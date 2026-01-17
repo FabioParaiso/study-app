@@ -25,7 +25,7 @@ def generate_quiz(text, api_key):
         return None
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.0-flash')
 
     prompt = f"""
     És um professor experiente e encorajador do 6º ano de escolaridade em Portugal.
