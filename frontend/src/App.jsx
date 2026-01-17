@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, CheckCircle, XCircle, Brain, Sparkles, ArrowRight, RefreshCw, Trophy, Upload, FileText, Trash2, List, LogOut, ChevronDown } from 'lucide-react';
+import { BookOpen, CheckCircle, XCircle, Brain, Sparkles, ArrowRight, RefreshCw, Trophy, Upload, FileText, Trash2, List, LogOut, ChevronDown, Search } from 'lucide-react';
 import axios from 'axios';
 
 // Backend URL
@@ -69,6 +69,9 @@ export default function App() {
 
         const formData = new FormData();
         formData.append("file", file);
+        if (apiKey) {
+            formData.append("api_key", apiKey);
+        }
 
         try {
             const res = await axios.post(`${API_URL}/upload`, formData, {
@@ -83,6 +86,26 @@ export default function App() {
             setIsAnalyzing(false);
         }
     };
+
+    // Retroactive Analysis for existing material
+    const detectTopics = async () => {
+        setIsAnalyzing(true);
+        setErrorMsg('');
+        try {
+            const res = await axios.post(`${API_URL}/analyze-topics`, {
+                api_key: apiKey
+            });
+            setAvailableTopics(res.data.topics);
+            // Refresh saved material to sync state
+            await checkSavedMaterial();
+            setIsAnalyzing(false);
+        } catch (err) {
+            console.error(err);
+            setErrorMsg("Falha ao detetar tópicos. Verifica a API Key.");
+            setIsAnalyzing(false);
+        }
+    };
+
 
     // Dropdown Logic
     const handleTopicChange = (e) => {
@@ -222,8 +245,8 @@ export default function App() {
                                             {savedMaterial.preview}...
                                         </div>
 
-                                        {/* Topic Selection Dropdown */}
-                                        {availableTopics.length > 0 && (
+                                        {/* Topic Selection Logic */}
+                                        {availableTopics.length > 0 ? (
                                             <div className="mb-4">
                                                 <label className="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
                                                     <List size={16} /> Escolhe o Tópico:
@@ -244,6 +267,21 @@ export default function App() {
                                                         <ChevronDown size={20} />
                                                     </div>
                                                 </div>
+                                            </div>
+                                        ) : (
+                                            /* Button to Detect Topics if missing */
+                                            <div className="mb-4">
+                                                <label className="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
+                                                    <List size={16} /> Tópicos não detetados
+                                                </label>
+                                                <button
+                                                    onClick={detectTopics}
+                                                    disabled={isAnalyzing}
+                                                    className="w-full py-2 px-3 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-indigo-100 transition-colors"
+                                                >
+                                                    {isAnalyzing ? <RefreshCw className="animate-spin" size={16} /> : <Search size={16} />}
+                                                    {isAnalyzing ? "A analisar..." : "Identificar Tópicos Agora"}
+                                                </button>
                                             </div>
                                         )}
 
@@ -357,7 +395,6 @@ export default function App() {
                         </div>
 
                         {/* ... Rest of Quiz Logic (Options, Feedback) ... */}
-                        {/* Keeping it identical to previous logic, just ensuring the surrounding UI is updated */}
                         <div className="p-8 grid gap-4">
                             {question.options.map((option, idx) => {
                                 let btnClass = "w-full text-left p-5 rounded-2xl border-2 text-lg font-medium transition-all duration-200 ";

@@ -51,7 +51,7 @@ def clear_material():
     return {"status": "cleared"}
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), api_key: Optional[str] = Form(None)):
     try:
         content = await file.read()
         file_type = file.content_type
@@ -71,12 +71,11 @@ async def upload_file(file: UploadFile = File(...)):
             text = content.decode("utf-8")
         
         # Extract topics
-        # We need an API key for this. 
-        # Ideally passed in header or env. defaulting to env.
-        api_key = os.getenv("OPENAI_API_KEY") 
+        # Prioritize key passed in form, then env
+        key_to_use = api_key or os.getenv("OPENAI_API_KEY") 
         topics = []
-        if api_key:
-             topics = extract_topics(text, api_key)
+        if key_to_use:
+             topics = extract_topics(text, key_to_use)
 
         # Save to storage with topics
         save_study_material(text, file.filename, topics)
@@ -85,6 +84,29 @@ async def upload_file(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class AnalyzeRequest(BaseModel):
+    api_key: Optional[str] = None
+
+@app.post("/analyze-topics")
+def analyze_topics_endpoint(request: AnalyzeRequest):
+    data = load_study_material()
+    if not data or not data.get("text"):
+        raise HTTPException(status_code=400, detail="No material found to analyze")
+
+    text = data.get("text")
+    source = data.get("source")
+    
+    key_to_use = request.api_key or os.getenv("OPENAI_API_KEY")
+    if not key_to_use:
+        raise HTTPException(status_code=400, detail="API Key required to analyze topics")
+
+    topics = extract_topics(text, key_to_use)
+    
+    # Update storage
+    save_study_material(text, source, topics)
+    
+    return {"topics": topics}
 
 @app.post("/generate-quiz")
 def generate_quiz_endpoint(request: QuizRequest):
