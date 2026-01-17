@@ -63,6 +63,7 @@ if uploaded_file:
                         st.session_state.quiz_data = quiz
                         st.session_state.quiz_submitted = False
                         st.session_state.quiz_id += 1 # Increment ID to reset widgets
+                        st.session_state.show_toast = True
                         st.rerun()
                     else:
                         st.error("Não foi possível criar o questionário. Verifica a tua API Key ou tenta novamente.")
@@ -71,6 +72,10 @@ if uploaded_file:
 
 # Display Quiz
 if st.session_state.quiz_data:
+    if st.session_state.get('show_toast'):
+        st.toast("✨ O teu questionário está pronto! Boa sorte!")
+        st.session_state.show_toast = False
+
     st.divider()
     st.subheader("📝 Responde às perguntas:")
 
@@ -78,16 +83,13 @@ if st.session_state.quiz_data:
     with st.form(key=f"quiz_form_{st.session_state.quiz_id}"):
         user_answers = {}
         for i, q in enumerate(st.session_state.quiz_data):
-            st.markdown(f"**{i+1}. {q['pergunta']}**")
-
             # Using radio button for options
             # We map the index to the options list
             user_answers[i] = st.radio(
-                "Escolhe uma opção:",
+                f"**{i+1}. {q['pergunta']}**",
                 options=range(len(q['opcoes'])),
                 format_func=lambda x: q['opcoes'][x],
                 key=f"q_{st.session_state.quiz_id}_{i}",
-                label_visibility="collapsed",
                 index=None # No default selection
             )
             st.write("") # Spacing
