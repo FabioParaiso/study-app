@@ -22,16 +22,16 @@ Para correres esta aplicação no teu computador, precisas de ter instalado:
     pip install -r requirements.txt
     ```
 
-## 🔑 Configuração (Google Gemini API)
+## 🔑 Configuração (OpenAI API)
 
-Esta app usa a inteligência do Google (Gemini) para ler os teus apontamentos. Precisas de uma chave especial (API Key).
+Esta app usa a inteligência da OpenAI (GPT-4o-mini) para ler os teus apontamentos. Precisas de uma chave especial (API Key).
 
-1.  Vai a [Google AI Studio](https://aistudio.google.com/app/apikey) e cria uma API Key.
+1.  Vai a [OpenAI Platform](https://platform.openai.com/api-keys) e cria uma API Key.
 2.  Tens duas opções para configurar a chave:
     *   **Opção A (Mais fácil):** Cola a chave diretamente na aplicação quando a correres (há um campo para isso na barra lateral).
     *   **Opção B (Avançado):** Cria um ficheiro chamado `.env` na pasta do projeto e adiciona a seguinte linha:
         ```text
-        GOOGLE_API_KEY=a_tua_chave_aqui
+        OPENAI_API_KEY=a_tua_chave_aqui
         ```
 
 ## 🚀 Como Correr a Aplicação
