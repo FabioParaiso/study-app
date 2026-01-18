@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -13,6 +13,9 @@ import json
 load_dotenv()
 
 app = FastAPI()
+
+# 10 MB limit
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 # Allow CORS for frontend
 app.add_middleware(
@@ -51,9 +54,25 @@ def clear_material():
     return {"status": "cleared"}
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...), api_key: Optional[str] = Form(None)):
+async def upload_file(request: Request, file: UploadFile = File(...), api_key: Optional[str] = Form(None)):
     try:
+        # Check Content-Length header if present
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > MAX_FILE_SIZE:
+             raise HTTPException(status_code=413, detail="File too large")
+
+        # Read content and check size
+        # We read into memory, so we should be careful.
+        # Ideally we read in chunks to avoid memory spike, but for now we check size after read
+        # or rely on spooled file size check if available.
+        # However, await file.read() reads all.
+
+        # Safe reading approach:
         content = await file.read()
+
+        if len(content) > MAX_FILE_SIZE:
+             raise HTTPException(status_code=413, detail="File too large")
+
         file_type = file.content_type
         text = ""
 
@@ -82,8 +101,11 @@ async def upload_file(file: UploadFile = File(...), api_key: Optional[str] = For
         
         return {"text": text, "filename": file.filename, "topics": topics}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error during upload: {e}") # Log the error
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 class AnalyzeRequest(BaseModel):
     api_key: Optional[str] = None

@@ -16,12 +16,15 @@ def test_extract_text_txt():
     text = extract_text_from_file(file)
     assert text == "Ola mundo"
 
-@patch('logic.genai')
-def test_generate_quiz_success(mock_genai):
+@patch('logic.OpenAI')
+def test_generate_quiz_success(mock_openai):
     # Mock the API response
-    mock_model = MagicMock()
+    mock_client = MagicMock()
     mock_response = MagicMock()
-    mock_response.text = '''
+
+    # Mock the response content structure for OpenAI chat completion
+    mock_choice = MagicMock()
+    mock_choice.message.content = '''
     [
         {
             "pergunta": "Questao 1",
@@ -31,8 +34,10 @@ def test_generate_quiz_success(mock_genai):
         }
     ]
     '''
-    mock_model.generate_content.return_value = mock_response
-    mock_genai.GenerativeModel.return_value = mock_model
+    mock_response.choices = [mock_choice]
+
+    mock_client.chat.completions.create.return_value = mock_response
+    mock_openai.return_value = mock_client
 
     quiz = generate_quiz("Texto de teste", "fake_key")
 
