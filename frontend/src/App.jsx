@@ -1,30 +1,312 @@
-import React, { useState, useEffect } from 'react';
-import { BookOpen, CheckCircle, XCircle, Brain, Sparkles, ArrowRight, RefreshCw, Trophy, Upload, FileText, Trash2, List, LogOut, ChevronDown, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import {
+    BookOpen, CheckCircle, XCircle, RefreshCw, Award, BrainCircuit,
+    ChevronRight, ArrowRight, Volume2, StopCircle, Play, Filter,
+    AlertCircle, Star, PenTool, Send, MessageSquare, Flame, User, Trophy, Zap, Upload, FileText
+} from 'lucide-react';
+import Confetti from './Confetti';
 
-// Backend URL
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-export default function App() {
-    const [gameState, setGameState] = useState('intro'); // intro, loading, playing, results, error
-    const [questions, setQuestions] = useState([]);
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [score, setScore] = useState(0);
-    const [selectedOption, setSelectedOption] = useState(null);
-    const [showExplanation, setShowExplanation] = useState(false);
-    const [errorMsg, setErrorMsg] = useState('');
-    const [apiKey, setApiKey] = useState('');
-    const [file, setFile] = useState(null);
+// --- Leveling System Config ---
+const LEVELS = [
+    { min: 0, title: "Estudante Curiosa", emoji: "🌱" },
+    { min: 100, title: "Exploradora da Natureza", emoji: "🦋" },
+    { min: 300, title: "Assistente de Laboratório", emoji: "🔬" },
+    { min: 600, title: "Bióloga Júnior", emoji: "🧬" },
+    { min: 1000, title: "Mestre das Ciências", emoji: "👩‍🔬" },
+    { min: 2000, title: "Cientista Lendária", emoji: "🚀" },
+];
 
-    // Persistence & Topics state
+const getLevelInfo = (xp) => {
+    let level = LEVELS[0];
+    let nextLevel = LEVELS[1];
+    for (let i = 0; i < LEVELS.length; i++) {
+        if (xp >= LEVELS[i].min) {
+            level = LEVELS[i];
+            nextLevel = LEVELS[i + 1] || null;
+        }
+    }
+    return { level, nextLevel };
+};
+
+const cleanTextForSpeech = (text) => {
+    return text
+        .replace(/->/g, "dá origem a")
+        .replace(/\*/g, "")
+        .replace(/_/g, "");
+};
+
+// --- Sub-components ---
+
+const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, handleSpeak, speakingPart }) => {
+    const isAnswered = userAnswer !== null;
+
+    return (
+        <div className="w-full max-w-2xl mx-auto animate-fade-in">
+            <div className="bg-white rounded-3xl shadow-xl p-8 border-b-8 border-indigo-100 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-2 bg-gray-100">
+                    <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${((index + 1) / total) * 100}%` }}></div>
+                </div>
+
+                <div className="flex justify-between items-center mb-6 mt-2">
+                    <span className="text-xs font-bold tracking-wider text-indigo-400 uppercase">Pergunta {index + 1} de {total}</span>
+                    <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold border border-indigo-100">
+                        {question.topic || "Geral"}
+                    </span>
+                </div>
+
+                <div className="flex items-start gap-4 mb-8">
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight flex-1">{question.question}</h2>
+                    <button
+                        onClick={() => handleSpeak(question.question, 'question')}
+                        className={`p-3 rounded-full transition-all duration-200 flex-shrink-0 shadow-sm ${speakingPart === 'question'
+                            ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-300'
+                            : 'bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                            }`}
+                    >
+                        {speakingPart === 'question' ? <StopCircle size={24} /> : <Volume2 size={24} />}
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    {question.options.map((option, optIndex) => {
+                        let btnClass = "w-full text-left p-5 rounded-xl border-2 transition-all duration-200 flex items-center justify-between group relative overflow-hidden ";
+                        if (isAnswered) {
+                            if (optIndex === question.correctIndex) btnClass += "bg-green-100 border-green-500 text-green-900 font-medium shadow-sm ring-1 ring-green-300";
+                            else if (optIndex === userAnswer && userAnswer !== question.correctIndex) btnClass += "bg-red-50 border-red-300 text-red-800 opacity-90";
+                            else btnClass += "bg-gray-50 border-gray-100 text-gray-400 opacity-60";
+                        } else {
+                            btnClass += "bg-white border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 text-gray-700 hover:shadow-md cursor-pointer hover:scale-[1.01]";
+                        }
+
+                        return (
+                            <button key={optIndex} onClick={() => !isAnswered && onAnswer(index, optIndex)} disabled={isAnswered} className={btnClass}>
+                                <div className="flex items-center">
+                                    <span className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 text-sm font-bold shadow-sm transition-colors ${isAnswered && optIndex === question.correctIndex ? 'bg-green-500 text-white' :
+                                        isAnswered && optIndex === userAnswer ? 'bg-red-500 text-white' :
+                                            'bg-gray-100 text-gray-500 group-hover:bg-indigo-200 group-hover:text-indigo-700'
+                                        }`}>
+                                        {['A', 'B', 'C', 'D'][optIndex]}
+                                    </span>
+                                    {option}
+                                </div>
+                                {isAnswered && optIndex === question.correctIndex && <CheckCircle className="text-green-600" size={24} />}
+                                {isAnswered && optIndex === userAnswer && userAnswer !== question.correctIndex && <XCircle className="text-red-500" size={24} />}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {isAnswered && (
+                    <div className="mt-8 animate-slide-up">
+                        <div className={`p-5 rounded-xl border mb-6 shadow-sm ${userAnswer === question.correctIndex ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                            <div className="flex items-start gap-3">
+                                <BrainCircuit className={`mt-1 flex-shrink-0 ${userAnswer === question.correctIndex ? 'text-green-600' : 'text-red-500'}`} size={24} />
+                                <div className="flex-1">
+                                    <p className={`font-bold mb-2 ${userAnswer === question.correctIndex ? 'text-green-800' : 'text-red-800'}`}>
+                                        {userAnswer === question.correctIndex ? 'Muito bem! 🎉' : 'Não foi desta... Vê a explicação: 👇'}
+                                    </p>
+                                    <div className="flex justify-between items-start">
+                                        <p className="text-gray-700 text-sm leading-relaxed">{question.explanation}</p>
+                                        <button
+                                            onClick={() => handleSpeak(question.explanation, 'explanation')}
+                                            className={`p-2 rounded-full transition-all duration-200 flex-shrink-0 ml-2 ${speakingPart === 'explanation' ? 'bg-indigo-200 text-indigo-700' : 'bg-white/50 text-indigo-400 hover:text-indigo-600'
+                                                }`}
+                                        >
+                                            {speakingPart === 'explanation' ? <StopCircle size={18} /> : <Volume2 size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-end">
+                            <button onClick={onNext} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transform transition hover:-translate-y-1 flex items-center text-lg">
+                                {index < total - 1 ? 'Próxima' : 'Ver Nota'} <ArrowRight className="ml-2" size={20} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvaluating, onNext, handleSpeak, speakingPart }) => {
+    const [userText, setUserText] = useState("");
+
+    return (
+        <div className="w-full max-w-2xl mx-auto animate-fade-in">
+            <div className="bg-white rounded-3xl shadow-xl p-8 border-b-8 border-purple-100 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-2 bg-gray-100">
+                    <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${((index + 1) / total) * 100}%` }}></div>
+                </div>
+
+                <div className="flex justify-between items-center mb-6 mt-2">
+                    <span className="text-xs font-bold tracking-wider text-purple-400 uppercase">Pergunta Objetiva {index + 1} de {total}</span>
+                    <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-xs font-bold border border-purple-100">
+                        {question.topic || "Geral"}
+                    </span>
+                </div>
+
+                <div className="flex items-start gap-4 mb-6">
+                    <p className="text-gray-800 text-xl font-medium leading-relaxed flex-grow">{question.question}</p>
+                    <button
+                        onClick={() => handleSpeak(question.question, 'question')}
+                        className={`p-3 rounded-full transition-all duration-200 flex-shrink-0 shadow-sm ${speakingPart === 'question'
+                            ? 'bg-purple-100 text-purple-600 ring-2 ring-purple-300'
+                            : 'bg-gray-100 text-gray-500 hover:bg-purple-50 hover:text-purple-600'
+                            }`}
+                    >
+                        {speakingPart === 'question' ? <StopCircle size={24} /> : <Volume2 size={24} />}
+                    </button>
+                </div>
+
+                {!evaluation ? (
+                    <div className="space-y-4">
+                        <textarea
+                            className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-gray-700 min-h-[120px] resize-y"
+                            placeholder="Escreve a tua resposta aqui..."
+                            value={userText}
+                            onChange={(e) => setUserText(e.target.value)}
+                            disabled={isEvaluating}
+                        />
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => onEvaluate(userText)}
+                                disabled={isEvaluating || userText.trim().length === 0}
+                                className={`font-bold py-3 px-8 rounded-full shadow-lg flex items-center text-lg transition-all ${isEvaluating || userText.trim().length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white hover:shadow-xl hover:-translate-y-1'}`}
+                            >
+                                {isEvaluating ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+                                        A corrigir...
+                                    </>
+                                ) : (
+                                    <>
+                                        Enviar Resposta <Send className="ml-2" size={20} />
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="animate-slide-up">
+                        <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
+                            <p className="text-gray-500 text-xs font-bold uppercase mb-1">A tua resposta:</p>
+                            <p className="text-gray-700 italic">"{userText}"</p>
+                        </div>
+
+                        <div className={`p-5 rounded-xl border mb-6 shadow-sm ${evaluation.score >= 50 ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
+                            <div className="flex items-start gap-4">
+                                <div className={`flex flex-col items-center justify-center p-3 rounded-full w-16 h-16 flex-shrink-0 ${evaluation.score >= 50 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                    <span className="text-xl font-black">{evaluation.score}</span>
+                                    <span className="text-[10px] font-bold uppercase">Nota</span>
+                                </div>
+                                <div className="flex-grow">
+                                    <div className="flex justify-between items-start">
+                                        <p className="font-bold mb-2 text-gray-800">Avaliação da Professora:</p>
+                                        <button
+                                            onClick={() => handleSpeak(evaluation.feedback, 'feedback')}
+                                            className={`p-2 rounded-full transition-all duration-200 flex-shrink-0 ${speakingPart === 'feedback'
+                                                ? 'bg-blue-200 text-blue-700 ring-2 ring-blue-400'
+                                                : 'bg-white/50 text-blue-400 hover:bg-white hover:text-blue-600'
+                                                }`}
+                                        >
+                                            {speakingPart === 'feedback' ? <StopCircle size={20} /> : <Volume2 size={20} />}
+                                        </button>
+                                    </div>
+                                    <p className="text-gray-700 text-md leading-relaxed">{evaluation.feedback}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                            <button onClick={onNext} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transform transition hover:-translate-y-1 flex items-center text-lg">
+                                {index < total - 1 ? 'Próxima' : 'Ver Nota'} <ArrowRight className="ml-2" size={20} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const LoadingOverlay = () => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-fade-in">
+        <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center max-w-sm mx-4">
+            <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">A preparar o teu Quiz...</h3>
+            <p className="text-gray-500 text-sm">A nossa IA está a ler a matéria e a criar perguntas desafiantes! 🧠✨</p>
+        </div>
+    </div>
+);
+
+
+export default function App() {
+    // --- States ---
+    const [file, setFile] = useState(null);
     const [savedMaterial, setSavedMaterial] = useState(null);
     const [availableTopics, setAvailableTopics] = useState([]);
-    const [selectedTopics, setSelectedTopics] = useState([]); // Array, but we might stick to single + all logic
+    const [selectedTopic, setSelectedTopic] = useState("all");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    // Quiz States
+    const [questions, setQuestions] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [isEvaluating, setIsEvaluating] = useState(false);
+    const [errorMsg, setErrorMsg] = useState("");
+
+    const [quizType, setQuizType] = useState(null); // 'multiple' | 'open-ended' | null
+    const [gameState, setGameState] = useState('intro'); // 'intro', 'playing', 'results'
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [score, setScore] = useState(0);
+    const [streak, setStreak] = useState(0);
+
+    const [userAnswers, setUserAnswers] = useState({});
+    const [openEndedEvaluations, setOpenEndedEvaluations] = useState({});
+
+    // TTS
+    const [speakingPart, setSpeakingPart] = useState(null);
+
+    // Gamification Persisted
+    const [highScore, setHighScore] = useState(0);
+    const [totalXP, setTotalXP] = useState(0);
+    const [selectedAvatar, setSelectedAvatar] = useState('👩‍🎓');
 
     useEffect(() => {
         checkSavedMaterial();
+        const savedScore = localStorage.getItem('scienceQuizHighScore');
+        if (savedScore) setHighScore(parseInt(savedScore, 10));
+
+        const savedXP = localStorage.getItem('scienceQuizTotalXP');
+        if (savedXP) setTotalXP(parseInt(savedXP, 10));
+
+        const savedAvatar = localStorage.getItem('scienceQuizAvatar');
+        if (savedAvatar) setSelectedAvatar(savedAvatar);
     }, []);
+
+    // Stop TTS on unmount or question change
+    useEffect(() => {
+        window.speechSynthesis.cancel();
+        setSpeakingPart(null);
+        return () => window.speechSynthesis.cancel();
+    }, [currentQuestionIndex, gameState]);
+
+    const changeAvatar = (emoji) => {
+        setSelectedAvatar(emoji);
+        localStorage.setItem('scienceQuizAvatar', emoji);
+    };
+
+    const addXP = (amount) => {
+        const newXP = totalXP + amount;
+        setTotalXP(newXP);
+        localStorage.setItem('scienceQuizTotalXP', newXP.toString());
+    };
+
+    const { level, nextLevel } = getLevelInfo(totalXP);
 
     const checkSavedMaterial = async () => {
         try {
@@ -34,32 +316,16 @@ export default function App() {
                 setAvailableTopics(res.data.topics || []);
             } else {
                 setSavedMaterial(null);
-                setAvailableTopics([]);
             }
-        } catch (e) {
-            console.error("Error checking material", e);
+        } catch (err) {
+            console.error(err);
         }
     };
 
-    const clearMaterial = async () => {
-        try {
-            await axios.post(`${API_URL}/clear-material`);
-            setSavedMaterial(null);
-            setFile(null);
-            setAvailableTopics([]);
-            setSelectedTopics([]);
-        } catch (e) {
-            console.error("Error clearing material", e);
-        }
-    };
+    // --- Actions ---
 
     const handleFileChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
-            // Reset previous analysis when new file picked
-            setAvailableTopics([]);
-            setSelectedTopics([]);
-        }
+        setFile(e.target.files[0]);
     };
 
     const analyzeFile = async () => {
@@ -69,15 +335,11 @@ export default function App() {
 
         const formData = new FormData();
         formData.append("file", file);
-        if (apiKey) {
-            formData.append("api_key", apiKey);
-        }
 
         try {
-            const res = await axios.post(`${API_URL}/upload`, formData, {
+            await axios.post(`${API_URL}/upload`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            // Upload success, update state
             await checkSavedMaterial();
             setIsAnalyzing(false);
         } catch (err) {
@@ -87,437 +349,415 @@ export default function App() {
         }
     };
 
-    // Retroactive Analysis for existing material
     const detectTopics = async () => {
         setIsAnalyzing(true);
         setErrorMsg('');
         try {
-            const res = await axios.post(`${API_URL}/analyze-topics`, {
-                api_key: apiKey
-            });
+            const res = await axios.post(`${API_URL}/analyze-topics`, {});
             setAvailableTopics(res.data.topics);
-            // Refresh saved material to sync state
             await checkSavedMaterial();
             setIsAnalyzing(false);
         } catch (err) {
             console.error(err);
-            setErrorMsg("Falha ao detetar tópicos. Verifica a API Key.");
+            const msg = err.response?.data?.detail || "Falha ao detetar tópicos.";
+            setErrorMsg(msg);
             setIsAnalyzing(false);
         }
     };
 
-
-    // Dropdown Logic
-    const handleTopicChange = (e) => {
-        const val = e.target.value;
-        if (val === "ALL") {
-            setSelectedTopics([]); // Empty means ALL in our logic
-        } else {
-            setSelectedTopics([val]);
+    const clearMaterial = async () => {
+        try {
+            await axios.post(`${API_URL}/clear-material`);
+            setSavedMaterial(null);
+            setQuestions([]);
+            setGameState('intro');
+        } catch (err) {
+            console.error(err);
         }
     };
 
-    const generateQuiz = async () => {
-        setGameState('loading');
-        setErrorMsg('');
+    const startQuiz = async (type) => {
+        setLoading(true);
+        setErrorMsg("");
+        setQuizType(type);
+        setQuestions([]);
+        setUserAnswers({});
+        setOpenEndedEvaluations({});
+        setScore(0);
+        setStreak(0);
+        setCurrentQuestionIndex(0);
 
         try {
-            // 2. Generate Quiz using saved material
-            const quizRes = await axios.post(`${API_URL}/generate-quiz`, {
-                use_saved: true,
-                topics: selectedTopics,
-                api_key: apiKey || null
-            });
+            const payload = {
+                topics: selectedTopic === 'all' ? [] : [selectedTopic],
+                quiz_type: type === 'open-ended' ? 'open-ended' : 'multiple'
+            };
 
-            const parsedQuestions = quizRes.data;
-
-            if (!parsedQuestions || parsedQuestions.length === 0) {
-                throw new Error("Nenhuma pergunta gerada.");
-            }
-
-            const adaptedQuestions = parsedQuestions.map(q => ({
-                question: q.pergunta || q.question,
-                options: q.opcoes || q.options,
-                correctAnswer: q.resposta_correta !== undefined ? q.resposta_correta : q.correctAnswer,
-                explanation: q.explicacao || q.explanation
-            }));
-
-            setQuestions(adaptedQuestions);
+            const res = await axios.post(`${API_URL}/generate-quiz`, payload);
+            setQuestions(res.data.questions);
             setGameState('playing');
-            setCurrentQuestionIndex(0);
-            setScore(0);
-            resetQuestionState();
-
-        } catch (error) {
-            console.error(error);
-            setErrorMsg(error.response?.data?.detail || error.message || "Ups! Ocorreu um erro ao criar o quiz. Tenta novamente.");
-            setGameState('error');
+        } catch (err) {
+            console.error(err);
+            const msg = err.response?.data?.detail || "Erro ao gerar o teste.";
+            setErrorMsg(msg);
+            setQuizType(null);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const resetQuestionState = () => {
-        setSelectedOption(null);
-        setShowExplanation(false);
+    const handleMultipleChoiceAnswer = (qIndex, oIndex) => {
+        setUserAnswers(prev => ({ ...prev, [qIndex]: oIndex }));
+        const correct = questions[qIndex].correctIndex;
+        if (oIndex === correct) {
+            setScore(prev => prev + 1);
+            setStreak(prev => prev + 1);
+            addXP(10);
+        } else {
+            setStreak(0);
+            addXP(2); // Effort
+        }
     };
 
-    const handleOptionClick = (index) => {
-        if (selectedOption !== null) return;
-        setSelectedOption(index);
-        setShowExplanation(true);
+    const handleOpenEndedEvaluation = async (userText) => {
+        if (!userText.trim()) return;
+        setIsEvaluating(true);
+        const currentQ = questions[currentQuestionIndex];
 
-        if (index === questions[currentQuestionIndex].correctAnswer) {
-            setScore(s => s + 1);
+        try {
+            const res = await axios.post(`${API_URL}/evaluate-answer`, {
+                question: currentQ.question,
+                user_answer: userText
+            });
+
+            const evalData = res.data;
+            setOpenEndedEvaluations(prev => ({
+                ...prev,
+                [currentQuestionIndex]: { ...evalData, userText }
+            }));
+
+            // XP Logic
+            const xpEarned = 5 + (evalData.score >= 50 ? 5 : 0) + (evalData.score >= 80 ? 5 : 0);
+            addXP(xpEarned);
+
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao avaliar. Tenta novamente.");
+        } finally {
+            setIsEvaluating(false);
         }
     };
 
     const nextQuestion = () => {
         if (currentQuestionIndex < questions.length - 1) {
             setCurrentQuestionIndex(prev => prev + 1);
-            resetQuestionState();
         } else {
-            setGameState('results');
+            finishQuiz();
         }
+    };
+
+    const finishQuiz = () => {
+        if (quizType === 'multiple') {
+            if (score > highScore) {
+                setHighScore(score);
+                localStorage.setItem('scienceQuizHighScore', score.toString());
+            }
+        }
+        setGameState('results');
     };
 
     const exitQuiz = () => {
         if (confirm("Tens a certeza que queres sair? Vais perder o progresso atual.")) {
             setGameState('intro');
             setQuestions([]);
-            setScore(0);
         }
     };
 
-    const restartGamePayload = () => {
-        setGameState('intro');
-        setQuestions([]);
-        setScore(0);
+    // TTS Helper
+    const handleSpeak = (text, part) => {
+        if (speakingPart === part) {
+            window.speechSynthesis.cancel();
+            setSpeakingPart(null);
+            return;
+        }
+        window.speechSynthesis.cancel();
+        const cleanText = cleanTextForSpeech(text);
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'pt-PT';
+        setSpeakingPart(part);
+        utterance.onend = () => setSpeakingPart(null);
+        window.speechSynthesis.speak(utterance);
     };
 
-    // --- UI Components ---
+    const getOpenEndedAverage = () => {
+        const evals = Object.values(openEndedEvaluations);
+        if (evals.length === 0) return 0;
+        const total = evals.reduce((acc, curr) => acc + curr.score, 0);
+        return Math.round(total / evals.length);
+    };
 
-    if (gameState === 'intro' || gameState === 'error') {
+    // --- Renders ---
+
+
+
+    // ... inside App component ...
+    // 1. Loading State (Global)
+    if (loading) {
+        return <LoadingOverlay />;
+    }
+
+    // 2. Intro Screen (if not loading)
+    if (gameState === 'intro') {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-6 flex items-center justify-center font-sans">
-                <div className="max-w-2xl w-full bg-white rounded-3xl shadow-xl overflow-hidden border-4 border-indigo-100">
-                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white text-center">
-                        <div className="flex justify-center mb-4">
-                            <Brain size={64} className="text-yellow-300 animate-bounce" />
+            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 p-6 font-sans text-gray-800">
+                <div className="max-w-4xl mx-auto">
+                    {/* Header Profile */}
+                    <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-2xl shadow-sm border border-indigo-50">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => changeAvatar(selectedAvatar === '👩‍🎓' ? '🧑‍🎓' : '👩‍🎓')} className="text-4xl bg-indigo-50 p-2 rounded-full border-2 border-indigo-100 hover:scale-110 transition-transform cursor-pointer">
+                                {selectedAvatar}
+                            </button>
+                            <div>
+                                <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    {level.emoji} {level.title}
+                                </h1>
+                                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                                    <span className="text-indigo-600 font-bold">{totalXP} XP</span>
+                                    <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div className="h-full bg-indigo-500" style={{ width: nextLevel ? `${((totalXP - level.min) / (nextLevel.min - level.min)) * 100}%` : '100%' }}></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <h1 className="text-3xl font-bold mb-2">Quiz Mágico de Estudo</h1>
-                        <p className="text-indigo-100">Transforma os teus apontamentos num jogo!</p>
+                        <div className="bg-yellow-50 px-4 py-2 rounded-xl border border-yellow-200 flex items-center gap-2 text-yellow-700 font-bold">
+                            <Trophy size={20} /> Recorde: {highScore}
+                        </div>
                     </div>
 
-                    <div className="p-8 space-y-6">
-
-                        {/* API Key Input */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                OpenAI API Key (Opcional se já configurada no backend)
-                            </label>
-                            <input
-                                type="password"
-                                value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
-                                placeholder="sk-..."
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            />
-                        </div>
-
-                        {/* ERROR DISPLAY */}
-                        {errorMsg && (
-                            <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-xl flex items-center gap-2 animate-pulse">
-                                <XCircle size={20} />
-                                {errorMsg}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                        {/* Left: Material */}
+                        <div className="bg-white rounded-3xl shadow-xl p-8 border border-white/50 backdrop-blur-sm">
+                            <div className="flex items-center mb-6">
+                                <div className="bg-indigo-100 p-3 rounded-full mr-4 text-indigo-600">
+                                    <BookOpen size={24} />
+                                </div>
+                                <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Estudar</h2>
                             </div>
-                        )}
 
-                        {/* SAVED MATERIAL CARD */}
-                        {savedMaterial ? (
-                            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-6 relative">
-                                <div className="flex items-start gap-4">
-                                    <div className="p-3 bg-white rounded-lg shadow-sm text-indigo-600 shrink-0">
-                                        <FileText size={32} />
+                            {!savedMaterial ? (
+                                <>
+                                    <div className="border-3 border-dashed border-indigo-200 rounded-2xl p-8 text-center hover:bg-indigo-50 transition-colors cursor-pointer group relative">
+                                        <Upload className="mx-auto text-indigo-300 mb-4 group-hover:scale-110 transition-transform" size={48} />
+                                        <p className="text-gray-500 font-medium mb-4">Carrega os teus apontamentos (PDF ou TXT)</p>
+                                        <p className="text-xs text-indigo-400 font-bold">{file ? `Selecionado: ${file.name}` : "Clica ou arrasta para aqui"}</p>
+                                        <input
+                                            type="file"
+                                            accept=".pdf,.txt"
+                                            onChange={handleFileChange}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-lg text-indigo-900 mb-1">Continuar Estudo</h3>
-                                        <p className="text-sm text-indigo-600 font-medium mb-2 truncate">{savedMaterial.source}</p>
-                                        <div className="text-xs text-gray-500 bg-white p-2 rounded border border-indigo-100 mb-4 truncate">
-                                            {savedMaterial.preview}...
-                                        </div>
-
-                                        {/* Topic Selection Logic */}
-                                        {availableTopics.length > 0 ? (
-                                            <div className="mb-4">
-                                                <label className="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
-                                                    <List size={16} /> Escolhe o Tópico:
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        onChange={handleTopicChange}
-                                                        className="w-full appearance-none bg-white border border-indigo-200 text-gray-700 py-3 px-4 rounded-xl leading-tight focus:outline-none focus:bg-white focus:border-indigo-500 cursor-pointer"
-                                                        value={selectedTopics.length === 0 ? "ALL" : selectedTopics[0]}
-                                                    >
-                                                        <option value="ALL">🌟 Todos os Tópicos</option>
-                                                        <hr />
-                                                        {availableTopics.map((topic, idx) => (
-                                                            <option key={idx} value={topic}>{topic}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-indigo-500">
-                                                        <ChevronDown size={20} />
-                                                    </div>
-                                                </div>
+                                    <div className="mt-4">
+                                        <button
+                                            onClick={analyzeFile}
+                                            disabled={!file || isAnalyzing}
+                                            className={`w-full px-6 py-4 rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 ${file ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg transform hover:-translate-y-1' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                }`}
+                                        >
+                                            {isAnalyzing ? (
+                                                <>
+                                                    <RefreshCw className="animate-spin" size={20} /> A Analisar...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Carregar e Analisar <ArrowRight size={20} />
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div>
+                                    <div className="bg-indigo-50 rounded-xl p-4 mb-6 border border-indigo-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <FileText className="text-indigo-500 flex-shrink-0" size={24} />
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-gray-800 truncate">{savedMaterial.source}</p>
+                                                <p className="text-xs text-indigo-600 font-medium">Material Pronto</p>
                                             </div>
+                                        </div>
+                                        <button onClick={clearMaterial} className="text-gray-400 hover:text-red-500 p-2">
+                                            <XCircle size={20} />
+                                        </button>
+                                    </div>
+
+                                    {/* Topic Selection */}
+                                    <div className="mb-6">
+                                        <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                            <Filter size={18} /> Filtrar por Tópico
+                                        </h3>
+                                        {availableTopics.length > 0 ? (
+                                            <select
+                                                value={selectedTopic}
+                                                onChange={(e) => setSelectedTopic(e.target.value)}
+                                                className="w-full p-3 rounded-xl border-2 border-gray-200 bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-medium text-gray-700"
+                                            >
+                                                <option value="all">📚 Todos os Tópicos</option>
+                                                {availableTopics.map((t, i) => (
+                                                    <option key={i} value={t}>{t}</option>
+                                                ))}
+                                            </select>
                                         ) : (
-                                            /* Button to Detect Topics if missing */
-                                            <div className="mb-4">
-                                                <label className="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
-                                                    <List size={16} /> Tópicos não detetados
-                                                </label>
+                                            <div className="text-center p-4 bg-yellow-50 rounded-xl border border-yellow-100">
+                                                <p className="text-sm text-yellow-700 font-medium mb-2">Sem tópicos detetados.</p>
                                                 <button
                                                     onClick={detectTopics}
                                                     disabled={isAnalyzing}
-                                                    className="w-full py-2 px-3 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-indigo-100 transition-colors"
+                                                    className="text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full font-bold transition-colors"
                                                 >
-                                                    {isAnalyzing ? <RefreshCw className="animate-spin" size={16} /> : <Search size={16} />}
-                                                    {isAnalyzing ? "A analisar..." : "Identificar Tópicos Agora"}
+                                                    Identificar Tópicos
                                                 </button>
                                             </div>
                                         )}
-
-                                        <div className="flex gap-3">
-                                            <button
-                                                onClick={generateQuiz}
-                                                className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
-                                            >
-                                                <Sparkles size={18} />
-                                                Gerar Quiz
-                                            </button>
-                                            <button
-                                                onClick={clearMaterial}
-                                                className="p-3 text-red-500 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors shrink-0"
-                                                title="Apagar matéria"
-                                            >
-                                                <Trash2 size={20} />
-                                            </button>
-                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        ) : (
-                            /* FILE UPLOAD CARD */
-                            <div className="border-2 border-dashed border-indigo-200 rounded-xl p-8 text-center hover:bg-indigo-50 transition-colors cursor-pointer relative group">
-                                <input
-                                    type="file"
-                                    onChange={handleFileChange}
-                                    accept=".pdf,.txt"
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                                <div className="group-hover:scale-110 transition-transform duration-300 inline-block mb-3">
-                                    <Upload className="mx-auto text-indigo-400" size={48} />
-                                </div>
-                                <p className="text-indigo-600 font-bold text-lg">
-                                    {file ? file.name : "Carregar Ficheiro PDF ou TXT"}
-                                </p>
-                                <p className="text-sm text-gray-500 mt-2">Clica ou arrasta para aqui</p>
-                            </div>
-                        )}
 
-                        {!savedMaterial && (
-                            <button
-                                onClick={analyzeFile}
-                                disabled={!file || isAnalyzing}
-                                className={`w-full py-4 rounded-xl text-xl font-bold flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95 shadow-lg ${!file || isAnalyzing
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:shadow-indigo-500/30'
-                                    }`}
-                            >
-                                <Sparkles className={isAnalyzing ? "animate-spin" : ""} />
-                                {isAnalyzing ? "A analisar..." : "Carregar e Analisar"}
-                            </button>
-                        )}
-
-                        <p className="text-center text-gray-400 text-xs mt-4">10 perguntas automáticas sobre os teus tópicos!</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Tela de Loading
-    if (gameState === 'loading') {
-        return (
-            <div className="min-h-screen bg-indigo-50 flex flex-col items-center justify-center p-6">
-                <div className="w-32 h-32 relative">
-                    <div className="absolute inset-0 border-8 border-indigo-200 rounded-full"></div>
-                    <div className="absolute inset-0 border-8 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
-                    <Brain className="absolute inset-0 m-auto text-indigo-500" size={40} />
-                </div>
-                <h2 className="mt-8 text-2xl font-bold text-indigo-800 animate-pulse">A gerar 10 perguntas...</h2>
-                {selectedTopics.length > 0 && <p className="text-indigo-600 mt-1">Focadas em: {selectedTopics.join(", ")}</p>}
-            </div>
-        );
-    }
-
-    // Tela de Jogo (Quiz)
-    if (gameState === 'playing') {
-        const question = questions[currentQuestionIndex];
-        const isCorrect = selectedOption === question.correctAnswer;
-        const progress = ((currentQuestionIndex) / questions.length) * 100;
-
-        return (
-            <div className="min-h-screen bg-slate-100 p-4 md:p-8 flex items-center justify-center font-sans">
-                <div className="max-w-3xl w-full">
-                    {/* Top Bar with Exit */}
-                    <div className="flex items-center justify-between mb-6 px-2">
-                        <button
-                            onClick={exitQuiz}
-                            className="text-slate-400 hover:text-red-500 text-sm font-bold flex items-center gap-1 transition-colors"
-                        >
-                            <LogOut size={16} /> Sair
-                        </button>
-                        <div className="text-indigo-600 font-bold bg-indigo-100 px-3 py-1 rounded-full text-sm">
-                            {currentQuestionIndex + 1} / {questions.length}
-                        </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-                        <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
-                    </div>
-
-                    <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
-                        {/* Pergunta */}
-                        <div className="p-8 border-b border-slate-100 bg-indigo-50/30">
-                            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 leading-tight">
-                                {question.question}
-                            </h2>
-                        </div>
-
-                        {/* ... Rest of Quiz Logic (Options, Feedback) ... */}
-                        <div className="p-8 grid gap-4">
-                            {question.options.map((option, idx) => {
-                                let btnClass = "w-full text-left p-5 rounded-2xl border-2 text-lg font-medium transition-all duration-200 ";
-
-                                if (selectedOption === null) {
-                                    btnClass += "border-slate-100 hover:border-indigo-400 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 cursor-pointer shadow-sm hover:shadow-md";
-                                } else {
-                                    if (idx === question.correctAnswer) {
-                                        btnClass += "border-green-500 bg-green-50 text-green-800 shadow-md ring-2 ring-green-200";
-                                    } else if (idx === selectedOption) {
-                                        btnClass += "border-red-400 bg-red-50 text-red-800 opacity-75";
-                                    } else {
-                                        btnClass += "border-slate-100 text-slate-400 opacity-50";
-                                    }
-                                }
-
-                                return (
-                                    <button
-                                        key={idx}
-                                        onClick={() => handleOptionClick(idx)}
-                                        disabled={selectedOption !== null}
-                                        className={btnClass}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span>{option}</span>
-                                            {selectedOption !== null && idx === question.correctAnswer && (
-                                                <CheckCircle className="text-green-600" size={24} />
-                                            )}
-                                            {selectedOption !== null && idx === selectedOption && idx !== question.correctAnswer && (
-                                                <XCircle className="text-red-500" size={24} />
-                                            )}
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* Feedback e Explicação */}
-                        {showExplanation && (
-                            <div className={`p-6 mx-8 mb-8 rounded-2xl ${isCorrect ? 'bg-green-100' : 'bg-orange-50'} animate-in fade-in slide-in-from-bottom-4 duration-500 border ${isCorrect ? 'border-green-200' : 'border-orange-200'}`}>
-                                <div className="flex items-start gap-3">
-                                    {isCorrect ? (
-                                        <div className="p-2 bg-green-200 rounded-full text-green-700">
-                                            <Sparkles size={24} />
-                                        </div>
-                                    ) : (
-                                        <div className="p-2 bg-orange-200 rounded-full text-orange-700">
-                                            <BookOpen size={24} />
+                                    {errorMsg && (
+                                        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium mb-4 flex items-center gap-2">
+                                            <AlertCircle size={16} /> {errorMsg}
                                         </div>
                                     )}
-                                    <div>
-                                        <h3 className={`font-bold text-lg mb-1 ${isCorrect ? 'text-green-800' : 'text-orange-800'}`}>
-                                            {isCorrect ? "Excelente!" : "Quase lá!"}
-                                        </h3>
-                                        <p className="text-slate-700 leading-relaxed">
-                                            {question.explanation}
-                                        </p>
+
+                                    {/* Action Buttons */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            onClick={() => startQuiz('multiple')}
+                                            disabled={loading}
+                                            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all group text-left relative overflow-hidden"
+                                        >
+                                            <div className="relative z-10">
+                                                <p className="text-xs font-bold uppercase opacity-80 mb-1">Modo Clássico</p>
+                                                <h3 className="text-lg font-bold flex items-center">
+                                                    Escolha Múltipla <ChevronRight className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </h3>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={() => startQuiz('open-ended')}
+                                            disabled={loading}
+                                            className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-4 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all group text-left relative overflow-hidden"
+                                        >
+                                            <div className="relative z-10">
+                                                <p className="text-xs font-bold uppercase opacity-80 mb-1">Modo Escrita</p>
+                                                <h3 className="text-lg font-bold flex items-center">
+                                                    Resposta Aberta <PenTool size={16} className="ml-2" />
+                                                </h3>
+                                            </div>
+                                        </button>
+                                    </div>
+                                    {loading && <p className="text-center text-indigo-600 font-bold mt-4 animate-pulse">A preparar o teste... 🤖</p>}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right: Stats/Info */}
+                        <div className="space-y-6">
+                            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-32 bg-white opacity-5 rounded-full blur-3xl transform translate-x-10 -translate-y-10"></div>
+                                <h3 className="text-xl font-bold mb-4 opacity-90">Progresso Atual</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                                        <p className="text-2xl font-black">{totalXP}</p>
+                                        <p className="text-xs font-medium uppercase opacity-70">XP Total</p>
+                                    </div>
+                                    <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                                        <p className="text-2xl font-black">{LEVELS.indexOf(level) + 1}</p>
+                                        <p className="text-xs font-medium uppercase opacity-70">Nível</p>
                                     </div>
                                 </div>
-
-                                <div className="mt-6 flex justify-end">
-                                    <button
-                                        onClick={nextQuestion}
-                                        className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-200"
-                                    >
-                                        {currentQuestionIndex < questions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultados'}
-                                        <ArrowRight size={20} />
-                                    </button>
-                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </div>
         );
     }
 
-    // Tela de Resultados
-    if (gameState === 'results') {
-        const percentage = Math.round((score / questions.length) * 100);
-        let message = "";
-        let emoji = "";
+    // 2. Play Screen
+    if (gameState === 'playing' && questions.length > 0) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
+                <button onClick={exitQuiz} className="absolute top-6 right-6 text-gray-400 hover:text-red-500 font-bold text-sm bg-white px-4 py-2 rounded-full shadow-sm hover:shadow-md transition-all z-20">
+                    Sair do Teste ✕
+                </button>
 
-        if (percentage === 100) { message = "Fantástico! Sabes tudo!"; emoji = "🏆"; }
-        else if (percentage >= 80) { message = "Muito bom trabalho!"; emoji = "🌟"; }
-        else if (percentage >= 50) { message = "Bom esforço! Continua a estudar."; emoji = "📚"; }
-        else { message = "Vamos rever a matéria mais uma vez?"; emoji = "💪"; }
+                {quizType === 'multiple' ? (
+                    <QuestionCard
+                        question={questions[currentQuestionIndex]}
+                        index={currentQuestionIndex}
+                        total={questions.length}
+                        onAnswer={handleMultipleChoiceAnswer}
+                        userAnswer={userAnswers[currentQuestionIndex] ?? null}
+                        onNext={nextQuestion}
+                        handleSpeak={handleSpeak}
+                        speakingPart={speakingPart}
+                    />
+                ) : (
+                    <OpenEndedCard
+                        question={questions[currentQuestionIndex]}
+                        index={currentQuestionIndex}
+                        total={questions.length}
+                        onEvaluate={handleOpenEndedEvaluation}
+                        evaluation={openEndedEvaluations[currentQuestionIndex] ?? null}
+                        isEvaluating={isEvaluating}
+                        onNext={nextQuestion}
+                        handleSpeak={handleSpeak}
+                        speakingPart={speakingPart}
+                    />
+                )}
+            </div>
+        );
+    }
+
+    // 3. Results Screen
+    if (gameState === 'results') {
+        const isWin = (quizType === 'multiple' && score >= questions.length * 0.7) ||
+            (quizType === 'open-ended' && getOpenEndedAverage() >= 70);
 
         return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center p-6 font-sans">
-                <div className="bg-white rounded-3xl p-10 max-w-lg w-full text-center shadow-2xl animate-in zoom-in duration-300">
-                    <div className="mb-6 inline-block p-6 bg-yellow-100 rounded-full text-6xl animate-bounce">
-                        {emoji}
+            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 flex flex-col items-center justify-center p-6 text-center">
+                {isWin && <Confetti />}
+
+                <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-lg w-full transform transition-all animate-bounce-in relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500"></div>
+
+                    <div className="mb-6 inline-block p-6 rounded-full bg-yellow-50 text-6xl shadow-inner">
+                        {isWin ? '🏆' : '📚'}
                     </div>
 
-                    <h2 className="text-4xl font-bold text-slate-800 mb-2">Quiz Terminado!</h2>
-                    <p className="text-slate-500 text-lg mb-8">{message}</p>
+                    <h2 className="text-4xl font-extrabold text-gray-800 mb-2">
+                        {isWin ? 'Fantástico!' : 'Bom Esforço!'}
+                    </h2>
+                    <p className="text-gray-500 font-medium mb-8">
+                        {quizType === 'multiple'
+                            ? `Acertaste em ${score} de ${questions.length} perguntas.`
+                            : `A tua média foi de ${getOpenEndedAverage()}% nas respostas.`}
+                    </p>
 
-                    <div className="flex justify-center items-end gap-2 mb-8 text-indigo-900">
-                        <span className="text-7xl font-extrabold">{score}</span>
-                        <span className="text-2xl font-bold text-slate-400 mb-2">/ {questions.length}</span>
+                    <div className="flex justify-center gap-4 mb-8">
+                        <div className="bg-indigo-50 rounded-2xl p-4 min-w-[100px]">
+                            <p className="text-indigo-600 font-black text-2xl">+{quizType === 'multiple' ? score * 10 : Math.round(getOpenEndedAverage() / 2)}</p>
+                            <p className="text-indigo-400 text-xs font-bold uppercase">XP Ganho</p>
+                        </div>
+                        <div className="bg-purple-50 rounded-2xl p-4 min-w-[100px]">
+                            <p className="text-purple-600 font-black text-2xl">{highScore}</p>
+                            <p className="text-purple-400 text-xs font-bold uppercase">Recorde</p>
+                        </div>
                     </div>
 
-                    <div className="w-full bg-slate-100 rounded-full h-4 mb-8 overflow-hidden">
-                        <div
-                            className="bg-gradient-to-r from-green-400 to-indigo-500 h-full transition-all duration-1000 ease-out"
-                            style={{ width: `${percentage}%` }}
-                        />
-                    </div>
-
-                    <div className="flex flex-col gap-3">
-                        <button
-                            onClick={restartGamePayload}
-                            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-indigo-500/40"
-                        >
-                            <RefreshCw size={24} />
-                            Reiniciar
-                        </button>
-                        <button
-                            onClick={() => { clearMaterial(); restartGamePayload(); }}
-                            className="text-white/80 hover:text-white text-sm font-medium py-2"
-                        >
-                            Escolher outra matéria
+                    <div className="space-y-3">
+                        <button onClick={() => setGameState('intro')} className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                            <RefreshCw size={20} /> Voltar ao Menu
                         </button>
                     </div>
                 </div>
@@ -525,5 +765,5 @@ export default function App() {
         );
     }
 
-    return null;
+    return <div>A carregar...</div>;
 }

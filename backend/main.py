@@ -4,13 +4,15 @@ from pydantic import BaseModel
 from typing import List, Optional
 import os
 from dotenv import load_dotenv
-from logic import extract_text_from_file, generate_quiz, extract_topics
+from logic import extract_text_from_file, generate_quiz, extract_topics, generate_open_questions, evaluate_answer
 from storage import save_study_material, load_study_material, clear_study_material
 from io import BytesIO
 from pypdf import PdfReader
 import json
 
-load_dotenv()
+from pathlib import Path
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 app = FastAPI()
 
@@ -28,6 +30,7 @@ class QuizRequest(BaseModel):
     use_saved: bool = False
     topics: list[str] = []
     api_key: Optional[str] = None
+    quiz_type: str = "multiple"
 
 @app.get("/health")
 def health_check():
@@ -51,7 +54,7 @@ def clear_material():
     return {"status": "cleared"}
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...), api_key: Optional[str] = Form(None)):
+async def upload_file(file: UploadFile = File(...)):
     try:
         content = await file.read()
         file_type = file.content_type
@@ -70,12 +73,8 @@ async def upload_file(file: UploadFile = File(...), api_key: Optional[str] = For
         else:
             text = content.decode("utf-8")
         
-        # Extract topics
-        # Prioritize key passed in form, then env
-        key_to_use = api_key or os.getenv("OPENAI_API_KEY") 
-        topics = []
-        if key_to_use:
-             topics = extract_topics(text, key_to_use)
+        # Extract topics (Heuristic - no key needed)
+        topics = extract_topics(text)
 
         # Save to storage with topics
         save_study_material(text, file.filename, topics)
@@ -86,7 +85,7 @@ async def upload_file(file: UploadFile = File(...), api_key: Optional[str] = For
         raise HTTPException(status_code=500, detail=str(e))
 
 class AnalyzeRequest(BaseModel):
-    api_key: Optional[str] = None
+    pass # No fields needed now
 
 @app.post("/analyze-topics")
 def analyze_topics_endpoint(request: AnalyzeRequest):
@@ -97,11 +96,8 @@ def analyze_topics_endpoint(request: AnalyzeRequest):
     text = data.get("text")
     source = data.get("source")
     
-    key_to_use = request.api_key or os.getenv("OPENAI_API_KEY")
-    if not key_to_use:
-        raise HTTPException(status_code=400, detail="API Key required to analyze topics")
-
-    topics = extract_topics(text, key_to_use)
+    # Heuristic extraction
+    topics = extract_topics(text)
     
     # Update storage
     save_study_material(text, source, topics)
@@ -110,23 +106,44 @@ def analyze_topics_endpoint(request: AnalyzeRequest):
 
 @app.post("/generate-quiz")
 def generate_quiz_endpoint(request: QuizRequest):
+    data = load_study_material()
+    if not data or not data.get("text"):
+        raise HTTPException(status_code=400, detail="No material found. Upload a file first.")
+    
+    text = data.get("text")
+    
+    # Priority: Request API Key > Env API Key
     api_key = request.api_key or os.getenv("OPENAI_API_KEY")
+    
     if not api_key:
-        raise HTTPException(status_code=400, detail="API Key required")
-    
-    text_to_use = request.text
-    
-    if request.use_saved:
-        saved = load_study_material()
-        if saved:
-            text_to_use = saved.get("text")
-    
-    if not text_to_use:
-         raise HTTPException(status_code=400, detail="No text provided and no saved material found.")
+         raise HTTPException(status_code=400, detail="API Key is required for quiz generation.")
 
-    # Call logic.py's generate_quiz
-    quiz = generate_quiz(text_to_use, api_key, request.topics)
-    if not quiz:
-        raise HTTPException(status_code=500, detail="Failed to generate quiz")
+    if request.quiz_type == "open-ended":
+        questions = generate_open_questions(text, api_key, request.topics)
+    else:
+        questions = generate_quiz(text, api_key, request.topics)
     
-    return quiz
+    if not questions:
+        raise HTTPException(status_code=500, detail="Failed to generate quiz. Please try again.")
+        
+    return {"questions": questions}
+
+class EvaluationRequest(BaseModel):
+    question: str
+    user_answer: str
+    api_key: Optional[str] = None
+
+@app.post("/evaluate-answer")
+def evaluate_answer_endpoint(request: EvaluationRequest):
+    data = load_study_material()
+    if not data or not data.get("text"):
+        raise HTTPException(status_code=400, detail="No material found.")
+        
+    text = data.get("text")
+    api_key = request.api_key or os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+         raise HTTPException(status_code=400, detail="API Key is required for evaluation.")
+         
+    result = evaluate_answer(text, request.question, request.user_answer, api_key)
+    return result
