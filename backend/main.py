@@ -68,8 +68,11 @@ async def upload_file(file: UploadFile = File(...)):
 
         if file_type == 'application/pdf':
              reader = PdfReader(BytesIO(content))
+             # Optimization: Use list accumulation instead of string concatenation
+             text_parts = []
              for page in reader.pages:
-                 text += page.extract_text()
+                 text_parts.append(page.extract_text())
+             text = "".join(text_parts)
         else:
             text = content.decode("utf-8")
         
