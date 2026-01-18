@@ -8,10 +8,11 @@ def extract_text_from_file(uploaded_file):
         # Check if it's a Streamlit UploadedFile or just bytes/string IO
         if uploaded_file.type == "application/pdf":
             reader = PdfReader(uploaded_file)
-            text = ""
+            # ⚡ Bolt Optimization: Use list join instead of string concatenation
+            pages_text = []
             for page in reader.pages:
-                text += page.extract_text()
-            return text
+                pages_text.append(page.extract_text())
+            return "".join(pages_text)
         else:
             # Assume text/plain
             return uploaded_file.getvalue().decode("utf-8")

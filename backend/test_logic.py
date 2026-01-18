@@ -16,12 +16,32 @@ def test_extract_text_txt():
     text = extract_text_from_file(file)
     assert text == "Ola mundo"
 
-@patch('logic.genai')
-def test_generate_quiz_success(mock_genai):
+@patch('logic.PdfReader')
+def test_extract_text_pdf(mock_pdf_reader):
+    # Mock the PdfReader instance
+    mock_reader_instance = MagicMock()
+
+    # Mock pages
+    page1 = MagicMock()
+    page1.extract_text.return_value = "Page 1 content. "
+    page2 = MagicMock()
+    page2.extract_text.return_value = "Page 2 content."
+
+    mock_reader_instance.pages = [page1, page2]
+    mock_pdf_reader.return_value = mock_reader_instance
+
+    file = MockUploadedFile(b"fake pdf content", "application/pdf")
+    text = extract_text_from_file(file)
+
+    assert text == "Page 1 content. Page 2 content."
+
+@patch('logic.OpenAI')
+def test_generate_quiz_success(mock_openai):
     # Mock the API response
-    mock_model = MagicMock()
+    mock_client = MagicMock()
     mock_response = MagicMock()
-    mock_response.text = '''
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = '''
     [
         {
             "pergunta": "Questao 1",
@@ -31,8 +51,8 @@ def test_generate_quiz_success(mock_genai):
         }
     ]
     '''
-    mock_model.generate_content.return_value = mock_response
-    mock_genai.GenerativeModel.return_value = mock_model
+    mock_client.chat.completions.create.return_value = mock_response
+    mock_openai.return_value = mock_client
 
     quiz = generate_quiz("Texto de teste", "fake_key")
 

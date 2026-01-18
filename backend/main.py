@@ -65,8 +65,11 @@ async def upload_file(file: UploadFile = File(...), api_key: Optional[str] = For
 
         if file_type == 'application/pdf':
              reader = PdfReader(BytesIO(content))
+             # ⚡ Bolt Optimization: Use list join instead of string concatenation
+             pages_text = []
              for page in reader.pages:
-                 text += page.extract_text()
+                 pages_text.append(page.extract_text())
+             text = "".join(pages_text)
         else:
             text = content.decode("utf-8")
         
