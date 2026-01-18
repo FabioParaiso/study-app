@@ -248,11 +248,12 @@ export default function App() {
                                         {/* Topic Selection Logic */}
                                         {availableTopics.length > 0 ? (
                                             <div className="mb-4">
-                                                <label className="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
+                                                <label htmlFor="topic-select" className="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
                                                     <List size={16} /> Escolhe o Tópico:
                                                 </label>
                                                 <div className="relative">
                                                     <select
+                                                        id="topic-select"
                                                         onChange={handleTopicChange}
                                                         className="w-full appearance-none bg-white border border-indigo-200 text-gray-700 py-3 px-4 rounded-xl leading-tight focus:outline-none focus:bg-white focus:border-indigo-500 cursor-pointer"
                                                         value={selectedTopics.length === 0 ? "ALL" : selectedTopics[0]}
@@ -297,6 +298,7 @@ export default function App() {
                                                 onClick={clearMaterial}
                                                 className="p-3 text-red-500 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors shrink-0"
                                                 title="Apagar matéria"
+                                                aria-label="Apagar matéria"
                                             >
                                                 <Trash2 size={20} />
                                             </button>
@@ -306,12 +308,13 @@ export default function App() {
                             </div>
                         ) : (
                             /* FILE UPLOAD CARD */
-                            <div className="border-2 border-dashed border-indigo-200 rounded-xl p-8 text-center hover:bg-indigo-50 transition-colors cursor-pointer relative group">
+                            <div className="border-2 border-dashed border-indigo-200 rounded-xl p-8 text-center hover:bg-indigo-50 transition-colors cursor-pointer relative group focus-within:ring-4 focus-within:ring-indigo-200 focus-within:border-indigo-500 focus-within:outline-none">
                                 <input
                                     type="file"
                                     onChange={handleFileChange}
                                     accept=".pdf,.txt"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    aria-label="Carregar ficheiro (PDF ou TXT)"
                                 />
                                 <div className="group-hover:scale-110 transition-transform duration-300 inline-block mb-3">
                                     <Upload className="mx-auto text-indigo-400" size={48} />
