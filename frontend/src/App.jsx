@@ -692,3 +692,6 @@ export default function App() {
             </div>
         );
     }
+
+    return null;
+}
