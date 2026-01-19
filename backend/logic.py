@@ -101,15 +101,6 @@ def extract_topics(text, api_key=None): # api_key arg kept for signature compati
     Extracts high-level topics/headers using hierarchical heuristics (Regex).
     Priority: H1 > H2 > H3. Returns the highest level found.
     """
-    lines = text.split('\n')
-    
-    # Clean lines & Normalize spaces
-    cleaned_lines = []
-    for line in lines:
-        norm_line = " ".join(line.split()) # Fix "A  relação" -> "A relação"
-        if norm_line and len(norm_line) < 150: # Increased limit slightly for long titles
-            cleaned_lines.append(norm_line)
-            
     # Regex Priorities
     # H1: "1. Title", "I. Title", "Chapter 1", "Capítulo 1"
     h1_regex = re.compile(r'^(?:(?:\d+\.)|[IVX]+\.?|Chapter\s+\d+|Capítulo\s+\d+|Módulo\s+\d+)\s+([A-Z].{2,})', re.IGNORECASE)
@@ -129,40 +120,42 @@ def extract_topics(text, api_key=None): # api_key arg kept for signature compati
     found_h3 = []
     found_loose = []
 
-    for line in cleaned_lines:
+    # Optimization: Combined cleaning and matching in single pass
+    for line in text.splitlines():
+        # Clean lines & Normalize spaces using string methods (fastest for this case)
+        norm_line = " ".join(line.split())
+
+        if not norm_line or len(norm_line) >= 150:
+            continue
+
         # Match H1
-        m1 = h1_regex.match(line)
+        m1 = h1_regex.match(norm_line)
         if m1:
-            found_h1.append(line)
+            found_h1.append(norm_line)
             continue 
 
         # Match H2
-        m2 = h2_regex.match(line)
+        m2 = h2_regex.match(norm_line)
         if m2:
-            found_h2.append(line)
+            found_h2.append(norm_line)
             continue
 
         # Match H3
-        m3 = h3_regex.match(line)
+        m3 = h3_regex.match(norm_line)
         if m3:
-            found_h3.append(line)
+            found_h3.append(norm_line)
             continue
 
         # Match Loose Title (Fallback)
-        if loose_title_regex.match(line):
+        if loose_title_regex.match(norm_line):
              # Heuristic: Title usually doesn't have "page"
-             if "página" not in line.lower() and "page" not in line.lower():
-                found_loose.append(line)
+             if "página" not in norm_line.lower() and "page" not in norm_line.lower():
+                found_loose.append(norm_line)
 
     # Priority Return Rule: "O maior que existir"
     def dedup(lst):
-        seen = set()
-        out = []
-        for x in lst:
-            if x not in seen:
-                out.append(x)
-                seen.add(x)
-        return out
+        # Optimization: Use dict.fromkeys for faster deduplication while preserving order
+        return list(dict.fromkeys(lst))
 
     if found_h1:
         return dedup(found_h1)[:20]
