@@ -14,6 +14,8 @@ from pathlib import Path
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
+
 app = FastAPI()
 
 # Allow CORS for frontend
@@ -56,6 +58,14 @@ def clear_material():
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     try:
+        # Security Check: File Size Limit
+        file.file.seek(0, 2)
+        file_size = file.file.tell()
+        file.file.seek(0)
+
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+
         content = await file.read()
         file_type = file.content_type
         text = ""
@@ -81,8 +91,11 @@ async def upload_file(file: UploadFile = File(...)):
         
         return {"text": text, "filename": file.filename, "topics": topics}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error processing upload: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 class AnalyzeRequest(BaseModel):
     pass # No fields needed now
