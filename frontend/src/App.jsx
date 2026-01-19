@@ -135,7 +135,7 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
     );
 };
 
-const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvaluating, onNext, handleSpeak, speakingPart }) => {
+const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvaluating, evaluationError, onNext, handleSpeak, speakingPart }) => {
     const [userText, setUserText] = useState("");
 
     return (
@@ -175,7 +175,12 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
                             onChange={(e) => setUserText(e.target.value)}
                             disabled={isEvaluating}
                         />
-                        <div className="flex justify-end">
+                        <div className="flex justify-end items-center gap-4">
+                            {evaluationError && (
+                                <p className="text-red-500 text-sm font-bold flex items-center gap-1 animate-shake">
+                                    <AlertCircle size={16} /> {evaluationError}
+                                </p>
+                            )}
                             <button
                                 onClick={() => onEvaluate(userText)}
                                 disabled={isEvaluating || userText.trim().length === 0}
@@ -261,6 +266,7 @@ export default function App() {
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isEvaluating, setIsEvaluating] = useState(false);
+    const [evaluationError, setEvaluationError] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
 
     const [quizType, setQuizType] = useState(null); // 'multiple' | 'open-ended' | null
@@ -426,6 +432,7 @@ export default function App() {
     const handleOpenEndedEvaluation = async (userText) => {
         if (!userText.trim()) return;
         setIsEvaluating(true);
+        setEvaluationError("");
         const currentQ = questions[currentQuestionIndex];
 
         try {
@@ -446,7 +453,7 @@ export default function App() {
 
         } catch (err) {
             console.error(err);
-            alert("Erro ao avaliar. Tenta novamente.");
+            setEvaluationError("Erro ao avaliar. Tenta novamente.");
         } finally {
             setIsEvaluating(false);
         }
@@ -688,6 +695,92 @@ export default function App() {
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        );
+    }
+
+    // 3. Playing State
+    if (gameState === 'playing') {
+        const currentQ = questions[currentQuestionIndex];
+        return (
+            <div className="min-h-screen bg-gray-50 p-6 flex flex-col font-sans">
+                <div className="max-w-4xl mx-auto w-full flex justify-between items-center mb-6">
+                    <button
+                        onClick={exitQuiz}
+                        aria-label="Sair do Quiz"
+                        className="flex items-center gap-2 text-gray-500 hover:text-red-600 transition-colors font-bold bg-white px-4 py-2 rounded-full shadow-sm hover:shadow-md"
+                    >
+                        <XCircle size={24} /> Sair
+                    </button>
+                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm text-indigo-600 font-bold border border-indigo-50">
+                        <Flame size={20} className={streak > 2 ? "text-orange-500 animate-pulse" : "text-gray-300"} />
+                        <span>{streak}</span>
+                    </div>
+                </div>
+
+                {quizType === 'multiple' ? (
+                    <QuestionCard
+                        question={currentQ}
+                        index={currentQuestionIndex}
+                        total={questions.length}
+                        onAnswer={handleMultipleChoiceAnswer}
+                        userAnswer={userAnswers[currentQuestionIndex] ?? null}
+                        onNext={nextQuestion}
+                        handleSpeak={handleSpeak}
+                        speakingPart={speakingPart}
+                    />
+                ) : (
+                    <OpenEndedCard
+                        question={currentQ}
+                        index={currentQuestionIndex}
+                        total={questions.length}
+                        onEvaluate={handleOpenEndedEvaluation}
+                        evaluation={openEndedEvaluations[currentQuestionIndex]}
+                        isEvaluating={isEvaluating}
+                        evaluationError={evaluationError}
+                        onNext={nextQuestion}
+                        handleSpeak={handleSpeak}
+                        speakingPart={speakingPart}
+                    />
+                )}
+            </div>
+        );
+    }
+
+    // 4. Results State
+    if (gameState === 'results') {
+        const isWin = score > 0; // Encouraging win condition
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center p-6 relative overflow-hidden font-sans">
+                {isWin && <Confetti />}
+                <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full text-center relative z-10 animate-fade-in">
+                    <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-yellow-400 p-4 rounded-full border-4 border-white shadow-xl">
+                        <Trophy size={48} className="text-white" />
+                    </div>
+
+                    <h2 className="text-3xl font-black text-gray-800 mt-8 mb-2">
+                        {quizType === 'multiple' ? 'Quiz Concluído!' : 'Treino Terminado!'}
+                    </h2>
+                    <p className="text-gray-500 mb-8">Fantástico esforço! 🌟</p>
+
+                    <div className="grid grid-cols-2 gap-4 mb-8">
+                        <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                            <p className="text-3xl font-black text-indigo-600">{score}</p>
+                            <p className="text-xs font-bold uppercase text-indigo-400">Pontos</p>
+                        </div>
+                        <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100">
+                            <p className="text-3xl font-black text-purple-600">+{score * 5} XP</p>
+                            <p className="text-xs font-bold uppercase text-purple-400">Ganhos</p>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => setGameState('intro')}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform transition hover:-translate-y-1 flex items-center justify-center gap-2"
+                    >
+                        <RefreshCw size={20} /> Voltar ao Início
+                    </button>
                 </div>
             </div>
         );
