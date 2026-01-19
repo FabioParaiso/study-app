@@ -1,8 +1,9 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List, Optional
 import os
+import re
 from dotenv import load_dotenv
 from logic import extract_text_from_file, generate_quiz, extract_topics, generate_open_questions, evaluate_answer
 from storage import save_study_material, load_study_material, clear_study_material
@@ -33,6 +34,26 @@ class QuizRequest(BaseModel):
     topics: list[str] = []
     api_key: Optional[str] = None
     quiz_type: str = "multiple"
+
+    @field_validator('topics')
+    @classmethod
+    def validate_topics(cls, v):
+        if len(v) > 20:
+            raise ValueError('Too many topics (max 20)')
+
+        for topic in v:
+            if len(topic) > 100:
+                raise ValueError(f'Topic too long: {topic[:20]}... (max 100 chars)')
+
+            # Security: Prevent Prompt Injection via newlines or special injection characters
+            # We allow standard punctuation but disallow characters that could restructure the prompt or code
+            if re.search(r'[\n\r\t]', topic):
+                raise ValueError('Topics cannot contain control characters (newlines, tabs)')
+
+            if re.search(r'[<>{}\[\]]', topic):
+                raise ValueError('Topics cannot contain special brackets < > { } [ ]')
+
+        return v
 
 @app.get("/health")
 def health_check():
