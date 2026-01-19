@@ -61,6 +61,7 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                     <h2 className="text-2xl font-bold text-gray-800 leading-tight flex-1">{question.question}</h2>
                     <button
                         onClick={() => handleSpeak(question.question, 'question')}
+                        aria-label={speakingPart === 'question' ? "Parar leitura da pergunta" : "Ler pergunta"}
                         className={`p-3 rounded-full transition-all duration-200 flex-shrink-0 shadow-sm ${speakingPart === 'question'
                             ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-300'
                             : 'bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600'
@@ -112,6 +113,7 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                                         <p className="text-gray-700 text-sm leading-relaxed">{question.explanation}</p>
                                         <button
                                             onClick={() => handleSpeak(question.explanation, 'explanation')}
+                                            aria-label={speakingPart === 'explanation' ? "Parar leitura da explicação" : "Ler explicação"}
                                             className={`p-2 rounded-full transition-all duration-200 flex-shrink-0 ml-2 ${speakingPart === 'explanation' ? 'bg-indigo-200 text-indigo-700' : 'bg-white/50 text-indigo-400 hover:text-indigo-600'
                                                 }`}
                                         >
@@ -154,6 +156,7 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
                     <p className="text-gray-800 text-xl font-medium leading-relaxed flex-grow">{question.question}</p>
                     <button
                         onClick={() => handleSpeak(question.question, 'question')}
+                        aria-label={speakingPart === 'question' ? "Parar leitura da pergunta" : "Ler pergunta"}
                         className={`p-3 rounded-full transition-all duration-200 flex-shrink-0 shadow-sm ${speakingPart === 'question'
                             ? 'bg-purple-100 text-purple-600 ring-2 ring-purple-300'
                             : 'bg-gray-100 text-gray-500 hover:bg-purple-50 hover:text-purple-600'
@@ -209,6 +212,7 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
                                         <p className="font-bold mb-2 text-gray-800">Avaliação da Professora:</p>
                                         <button
                                             onClick={() => handleSpeak(evaluation.feedback, 'feedback')}
+                                            aria-label={speakingPart === 'feedback' ? "Parar leitura do feedback" : "Ler feedback"}
                                             className={`p-2 rounded-full transition-all duration-200 flex-shrink-0 ${speakingPart === 'feedback'
                                                 ? 'bg-blue-200 text-blue-700 ring-2 ring-blue-400'
                                                 : 'bg-white/50 text-blue-400 hover:bg-white hover:text-blue-600'
@@ -554,6 +558,7 @@ export default function App() {
                                             type="file"
                                             accept=".pdf,.txt"
                                             onChange={handleFileChange}
+                                            aria-label="Carregar apontamentos (PDF ou TXT)"
                                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                         />
                                     </div>
@@ -586,7 +591,11 @@ export default function App() {
                                                 <p className="text-xs text-indigo-600 font-medium">Material Pronto</p>
                                             </div>
                                         </div>
-                                        <button onClick={clearMaterial} className="text-gray-400 hover:text-red-500 p-2">
+                                        <button
+                                            onClick={clearMaterial}
+                                            aria-label="Remover apontamentos"
+                                            className="text-gray-400 hover:text-red-500 p-2"
+                                        >
                                             <XCircle size={20} />
                                         </button>
                                     </div>
@@ -600,6 +609,7 @@ export default function App() {
                                             <select
                                                 value={selectedTopic}
                                                 onChange={(e) => setSelectedTopic(e.target.value)}
+                                                aria-label="Filtrar por tópico"
                                                 className="w-full p-3 rounded-xl border-2 border-gray-200 bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-medium text-gray-700"
                                             >
                                                 <option value="all">📚 Todos os Tópicos</option>
@@ -682,88 +692,3 @@ export default function App() {
             </div>
         );
     }
-
-    // 2. Play Screen
-    if (gameState === 'playing' && questions.length > 0) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
-                <button onClick={exitQuiz} className="absolute top-6 right-6 text-gray-400 hover:text-red-500 font-bold text-sm bg-white px-4 py-2 rounded-full shadow-sm hover:shadow-md transition-all z-20">
-                    Sair do Teste ✕
-                </button>
-
-                {quizType === 'multiple' ? (
-                    <QuestionCard
-                        question={questions[currentQuestionIndex]}
-                        index={currentQuestionIndex}
-                        total={questions.length}
-                        onAnswer={handleMultipleChoiceAnswer}
-                        userAnswer={userAnswers[currentQuestionIndex] ?? null}
-                        onNext={nextQuestion}
-                        handleSpeak={handleSpeak}
-                        speakingPart={speakingPart}
-                    />
-                ) : (
-                    <OpenEndedCard
-                        question={questions[currentQuestionIndex]}
-                        index={currentQuestionIndex}
-                        total={questions.length}
-                        onEvaluate={handleOpenEndedEvaluation}
-                        evaluation={openEndedEvaluations[currentQuestionIndex] ?? null}
-                        isEvaluating={isEvaluating}
-                        onNext={nextQuestion}
-                        handleSpeak={handleSpeak}
-                        speakingPart={speakingPart}
-                    />
-                )}
-            </div>
-        );
-    }
-
-    // 3. Results Screen
-    if (gameState === 'results') {
-        const isWin = (quizType === 'multiple' && score >= questions.length * 0.7) ||
-            (quizType === 'open-ended' && getOpenEndedAverage() >= 70);
-
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 flex flex-col items-center justify-center p-6 text-center">
-                {isWin && <Confetti />}
-
-                <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-lg w-full transform transition-all animate-bounce-in relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500"></div>
-
-                    <div className="mb-6 inline-block p-6 rounded-full bg-yellow-50 text-6xl shadow-inner">
-                        {isWin ? '🏆' : '📚'}
-                    </div>
-
-                    <h2 className="text-4xl font-extrabold text-gray-800 mb-2">
-                        {isWin ? 'Fantástico!' : 'Bom Esforço!'}
-                    </h2>
-                    <p className="text-gray-500 font-medium mb-8">
-                        {quizType === 'multiple'
-                            ? `Acertaste em ${score} de ${questions.length} perguntas.`
-                            : `A tua média foi de ${getOpenEndedAverage()}% nas respostas.`}
-                    </p>
-
-                    <div className="flex justify-center gap-4 mb-8">
-                        <div className="bg-indigo-50 rounded-2xl p-4 min-w-[100px]">
-                            <p className="text-indigo-600 font-black text-2xl">+{quizType === 'multiple' ? score * 10 : Math.round(getOpenEndedAverage() / 2)}</p>
-                            <p className="text-indigo-400 text-xs font-bold uppercase">XP Ganho</p>
-                        </div>
-                        <div className="bg-purple-50 rounded-2xl p-4 min-w-[100px]">
-                            <p className="text-purple-600 font-black text-2xl">{highScore}</p>
-                            <p className="text-purple-400 text-xs font-bold uppercase">Recorde</p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <button onClick={() => setGameState('intro')} className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center justify-center gap-2">
-                            <RefreshCw size={20} /> Voltar ao Menu
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    return <div>A carregar...</div>;
-}
