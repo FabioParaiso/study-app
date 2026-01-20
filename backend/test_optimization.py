@@ -27,7 +27,9 @@ def test_extract_text_pdf_optimized(mock_pdf_reader):
     mock_pdf_reader.return_value = mock_reader_instance
 
     # DocumentService.extract_text takes bytes
-    text = DocumentService.extract_text(b"fake pdf content", "application/pdf")
+    # Instantiate service
+    service = DocumentService()
+    text = service.extract_text(b"fake pdf content", "application/pdf")
 
     assert text == "Page 1 content. Page 2 content."
     # Verify we actually called extract_text

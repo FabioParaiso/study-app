@@ -1,8 +1,7 @@
 from services.ai_service import AIService
 
 class TopicService:
-    @staticmethod
-    def extract_topics(text: str, ai_service: AIService, existing_topics: list[str]) -> list[str]:
+    def extract_topics(self, text: str, ai_service: AIService, existing_topics: list[str]) -> list[str]:
         """
         Extracts high-level topics using AI, ensuring reuse of existing topics to avoid duplication.
         """

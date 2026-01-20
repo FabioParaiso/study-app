@@ -1,25 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { studyService } from '../services/studyService';
+import React from 'react';
+import { useAnalytics } from '../hooks/useAnalytics';
 import { TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const WeakPointsPanel = ({ studentId }) => {
-    const [points, setPoints] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (studentId) loadPoints();
-    }, [studentId]);
-
-    const loadPoints = async () => {
-        try {
-            const data = await studyService.getWeakPoints(studentId);
-            setPoints(data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { points, loading } = useAnalytics(studentId);
 
     if (loading) return <div className="animate-pulse h-20 bg-gray-100 rounded-xl"></div>;
     if (points.length === 0) return null;

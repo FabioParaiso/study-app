@@ -18,7 +18,9 @@ def test_extract_text_txt():
     # DocumentService.extract_text expects bytes for content (from UploadFile.read())
     # but the service handles decoding.
     # The original test mocked UploadFile, but DocumentService now takes bytes + type
-    text = DocumentService.extract_text(content, "text/plain")
+    # Instantiate service
+    service = DocumentService()
+    text = service.extract_text(content, "text/plain")
     assert text == "Ola mundo"
 
 @patch('services.ai_service.OpenAI')

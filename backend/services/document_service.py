@@ -2,8 +2,7 @@ from pypdf import PdfReader
 from io import BytesIO
 
 class DocumentService:
-    @staticmethod
-    def extract_text(file_content: bytes, file_type: str) -> str:
+    def extract_text(self, file_content: bytes, file_type: str) -> str:
         """Extracts text from PDF or TXT content."""
         try:
             if file_type == "application/pdf":

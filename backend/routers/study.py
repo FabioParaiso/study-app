@@ -46,12 +46,20 @@ def clear_material(student_id: int, repo: MaterialRepository = Depends(get_mater
     repo.clear(student_id)
     return {"status": "cleared"}
 
+def get_document_service():
+    return DocumentService()
+
+def get_topic_service():
+    return TopicService()
+
 @router.post("/upload")
 async def upload_file(
     student_id: int = Form(...),
     file: UploadFile = File(...), 
     repo: MaterialRepository = Depends(get_material_repo),
-    quiz_repo: QuizRepository = Depends(get_quiz_repo)
+    quiz_repo: QuizRepository = Depends(get_quiz_repo),
+    doc_service: DocumentService = Depends(get_document_service),
+    topic_service: TopicService = Depends(get_topic_service)
 ):
     try:
         # Security Check: File Size Limit
@@ -72,7 +80,7 @@ async def upload_file(
                  file_type = 'text/plain'
 
         # 1. Extract Text
-        text = DocumentService.extract_text(content, file_type)
+        text = doc_service.extract_text(content, file_type)
         if not text:
             raise HTTPException(status_code=400, detail="Failed to extract text from file.")
 
@@ -80,7 +88,7 @@ async def upload_file(
         ai_service = get_ai_service()
         existing_topics = quiz_repo.get_all_topics(student_id)
         
-        topics = TopicService.extract_topics(text, ai_service, existing_topics)
+        topics = topic_service.extract_topics(text, ai_service, existing_topics)
 
         # 3. Save
         repo.save(student_id, text, file.filename, topics)
@@ -97,7 +105,8 @@ async def upload_file(
 def analyze_topics_endpoint(
     request: AnalyzeRequest,
     repo: MaterialRepository = Depends(get_material_repo),
-    quiz_repo: QuizRepository = Depends(get_quiz_repo)
+    quiz_repo: QuizRepository = Depends(get_quiz_repo),
+    topic_service: TopicService = Depends(get_topic_service)
 ):
     data = repo.load(request.student_id)
     if not data or not data.get("text"):
@@ -110,7 +119,7 @@ def analyze_topics_endpoint(
     ai_service = get_ai_service()
     existing_topics = quiz_repo.get_all_topics(request.student_id)
 
-    topics = TopicService.extract_topics(text, ai_service, existing_topics)
+    topics = topic_service.extract_topics(text, ai_service, existing_topics)
     
     # Update storage
     repo.save(request.student_id, text, source, topics)
