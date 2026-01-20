@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 client = TestClient(app)
 
 @patch("services.ai_service.AIService.generate_quiz")
-@patch("repositories.study_repository.StudyRepository.load")
+@patch("repositories.material_repository.MaterialRepository.load")
 def test_topic_validation(mock_load, mock_generate):
     """Test the topic validation logic specifically."""
     # Mock loaded material

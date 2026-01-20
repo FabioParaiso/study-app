@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, ArrowRight } from 'lucide-react';
-import { studyService } from '../services/api';
+import { authService } from '../services/authService';
 
 const StudentLogin = ({ onLogin }) => {
     const [name, setName] = useState("");

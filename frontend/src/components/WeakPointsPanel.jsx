@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { studyService } from '../services/api';
+import { studyService } from '../services/studyService';
 import { TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const WeakPointsPanel = ({ studentId }) => {

@@ -2,9 +2,6 @@ from pydantic import BaseModel, field_validator
 from typing import List, Optional
 import re
 
-class StudentCreate(BaseModel):
-    name: str
-
 class QuizRequest(BaseModel):
     text: Optional[str] = None
     use_saved: bool = False

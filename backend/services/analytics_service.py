@@ -1,7 +1,7 @@
-from repositories.study_repository import StudyRepository
+from repositories.quiz_repository import QuizRepository
 
 class AnalyticsService:
-    def __init__(self, repo: StudyRepository):
+    def __init__(self, repo: QuizRepository):
         self.repo = repo
 
     def save_quiz_result(self, student_id: int, score: int, total: int, quiz_type: str, detailed_results: list[dict], material_id: int = None):

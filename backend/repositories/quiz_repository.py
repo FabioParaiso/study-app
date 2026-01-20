@@ -1,75 +1,11 @@
 import json
 from sqlalchemy.orm import Session
-from models import StudyMaterial, QuizResult, QuestionAnalytics, Student
+from models import QuizResult, QuestionAnalytics, StudyMaterial
 
-class StudyRepository:
+class QuizRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    # --- Student Methods ---
-    def get_or_create_student(self, name: str) -> Student:
-        student = self.db.query(Student).filter(Student.name == name).first()
-        if not student:
-            student = Student(name=name)
-            self.db.add(student)
-            self.db.commit()
-            self.db.refresh(student)
-        return student
-
-    def get_student(self, student_id: int) -> Student:
-        return self.db.query(Student).filter(Student.id == student_id).first()
-
-    # --- Material Methods ---
-    def save(self, student_id: int, text: str, source_name: str, topics: list[str] = None) -> StudyMaterial:
-        """Saves or updates the active study material for a specific student."""
-        try:
-            # 1. Clear existing for this student
-            self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).delete()
-            
-            # 2. Add new
-            db_item = StudyMaterial(
-                student_id=student_id,
-                text=text,
-                source=source_name,
-                topics=json.dumps(topics or [])
-            )
-            self.db.add(db_item)
-            self.db.commit()
-            self.db.refresh(db_item)
-            return db_item
-        except Exception as e:
-            print(f"Error saving material: {e}")
-            self.db.rollback()
-            return None
-
-    def load(self, student_id: int) -> dict:
-        """Loads the study material for a specific student."""
-        try:
-            item = self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).first()
-            if item:
-                return {
-                    "id": item.id,
-                    "text": item.text,
-                    "source": item.source,
-                    "topics": json.loads(item.topics) if item.topics else []
-                }
-            return None
-        except Exception as e:
-            print(f"Error loading material: {e}")
-            return None
-
-    def clear(self, student_id: int) -> bool:
-        """Deletes the saved study material for a specific student."""
-        try:
-            self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).delete()
-            self.db.commit()
-            return True
-        except Exception as e:
-            print(f"Error clearing material: {e}")
-            self.db.rollback()
-            return False
-
-    # --- Quiz & Analytics Methods ---
     def save_quiz_result(self, student_id: int, score: int, total: int, quiz_type: str, analytics_data: list[dict], material_id: int = None):
         """Saves quiz result and granular analytics."""
         try:
@@ -149,7 +85,37 @@ class StudyRepository:
             )
             topics = {t[0] for t in analytics_topics if t[0]}
             
-            # Get topics from current material for this student
+            # We also need topics from current material to deduplicate?
+            # Ideally the MaterialRepository should handle material topics.
+            # But the 'Extract Topics' service needs ALL topics (historic + current) to deduplicate.
+            # So this method in QuizRepository might need to call MaterialRepository or the Caller should aggregation.
+            # For strict ISP, QuizRepo should only return Analytics topics. MaterialRepo returns Material topics.
+            # But let's keep it here for simplicity or split it in the Service layer.
+            
+            # Let's check implementing just analytics topics here, and assume the caller merges.
+            # Wait, the original `get_all_topics` merged both.
+            # To follow SRP, QuizRepository should only know about Quiz topics.
+            # MaterialRepository should know about Material topics.
+            # The Service calling this should merge them.
+            
+            # However, I cannot easily inject MaterialRepo into QuizRepo.
+            # So I will query StudyMaterial here JUST for the topics column, strictly speaking it's a cross-concern but acceptable for query speed OR
+            # Better: separate getting material topics to MaterialRepo and merge in TopicService.
+            
+            # For now to minimize change impact, I will query StudyMaterial table directly here as it was before,
+            # but acknowledging it's a slight coupling.
+            
+            # Get topics from analytics
+            analytics_topics = (
+                self.db.query(QuestionAnalytics.topic)
+                .join(QuizResult)
+                .filter(QuizResult.student_id == student_id)
+                .distinct()
+                .all()
+            )
+            topics = {t[0] for t in analytics_topics if t[0]}
+
+            # Get topics from material (Direct DB access)
             materials = self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).all()
             for m in materials:
                 if m.topics:
@@ -160,6 +126,7 @@ class StudyRepository:
                         pass
             
             return sorted(list(topics))
+
         except Exception as e:
             print(f"Error getting all topics: {e}")
             return []

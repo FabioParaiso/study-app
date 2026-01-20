@@ -2,21 +2,25 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 import os
 from database import get_db
-from repositories.study_repository import StudyRepository
+from repositories.material_repository import MaterialRepository
+from repositories.quiz_repository import QuizRepository
 from services.document_service import DocumentService
 from services.topic_service import TopicService
 from services.ai_service import AIService
 from services.quiz_strategies import MultipleChoiceStrategy, OpenEndedStrategy
 from services.analytics_service import AnalyticsService
-from schemas.base import QuizRequest, AnalyzeRequest, EvaluationRequest, QuizResultCreate
+from schemas.study import QuizRequest, AnalyzeRequest, EvaluationRequest, QuizResultCreate
 
 router = APIRouter()
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
 
 # --- Dependencies ---
-def get_repository(db: Session = Depends(get_db)):
-    return StudyRepository(db)
+def get_material_repo(db: Session = Depends(get_db)):
+    return MaterialRepository(db)
+
+def get_quiz_repo(db: Session = Depends(get_db)):
+    return QuizRepository(db)
 
 def get_ai_service(api_key: str = None):
     # If API key is not passed, try env
@@ -26,7 +30,7 @@ def get_ai_service(api_key: str = None):
 # --- Endpoints ---
 
 @router.get("/current-material")
-def get_current_material(student_id: int, repo: StudyRepository = Depends(get_repository)):
+def get_current_material(student_id: int, repo: MaterialRepository = Depends(get_material_repo)):
     data = repo.load(student_id)
     if data:
         return {
@@ -38,7 +42,7 @@ def get_current_material(student_id: int, repo: StudyRepository = Depends(get_re
     return {"has_material": False}
 
 @router.post("/clear-material")
-def clear_material(student_id: int, repo: StudyRepository = Depends(get_repository)):
+def clear_material(student_id: int, repo: MaterialRepository = Depends(get_material_repo)):
     repo.clear(student_id)
     return {"status": "cleared"}
 
@@ -46,7 +50,8 @@ def clear_material(student_id: int, repo: StudyRepository = Depends(get_reposito
 async def upload_file(
     student_id: int = Form(...),
     file: UploadFile = File(...), 
-    repo: StudyRepository = Depends(get_repository)
+    repo: MaterialRepository = Depends(get_material_repo),
+    quiz_repo: QuizRepository = Depends(get_quiz_repo)
 ):
     try:
         # Security Check: File Size Limit
@@ -73,7 +78,7 @@ async def upload_file(
 
         # 2. Extract Topics (AI + Deduplication)
         ai_service = get_ai_service()
-        existing_topics = repo.get_all_topics(student_id)
+        existing_topics = quiz_repo.get_all_topics(student_id)
         
         topics = TopicService.extract_topics(text, ai_service, existing_topics)
 
@@ -91,7 +96,8 @@ async def upload_file(
 @router.post("/analyze-topics")
 def analyze_topics_endpoint(
     request: AnalyzeRequest,
-    repo: StudyRepository = Depends(get_repository)
+    repo: MaterialRepository = Depends(get_material_repo),
+    quiz_repo: QuizRepository = Depends(get_quiz_repo)
 ):
     data = repo.load(request.student_id)
     if not data or not data.get("text"):
@@ -102,7 +108,7 @@ def analyze_topics_endpoint(
     
     # Re-analyze (AI + Deduplication)
     ai_service = get_ai_service()
-    existing_topics = repo.get_all_topics(request.student_id)
+    existing_topics = quiz_repo.get_all_topics(request.student_id)
 
     topics = TopicService.extract_topics(text, ai_service, existing_topics)
     
@@ -114,7 +120,8 @@ def analyze_topics_endpoint(
 @router.post("/generate-quiz")
 def generate_quiz_endpoint(
     request: QuizRequest,
-    repo: StudyRepository = Depends(get_repository)
+    repo: MaterialRepository = Depends(get_material_repo),
+    quiz_repo: QuizRepository = Depends(get_quiz_repo)
 ):
     if not request.student_id:
          raise HTTPException(status_code=400, detail="Student ID is required.")
@@ -132,7 +139,7 @@ def generate_quiz_endpoint(
     # Adaptive Logic
     priority_topics = []
     if request.student_id:
-        analytics_service = AnalyticsService(repo)
+        analytics_service = AnalyticsService(quiz_repo)
         priority_topics = analytics_service.get_adaptive_topics(request.student_id)
 
     target_topics = request.topics
@@ -154,7 +161,7 @@ def generate_quiz_endpoint(
 @router.post("/evaluate-answer")
 def evaluate_answer_endpoint(
     request: EvaluationRequest,
-    repo: StudyRepository = Depends(get_repository)
+    repo: MaterialRepository = Depends(get_material_repo)
 ):
     # Note: request.student_id is required by schema now
     data = repo.load(request.student_id)
@@ -174,11 +181,10 @@ def evaluate_answer_endpoint(
 @router.post("/quiz/result")
 def save_quiz_result(
     result: QuizResultCreate,
-    repo: StudyRepository = Depends(get_repository)
+    repo: QuizRepository = Depends(get_quiz_repo),
+    material_repo: MaterialRepository = Depends(get_material_repo)
 ):
-    current = repo.load(result.student_id) # Should load by student ID to get their current material? 
-    # Actually repo.load takes student_id defaults to None which might be issue if not passed.
-    # repo.load(student_id) loads that student's material.
+    current = material_repo.load(result.student_id) 
     
     material_id = current["id"] if current else None
 
@@ -199,7 +205,7 @@ def save_quiz_result(
 @router.get("/analytics/weak-points")
 def get_weak_points(
     student_id: int,
-    repo: StudyRepository = Depends(get_repository)
+    repo: QuizRepository = Depends(get_quiz_repo)
 ):
     analytics = AnalyticsService(repo)
     return analytics.get_weak_points(student_id)

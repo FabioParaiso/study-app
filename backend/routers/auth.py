@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from repositories.study_repository import StudyRepository
-from schemas.base import StudentCreate
+from repositories.student_repository import StudentRepository
+from schemas.student import StudentCreate
 from database import get_db
 
 router = APIRouter()
 
-def get_repository(db: Session = Depends(get_db)):
-    return StudyRepository(db)
+def get_student_repo(db: Session = Depends(get_db)):
+    return StudentRepository(db)
 
 @router.post("/students")
-def login_student(student_data: StudentCreate, repo: StudyRepository = Depends(get_repository)):
+def login_student(student_data: StudentCreate, repo: StudentRepository = Depends(get_student_repo)):
     student = repo.get_or_create_student(student_data.name)
     return {"id": student.id, "name": student.name}

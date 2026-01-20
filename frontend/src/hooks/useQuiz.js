@@ -1,38 +1,27 @@
 import { useState } from 'react';
-import { studyService } from '../services/api';
+import { studyService } from '../services/studyService';
+import { useQuizEngine } from './useQuizEngine';
 
 export function useQuiz(student) {
-    const [questions, setQuestions] = useState([]);
+    const {
+        questions, gameState, currentQuestionIndex, score, streak, userAnswers,
+        openEndedEvaluations, missedIndices, showFeedback, isEvaluating,
+        setGameState, setIsEvaluating, initQuiz, recordAnswer, recordEvaluation, advanceQuestion,
+        setQuestions
+    } = useQuizEngine();
+
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [quizType, setQuizType] = useState(null);
-    const [gameState, setGameState] = useState('intro'); // 'intro', 'playing', 'results'
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [score, setScore] = useState(0);
-    const [streak, setStreak] = useState(0);
-    const [userAnswers, setUserAnswers] = useState({});
-    const [openEndedEvaluations, setOpenEndedEvaluations] = useState({});
-    const [missedIndices, setMissedIndices] = useState([]);
-    const [isReviewMode, setIsReviewMode] = useState(false);
-
-    // Evaluation state
-    const [isEvaluating, setIsEvaluating] = useState(false);
 
     const startQuiz = async (type, topic) => {
         setLoading(true);
         setErrorMsg("");
         setQuizType(type);
-        setQuestions([]);
-        setUserAnswers({});
-        setOpenEndedEvaluations({});
-        setScore(0);
-        setStreak(0);
-        setCurrentQuestionIndex(0);
 
         try {
             const qs = await studyService.generateQuiz(topic, type, student?.id);
-            setQuestions(qs);
-            setGameState('playing');
+            initQuiz(qs);
         } catch (err) {
             console.error(err);
             const msg = err.response?.data?.detail || "Erro ao gerar o teste.";
@@ -43,41 +32,17 @@ export function useQuiz(student) {
         }
     };
 
-    // Feedback State
-    const [showFeedback, setShowFeedback] = useState(false);
-
     const handleAnswer = (qIndex, oIndex, addXPCallback) => {
         if (userAnswers[qIndex] !== undefined) return;
 
-        setUserAnswers(prev => ({ ...prev, [qIndex]: oIndex }));
         const correct = questions[qIndex].correctIndex;
+        const result = recordAnswer(qIndex, oIndex, oIndex === correct);
 
-        setShowFeedback(true); // Show immediate feedback
-
-        if (oIndex === correct) {
-            setScore(prev => prev + 1);
-            setStreak(prev => prev + 1);
+        if (result === 'correct') {
             addXPCallback(10);
-            playSound('correct');
         } else {
-            setStreak(0);
-            addXPCallback(2); // Effort
-            playSound('incorrect');
-
-            // Track missed question for Review Mode (if not already in review?)
-            // Actually, keep tracking mistakes even in review to loop them? 
-            // For now, just track.
-            setMissedIndices(prev => {
-                if (!prev.includes(qIndex)) return [...prev, qIndex];
-                return prev;
-            });
+            addXPCallback(2);
         }
-    };
-
-    const playSound = (type) => {
-        // Placeholder for sound logic if we add it later
-        // const audio = new Audio(type === 'correct' ? '/sounds/correct.mp3' : '/sounds/wrong.mp3');
-        // audio.play().catch(e => console.log("Audio play failed", e));
     };
 
     const handleEvaluation = async (userText, addXPCallback) => {
@@ -87,10 +52,7 @@ export function useQuiz(student) {
 
         try {
             const evalData = await studyService.evaluateAnswer(currentQ.question, userText, student?.id);
-            setOpenEndedEvaluations(prev => ({
-                ...prev,
-                [currentQuestionIndex]: { ...evalData, userText }
-            }));
+            recordEvaluation(currentQuestionIndex, evalData, userText);
 
             // XP Logic
             const xpEarned = 5 + (evalData.score >= 50 ? 5 : 0) + (evalData.score >= 80 ? 5 : 0);
@@ -105,22 +67,17 @@ export function useQuiz(student) {
     };
 
     const nextQuestion = async (updateHighScoreCallback) => {
-        setShowFeedback(false);
-        if (currentQuestionIndex < questions.length - 1) {
-            setCurrentQuestionIndex(prev => prev + 1);
-        } else {
-            // Quiz Finished
+        const finished = advanceQuestion();
 
-            // 1. Prepare Analytics Data
+        if (finished) {
+            // Submit Analytics
             const detailedResults = questions.map((q, idx) => {
                 const ua = userAnswers[idx];
-                const isCorrect = (ua !== undefined && ua === q.correctIndex);
-                // For open ended, we might need different logic, but assuming multiple choice for now for auto-analytics
-                // Open ended analytics is harder without "correct" boolean from AI immediately.
-                // Let's focus analytics on Multiple Choice for now or use score > 50 as correct.
+                let correct = false;
 
-                let correct = isCorrect;
-                if (quizType === 'open-ended') {
+                if (quizType === 'multiple') {
+                    correct = (ua !== undefined && ua === q.correctIndex);
+                } else {
                     const evalData = openEndedEvaluations[idx];
                     correct = evalData && evalData.score >= 50;
                 }
@@ -131,7 +88,6 @@ export function useQuiz(student) {
                 };
             });
 
-            // 2. Submit to Backend
             try {
                 if (student?.id) {
                     await studyService.submitQuizResult(score, questions.length, quizType, detailedResults, student.id);
@@ -140,26 +96,14 @@ export function useQuiz(student) {
                 console.error("Failed to submit analytics", err);
             }
 
-            // 3. Update High Score (Local)
             if (quizType === 'multiple' && updateHighScoreCallback) {
                 updateHighScoreCallback(score);
             }
-            setGameState('results');
         }
     };
 
     const exitQuiz = () => {
-        // If we are already at results, no need to confirm losing progress
-        if (gameState === 'results') {
-            setGameState('intro');
-            setQuestions([]);
-            return;
-        }
-
-        if (confirm("Tens a certeza que queres sair? Vais perder o progresso atual.")) {
-            setGameState('intro');
-            setQuestions([]);
-        }
+        setGameState('intro');
     };
 
     const getOpenEndedAverage = () => {
@@ -171,25 +115,14 @@ export function useQuiz(student) {
 
     const startReviewMode = () => {
         if (missedIndices.length === 0) return;
-
-        // Filter questions to only missed ones
         const reviewQuestions = questions.filter((_, idx) => missedIndices.includes(idx));
-
-        setQuestions(reviewQuestions);
-        setMissedIndices([]); // Reset for the review session
-        setUserAnswers({});
-        setScore(0);
-        setStreak(0);
-        setCurrentQuestionIndex(0);
-        setIsReviewMode(true);
-        setGameState('playing');
-        setShowFeedback(false);
+        initQuiz(reviewQuestions);
     };
 
     return {
         questions, loading, errorMsg, setErrorMsg, quizType, gameState, setGameState,
         currentQuestionIndex, score, streak, userAnswers, openEndedEvaluations, isEvaluating, showFeedback,
-        missedIndices, isReviewMode,
+        missedIndices,
         startQuiz, handleAnswer, handleEvaluation, nextQuestion, exitQuiz, getOpenEndedAverage, startReviewMode
     };
 }
