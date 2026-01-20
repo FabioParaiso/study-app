@@ -4,8 +4,8 @@ from unittest.mock import patch, MagicMock
 
 client = TestClient(app)
 
-@patch("main.generate_quiz")
-@patch("main.load_study_material")
+@patch("services.ai_service.AIService.generate_quiz")
+@patch("repositories.study_repository.StudyRepository.load")
 def test_topic_validation(mock_load, mock_generate):
     """Test the topic validation logic specifically."""
     # Mock loaded material
@@ -20,7 +20,8 @@ def test_topic_validation(mock_load, mock_generate):
         "use_saved": True,
         "topics": ["A" * 101],
         "quiz_type": "multiple",
-        "api_key": "sk-dummy"
+        "api_key": "sk-dummy",
+        "student_id": 1
     }
     response = client.post("/generate-quiz", json=payload)
     assert response.status_code == 422

@@ -27,14 +27,16 @@ def test_generate_quiz_success(mock_openai):
     # OpenAI response structure
     mock_response.choices = [MagicMock()]
     mock_response.choices[0].message.content = '''
-    [
-        {
-            "question": "Questao 1",
-            "options": ["A", "B", "C", "D"],
-            "correctIndex": 0,
-            "explanation": "Porque sim."
-        }
-    ]
+    {
+        "questions": [
+            {
+                "question": "Questao 1",
+                "options": ["A", "B", "C", "D"],
+                "correctIndex": 0,
+                "explanation": "Porque sim."
+            }
+        ]
+    }
     '''
     mock_client.chat.completions.create.return_value = mock_response
     mock_openai.return_value = mock_client

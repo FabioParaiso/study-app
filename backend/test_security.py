@@ -9,7 +9,7 @@ def test_upload_small_file():
     """Test that a small file upload works as expected."""
     content = b"Hello world"
     files = {"file": ("test.txt", content, "text/plain")}
-    response = client.post("/upload", files=files)
+    response = client.post("/upload", files=files, data={"student_id": 1})
     assert response.status_code == 200
     assert response.json()["text"] == "Hello world"
 
@@ -21,7 +21,7 @@ def test_upload_too_large_file():
     large_content = b"x" * (10 * 1024 * 1024 + 100)
     files = {"file": ("large.txt", large_content, "text/plain")}
 
-    response = client.post("/upload", files=files)
+    response = client.post("/upload", files=files, data={"student_id": 1})
 
     # Currently this will likely pass (200) or fail with 500 if memory is issue,
     # but we want 413.
@@ -37,7 +37,7 @@ def test_upload_exception_handling(mock_pdf_reader):
     # Upload a PDF to trigger the mocked PDF processing
     files = {"file": ("test.pdf", b"%PDF-1.4...", "application/pdf")}
 
-    response = client.post("/upload", files=files)
+    response = client.post("/upload", files=files, data={"student_id": 1})
 
     # DocumentService catches the exception and returns None
     # Main.py sees None and raises 400 "Failed to extract text from file."
