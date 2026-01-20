@@ -160,8 +160,14 @@ async def upload_file(
         if not text:
             raise HTTPException(status_code=400, detail="Failed to extract text from file.")
 
-        # 2. Extract Topics
-        topics = TopicService.extract_topics(text)
+        # 2. Extract Topics (AI + Deduplication)
+        # Note: We prioritize headers but now use LLM to semantic deduplication
+        
+        # Get services
+        ai_service = get_ai_service()
+        existing_topics = repo.get_all_topics()
+        
+        topics = TopicService.extract_topics(text, ai_service, existing_topics)
 
         # 3. Save
         repo.save(text, file.filename, topics)
@@ -186,8 +192,11 @@ def analyze_topics_endpoint(
     text = data.get("text")
     source = data.get("source")
     
-    # Re-analyze
-    topics = TopicService.extract_topics(text)
+    # Re-analyze (AI + Deduplication)
+    ai_service = get_ai_service()
+    existing_topics = repo.get_all_topics()
+
+    topics = TopicService.extract_topics(text, ai_service, existing_topics)
     
     # Update storage
     repo.save(text, source, topics)

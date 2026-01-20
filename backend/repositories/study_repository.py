@@ -134,3 +134,25 @@ class StudyRepository:
         except Exception as e:
             print(f"Error calculating analytics: {e}")
             return []
+
+    def get_all_topics(self) -> list[str]:
+        """Returns a list of all unique topics used in analytics and materials."""
+        try:
+            # Get topics from analytics
+            analytics_topics = self.db.query(QuestionAnalytics.topic).distinct().all()
+            topics = {t[0] for t in analytics_topics if t[0]}
+            
+            # Get topics from current material
+            materials = self.db.query(StudyMaterial).all()
+            for m in materials:
+                if m.topics:
+                    try:
+                        t_list = json.loads(m.topics)
+                        topics.update(t_list)
+                    except:
+                        pass
+            
+            return sorted(list(topics))
+        except Exception as e:
+            print(f"Error getting all topics: {e}")
+            return []
