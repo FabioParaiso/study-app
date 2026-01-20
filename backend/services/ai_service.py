@@ -11,7 +11,7 @@ class AIService:
         topic_instruction = ""
         if topics and len(topics) > 0:
             topic_str = ", ".join(topics)
-            topic_instruction = f"Foca as perguntas EXCLUSIVAMENTE nestes tópicos: {topic_str}."
+            topic_instruction = f"INSTRUÇÃO CRÍTICA: O utilizador selecionou TÓPICOS ESPECÍFICOS: {topic_str}. Tens de gerar perguntas APENAS relacionadas com estes tópicos. Ignora todas as outras secções do texto."
 
         priority_instruction = ""
         if priority_topics and len(priority_topics) > 0:
@@ -76,7 +76,7 @@ class AIService:
         topic_instruction = ""
         if topics and len(topics) > 0:
             topic_str = ", ".join(topics)
-            topic_instruction = f"Foca as perguntas nestes tópicos: {topic_str}."
+            topic_instruction = f"INSTRUÇÃO CRÍTICA: O utilizador selecionou TÓPICOS ESPECÍFICOS: {topic_str}. Tens de gerar perguntas APENAS relacionadas com estes tópicos. Ignora todas as outras secções do texto."
 
         prompt = f"""
         Atua como um professor experiente. Cria um mini-teste de 5 perguntas de resposta aberta.

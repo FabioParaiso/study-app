@@ -211,7 +211,10 @@ const IntroScreen = ({
                         <h3 className="font-bold text-gray-700 text-xl">Nível {LEVELS.indexOf(level) + 1}</h3>
                         <p className="text-gray-400 font-bold uppercase text-xs mb-4">{level.title}</p>
                         <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
-                            <div className="bg-yellow-400 h-full rounded-full w-3/4"></div>
+                            <div
+                                className="bg-yellow-400 h-full rounded-full transition-all duration-500"
+                                style={{ width: `${nextLevel ? Math.max(0, Math.min(100, ((totalXP - level.min) / (nextLevel.min - level.min)) * 100)) : 100}%` }}
+                            ></div>
                         </div>
                         <p className="mt-2 font-bold text-yellow-500">{totalXP} XP</p>
                     </div>

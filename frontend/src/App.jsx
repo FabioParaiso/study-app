@@ -8,6 +8,7 @@ import OpenEndedCard from './components/OpenEndedCard';
 import ResultsScreen from './components/ResultsScreen';
 import LoadingOverlay from './components/LoadingOverlay';
 import StudentLogin from './components/StudentLogin';
+import { X } from 'lucide-react';
 
 // Helper for TTS
 const cleanTextForSpeech = (text) => {
@@ -193,12 +194,26 @@ export default function App() {
 
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
-                <button onClick={exitQuiz} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 font-bold text-sm z-50">
-                    Sair
-                </button>
+                {/* Header for Quiz Mode */}
+                <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-50">
+                    <button
+                        onClick={() => {
+                            if (window.confirm("Tens a certeza que queres sair? Vais perder o progresso atual.")) {
+                                exitQuiz();
+                            }
+                        }}
+                        className="p-3 rounded-2xl bg-white border-b-4 border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-red-500 hover:border-red-200 transition-all active:border-b-0 active:translate-y-1"
+                        aria-label="Sair"
+                    >
+                        <X size={24} strokeWidth={3} />
+                    </button>
+
+                    {/* Progress Bar Placeholder could go here if we wanted to move it out of cards */}
+                </div>
 
                 {quizType === 'multiple' ? (
                     <QuestionCard
+                        key={currentQuestionIndex}
                         question={currentQ}
                         index={currentQuestionIndex}
                         total={questions.length}
@@ -211,6 +226,7 @@ export default function App() {
                     />
                 ) : (
                     <OpenEndedCard
+                        key={currentQuestionIndex}
                         question={currentQ}
                         index={currentQuestionIndex}
                         total={questions.length}
