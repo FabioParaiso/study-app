@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from logic import extract_text_from_file
+from services.document_service import DocumentService
 
 class MockUploadedFile:
     def __init__(self, content, file_type):
@@ -10,7 +10,7 @@ class MockUploadedFile:
     def getvalue(self):
         return self.content
 
-@patch('logic.PdfReader')
+@patch('services.document_service.PdfReader')
 def test_extract_text_pdf_optimized(mock_pdf_reader):
     """
     Verify that PDF text extraction correctly joins text from multiple pages.
@@ -26,8 +26,8 @@ def test_extract_text_pdf_optimized(mock_pdf_reader):
     mock_reader_instance.pages = [page1, page2]
     mock_pdf_reader.return_value = mock_reader_instance
 
-    file = MockUploadedFile(b"fake pdf content", "application/pdf")
-    text = extract_text_from_file(file)
+    # DocumentService.extract_text takes bytes
+    text = DocumentService.extract_text(b"fake pdf content", "application/pdf")
 
     assert text == "Page 1 content. Page 2 content."
     # Verify we actually called extract_text

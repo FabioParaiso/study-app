@@ -1,16 +1,30 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os
 from dotenv import load_dotenv
-from logic import extract_text_from_file, generate_quiz, extract_topics, generate_open_questions, evaluate_answer
-from storage import save_study_material, load_study_material, clear_study_material
-from io import BytesIO
-from pypdf import PdfReader
-import json
-
 from pathlib import Path
+from sqlalchemy.orm import Session
+
+# Dependency Injection Imports
+import sys
+from pathlib import Path
+
+# Add backend directory to sys.path to allow imports from 'services'
+sys.path.append(str(Path(__file__).parent))
+
+from services.document_service import DocumentService
+from services.topic_service import TopicService
+from services.ai_service import AIService
+from services.analytics_service import AnalyticsService
+from repositories.study_repository import StudyRepository
+from database import get_db, engine
+import models
+
+# Create Tables
+models.Base.metadata.create_all(bind=engine)
+
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
@@ -27,36 +41,81 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Dependencies ---
+def get_repository(db: Session = Depends(get_db)):
+    return StudyRepository(db)
+
+def get_ai_service(api_key: str = None):
+    # If API key is not passed, try env
+    key = api_key or os.getenv("OPENAI_API_KEY")
+    return AIService(key)
+
+# --- Models ---
+class StudentCreate(BaseModel):
+    name: str
+
 class QuizRequest(BaseModel):
     text: Optional[str] = None
     use_saved: bool = False
     topics: list[str] = []
     api_key: Optional[str] = None
     quiz_type: str = "multiple"
+    student_id: Optional[int] = None
+
+class AnalyticsItem(BaseModel):
+    topic: str
+    is_correct: bool
+
+class QuizResultCreate(BaseModel):
+    score: int
+    total_questions: int
+    quiz_type: str
+    detailed_results: List[AnalyticsItem]
+    student_id: int
+
+class AnalyzeRequest(BaseModel):
+    pass
+
+class EvaluationRequest(BaseModel):
+    question: str
+    user_answer: str
+    api_key: Optional[str] = None
+
+# --- Endpoints ---
 
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
+# Student Endpoints
+@app.post("/students")
+def login_student(student_data: StudentCreate, repo: StudyRepository = Depends(get_repository)):
+    student = repo.get_or_create_student(student_data.name)
+    return {"id": student.id, "name": student.name}
+
+# Study Material Endpoints
 @app.get("/current-material")
-def get_current_material():
-    data = load_study_material()
+def get_current_material(repo: StudyRepository = Depends(get_repository)):
+    data = repo.load()
     if data:
         return {
             "has_material": True, 
             "source": data.get("source"), 
-            "preview": data.get("text")[:200],
+            "preview": data.get("text")[:200] if data.get("text") else "",
             "topics": data.get("topics", [])
         }
     return {"has_material": False}
 
 @app.post("/clear-material")
-def clear_material():
-    clear_study_material()
+def clear_material(repo: StudyRepository = Depends(get_repository)):
+    repo.clear()
     return {"status": "cleared"}
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(
+    file: UploadFile = File(...), 
+    repo: StudyRepository = Depends(get_repository)
+):
     try:
         # Security Check: File Size Limit
         file.file.seek(0, 2)
@@ -68,29 +127,23 @@ async def upload_file(file: UploadFile = File(...)):
 
         content = await file.read()
         file_type = file.content_type
-        text = ""
-
+        
         if not file_type:
              if file.filename.endswith('.pdf'):
                  file_type = 'application/pdf'
              else:
                  file_type = 'text/plain'
 
-        if file_type == 'application/pdf':
-             reader = PdfReader(BytesIO(content))
-             # Optimization: Use list accumulation instead of string concatenation
-             text_parts = []
-             for page in reader.pages:
-                 text_parts.append(page.extract_text())
-             text = "".join(text_parts)
-        else:
-            text = content.decode("utf-8")
-        
-        # Extract topics (Heuristic - no key needed)
-        topics = extract_topics(text)
+        # 1. Extract Text
+        text = DocumentService.extract_text(content, file_type)
+        if not text:
+            raise HTTPException(status_code=400, detail="Failed to extract text from file.")
 
-        # Save to storage with topics
-        save_study_material(text, file.filename, topics)
+        # 2. Extract Topics
+        topics = TopicService.extract_topics(text)
+
+        # 3. Save
+        repo.save(text, file.filename, topics)
         
         return {"text": text, "filename": file.filename, "topics": topics}
 
@@ -100,66 +153,111 @@ async def upload_file(file: UploadFile = File(...)):
         print(f"Error processing upload: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-class AnalyzeRequest(BaseModel):
-    pass # No fields needed now
-
 @app.post("/analyze-topics")
-def analyze_topics_endpoint(request: AnalyzeRequest):
-    data = load_study_material()
+def analyze_topics_endpoint(
+    request: AnalyzeRequest,
+    repo: StudyRepository = Depends(get_repository)
+):
+    data = repo.load()
     if not data or not data.get("text"):
         raise HTTPException(status_code=400, detail="No material found to analyze")
 
     text = data.get("text")
     source = data.get("source")
     
-    # Heuristic extraction
-    topics = extract_topics(text)
+    # Re-analyze
+    topics = TopicService.extract_topics(text)
     
     # Update storage
-    save_study_material(text, source, topics)
+    repo.save(text, source, topics)
     
     return {"topics": topics}
 
 @app.post("/generate-quiz")
-def generate_quiz_endpoint(request: QuizRequest):
-    data = load_study_material()
+def generate_quiz_endpoint(
+    request: QuizRequest,
+    repo: StudyRepository = Depends(get_repository)
+):
+    data = repo.load()
     if not data or not data.get("text"):
         raise HTTPException(status_code=400, detail="No material found. Upload a file first.")
     
     text = data.get("text")
     
-    # Priority: Request API Key > Env API Key
-    api_key = request.api_key or os.getenv("OPENAI_API_KEY")
-    
-    if not api_key:
+    # Initialize AI Service with key
+    ai_service = get_ai_service(request.api_key)
+    if not ai_service.client:
          raise HTTPException(status_code=400, detail="API Key is required for quiz generation.")
 
+    # Adaptive Logic: If student_id is provided, prioritize weak points
+    priority_topics = []
+    if request.student_id:
+        analytics_service = AnalyticsService(repo)
+        priority_topics = analytics_service.get_adaptive_topics(request.student_id)
+
+    # Combine request topics with priority topics
+    # Logic: If request topics are specified (e.g. by filter), use them.
+    # If "All" (empty list), use adaptive priority topics + general.
+    target_topics = request.topics
+    if not target_topics and priority_topics:
+        target_topics = priority_topics
+
     if request.quiz_type == "open-ended":
-        questions = generate_open_questions(text, api_key, request.topics)
+        questions = ai_service.generate_open_questions(text, target_topics)
     else:
-        questions = generate_quiz(text, api_key, request.topics)
+        questions = ai_service.generate_quiz(text, target_topics)
     
     if not questions:
         raise HTTPException(status_code=500, detail="Failed to generate quiz. Please try again.")
         
     return {"questions": questions}
 
-class EvaluationRequest(BaseModel):
-    question: str
-    user_answer: str
-    api_key: Optional[str] = None
-
 @app.post("/evaluate-answer")
-def evaluate_answer_endpoint(request: EvaluationRequest):
-    data = load_study_material()
+def evaluate_answer_endpoint(
+    request: EvaluationRequest,
+    repo: StudyRepository = Depends(get_repository)
+):
+    data = repo.load()
     if not data or not data.get("text"):
         raise HTTPException(status_code=400, detail="No material found.")
         
     text = data.get("text")
-    api_key = request.api_key or os.getenv("OPENAI_API_KEY")
-
-    if not api_key:
+    
+    ai_service = get_ai_service(request.api_key)
+    if not ai_service.client:
          raise HTTPException(status_code=400, detail="API Key is required for evaluation.")
          
-    result = evaluate_answer(text, request.question, request.user_answer, api_key)
+    result = ai_service.evaluate_answer(text, request.question, request.user_answer)
     return result
+
+@app.post("/quiz/result")
+def save_quiz_result(
+    result: QuizResultCreate,
+    repo: StudyRepository = Depends(get_repository)
+):
+    # Determine current material ID if possible
+    current = repo.load()
+    material_id = current["id"] if current else None
+
+    # Convert Pydantic items to dicts
+    analytics_data = [item.dict() for item in result.detailed_results]
+
+    success = repo.save_quiz_result(
+        student_id=result.student_id,
+        score=result.score,
+        total=result.total_questions,
+        quiz_type=result.quiz_type,
+        analytics_data=analytics_data,
+        material_id=material_id
+    )
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save results")
+    return {"status": "saved"}
+
+@app.get("/analytics/weak-points")
+def get_weak_points(
+    student_id: int,
+    repo: StudyRepository = Depends(get_repository)
+):
+    analytics = AnalyticsService(repo)
+    return analytics.get_weak_points(student_id)
