@@ -219,6 +219,8 @@ export default function App() {
         );
     }
 
+    const handleRestart = () => startQuiz(quizType, selectedTopic);
+
     if (gameState === 'results') {
         return (
             <ResultsScreen
@@ -229,6 +231,7 @@ export default function App() {
                 quizType={quizType}
                 getOpenEndedAverage={getOpenEndedAverage}
                 exitQuiz={exitQuiz}
+                onRestart={handleRestart}
                 numMissed={missedIndices ? missedIndices.length : 0}
                 onReview={startReviewMode}
             />

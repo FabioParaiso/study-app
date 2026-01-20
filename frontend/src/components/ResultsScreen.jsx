@@ -4,7 +4,7 @@ import Confetti from '../Confetti';
 
 const ResultsScreen = ({
     score, totalQuestions, xpEarned, streak, quizType,
-    getOpenEndedAverage, exitQuiz, numMissed, onReview
+    getOpenEndedAverage, exitQuiz, numMissed, onReview, onRestart
 }) => {
     const isMultiple = quizType === 'multiple';
     const finalScore = isMultiple ? Math.round((score / totalQuestions) * 100) : getOpenEndedAverage();
@@ -72,11 +72,19 @@ const ResultsScreen = ({
                         </button>
                     )}
 
+                    {/* Restart Button */}
+                    <button
+                        onClick={onRestart}
+                        className="w-full bg-yellow-400 border-b-4 border-yellow-600 hover:bg-yellow-500 active:border-b-0 active:translate-y-1 text-white font-bold py-4 rounded-2xl uppercase tracking-wider transition-all flex items-center justify-center gap-3 text-lg"
+                    >
+                        <RefreshCw size={24} /> NOVO TESTE
+                    </button>
+
                     <button
                         onClick={exitQuiz}
                         className="w-full bg-duo-green border-b-4 border-duo-green-dark hover:bg-[#61E002] active:border-b-0 active:translate-y-1 text-white font-bold py-4 rounded-2xl uppercase tracking-wider transition-all flex items-center justify-center gap-3 text-lg"
                     >
-                        CONTINUAR
+                        MENU PRINCIPAL
                     </button>
                 </div>
             </div>

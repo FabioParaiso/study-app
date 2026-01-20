@@ -149,6 +149,13 @@ export function useQuiz(student) {
     };
 
     const exitQuiz = () => {
+        // If we are already at results, no need to confirm losing progress
+        if (gameState === 'results') {
+            setGameState('intro');
+            setQuestions([]);
+            return;
+        }
+
         if (confirm("Tens a certeza que queres sair? Vais perder o progresso atual.")) {
             setGameState('intro');
             setQuestions([]);
