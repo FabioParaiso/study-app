@@ -1,6 +1,6 @@
 import React from 'react';
 import { Award, RefreshCw, RotateCcw, CheckCircle } from 'lucide-react';
-import Confetti from '../Confetti';
+import Confetti from '../components/UI/Confetti';
 
 const ResultsScreen = ({
     score, totalQuestions, xpEarned, streak, quizType,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { QuestionFactory } from './QuestionFactory';
+import { QuestionFactory } from '../components/Quiz/QuestionFactory';
 
 const QuizPage = ({
     questions,

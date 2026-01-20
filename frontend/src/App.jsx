@@ -5,11 +5,11 @@ import { useStudent } from './hooks/useStudent';
 import { useMaterial } from './hooks/useMaterial';
 import { useTTS } from './hooks/useTTS';
 
-import IntroScreen from './components/IntroScreen';
-import ResultsScreen from './components/ResultsScreen';
+import IntroPage from './pages/IntroPage';
+import ResultsPage from './pages/ResultsPage';
 import LoadingOverlay from './components/LoadingOverlay';
-import StudentLogin from './components/StudentLogin';
-import QuizPage from './components/Quiz/QuizPage';
+import LoginPage from './pages/LoginPage';
+import QuizPage from './pages/QuizPage';
 
 export default function App() {
     // --- Custom Hooks (SRP) ---
@@ -45,12 +45,12 @@ export default function App() {
     if (loading) return <LoadingOverlay />;
 
     if (!student) {
-        return <StudentLogin onLogin={setStudent} />;
+        return <LoginPage onLogin={setStudent} />;
     }
 
     if (gameState === 'intro') {
         return (
-            <IntroScreen
+            <IntroPage
                 student={student}
                 onLogout={handleLogout}
                 file={file}
@@ -100,7 +100,7 @@ export default function App() {
 
     if (gameState === 'results') {
         return (
-            <ResultsScreen
+            <ResultsPage
                 score={score}
                 totalQuestions={questions.length}
                 xpEarned={0}
