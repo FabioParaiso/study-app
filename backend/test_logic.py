@@ -1,7 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from services.document_service import DocumentService
+from services.document_service import DocumentService
 from services.ai_service import AIService
+from services.quiz_strategies import MultipleChoiceStrategy
 
 class MockUploadedFile:
     def __init__(self, content, file_type):
@@ -42,7 +44,8 @@ def test_generate_quiz_success(mock_openai):
     mock_openai.return_value = mock_client
 
     service = AIService("fake_key")
-    quiz = service.generate_quiz("Texto de teste")
+    strategy = MultipleChoiceStrategy()
+    quiz = service.generate_quiz(strategy, "Texto de teste")
 
     assert len(quiz) == 1
     assert quiz[0]['question'] == "Questao 1"
@@ -50,5 +53,6 @@ def test_generate_quiz_success(mock_openai):
 
 def test_generate_quiz_no_key():
     service = AIService(None)
-    quiz = service.generate_quiz("Texto")
+    strategy = MultipleChoiceStrategy()
+    quiz = service.generate_quiz(strategy, "Texto")
     assert quiz is None

@@ -6,6 +6,7 @@ from repositories.study_repository import StudyRepository
 from services.document_service import DocumentService
 from services.topic_service import TopicService
 from services.ai_service import AIService
+from services.quiz_strategies import MultipleChoiceStrategy, OpenEndedStrategy
 from services.analytics_service import AnalyticsService
 from schemas.base import QuizRequest, AnalyzeRequest, EvaluationRequest, QuizResultCreate
 
@@ -139,9 +140,11 @@ def generate_quiz_endpoint(
         target_topics = priority_topics
 
     if request.quiz_type == "open-ended":
-        questions = ai_service.generate_open_questions(text, target_topics)
+        strategy = OpenEndedStrategy()
     else:
-        questions = ai_service.generate_quiz(text, target_topics)
+        strategy = MultipleChoiceStrategy()
+
+    questions = ai_service.generate_quiz(strategy, text, target_topics, priority_topics)
     
     if not questions:
         raise HTTPException(status_code=500, detail="Failed to generate quiz. Please try again.")
