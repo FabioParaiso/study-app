@@ -1,6 +1,6 @@
 import React from 'react';
-import QuestionCard from '../QuestionCard';
-import OpenEndedCard from '../OpenEndedCard';
+import QuestionCard from './QuestionCard';
+import OpenEndedCard from './OpenEndedCard';
 
 export const QuestionFactory = ({
     type,
