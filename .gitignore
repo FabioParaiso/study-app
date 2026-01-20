@@ -9,6 +9,8 @@ venv/
 # Data
 current_study_data.json
 backend/current_study_data.json
+backend/study_app.db
+study_app.db
 
 # Frontend
 node_modules/

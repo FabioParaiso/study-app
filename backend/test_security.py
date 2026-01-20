@@ -46,3 +46,16 @@ def test_upload_exception_handling(mock_pdf_reader):
     # Ensure sensitive info is NOT leaked
     assert "192.168.1.5" not in response.text
     assert "Failed to extract text" in response.json()["detail"]
+
+def test_cors_restrictions():
+    """Test that CORS policies are enforced."""
+    # 1. Disallowed Origin
+    response = client.get("/health", headers={"Origin": "http://evil.com"})
+    assert response.status_code == 200 # Request succeeds, but CORS header missing
+    assert "access-control-allow-origin" not in response.headers
+
+    # 2. Allowed Origin
+    allowed = "http://localhost:5173"
+    response = client.get("/health", headers={"Origin": allowed})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == allowed
