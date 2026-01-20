@@ -63,6 +63,24 @@ class QuizRequest(BaseModel):
     quiz_type: str = "multiple"
     student_id: Optional[int] = None
 
+    @field_validator('topics')
+    @classmethod
+    def validate_topics(cls, v):
+        if len(v) > 20:
+            raise ValueError('Too many topics (max 20)')
+
+        for topic in v:
+            if len(topic) > 100:
+                raise ValueError(f'Topic too long: {topic[:20]}... (max 100 chars)')
+
+            if re.search(r'[\n\r\t]', topic):
+                raise ValueError('Topics cannot contain control characters (newlines, tabs)')
+
+            if re.search(r'[<>{}\[\]]', topic):
+                raise ValueError('Topics cannot contain special brackets < > { } [ ]')
+
+        return v
+
 class AnalyticsItem(BaseModel):
     topic: str
     is_correct: bool
@@ -75,34 +93,17 @@ class QuizResultCreate(BaseModel):
     student_id: int
 
 class AnalyzeRequest(BaseModel):
-    pass
+    student_id: int
 
 class EvaluationRequest(BaseModel):
+    student_id: int
     question: str
     user_answer: str
     api_key: Optional[str] = None
 
 # --- Endpoints ---
 
-    @field_validator('topics')
-    @classmethod
-    def validate_topics(cls, v):
-        if len(v) > 20:
-            raise ValueError('Too many topics (max 20)')
 
-        for topic in v:
-            if len(topic) > 100:
-                raise ValueError(f'Topic too long: {topic[:20]}... (max 100 chars)')
-
-            # Security: Prevent Prompt Injection via newlines or special injection characters
-            # We allow standard punctuation but disallow characters that could restructure the prompt or code
-            if re.search(r'[\n\r\t]', topic):
-                raise ValueError('Topics cannot contain control characters (newlines, tabs)')
-
-            if re.search(r'[<>{}\[\]]', topic):
-                raise ValueError('Topics cannot contain special brackets < > { } [ ]')
-
-        return v
 
 @app.get("/health")
 def health_check():
@@ -116,8 +117,8 @@ def login_student(student_data: StudentCreate, repo: StudyRepository = Depends(g
 
 # Study Material Endpoints
 @app.get("/current-material")
-def get_current_material(repo: StudyRepository = Depends(get_repository)):
-    data = repo.load()
+def get_current_material(student_id: int, repo: StudyRepository = Depends(get_repository)):
+    data = repo.load(student_id)
     if data:
         return {
             "has_material": True, 
@@ -128,12 +129,13 @@ def get_current_material(repo: StudyRepository = Depends(get_repository)):
     return {"has_material": False}
 
 @app.post("/clear-material")
-def clear_material(repo: StudyRepository = Depends(get_repository)):
-    repo.clear()
+def clear_material(student_id: int, repo: StudyRepository = Depends(get_repository)):
+    repo.clear(student_id)
     return {"status": "cleared"}
 
 @app.post("/upload")
 async def upload_file(
+    student_id: int = Form(...),
     file: UploadFile = File(...), 
     repo: StudyRepository = Depends(get_repository)
 ):
@@ -165,12 +167,12 @@ async def upload_file(
         
         # Get services
         ai_service = get_ai_service()
-        existing_topics = repo.get_all_topics()
+        existing_topics = repo.get_all_topics(student_id)
         
         topics = TopicService.extract_topics(text, ai_service, existing_topics)
 
         # 3. Save
-        repo.save(text, file.filename, topics)
+        repo.save(student_id, text, file.filename, topics)
         
         return {"text": text, "filename": file.filename, "topics": topics}
 
@@ -185,7 +187,7 @@ def analyze_topics_endpoint(
     request: AnalyzeRequest,
     repo: StudyRepository = Depends(get_repository)
 ):
-    data = repo.load()
+    data = repo.load(request.student_id)
     if not data or not data.get("text"):
         raise HTTPException(status_code=400, detail="No material found to analyze")
 
@@ -194,12 +196,12 @@ def analyze_topics_endpoint(
     
     # Re-analyze (AI + Deduplication)
     ai_service = get_ai_service()
-    existing_topics = repo.get_all_topics()
+    existing_topics = repo.get_all_topics(request.student_id)
 
     topics = TopicService.extract_topics(text, ai_service, existing_topics)
     
     # Update storage
-    repo.save(text, source, topics)
+    repo.save(request.student_id, text, source, topics)
     
     return {"topics": topics}
 
@@ -208,7 +210,11 @@ def generate_quiz_endpoint(
     request: QuizRequest,
     repo: StudyRepository = Depends(get_repository)
 ):
-    data = repo.load()
+    # Ensure student_id is present (it should be optional in model but logic requires it now for context)
+    if not request.student_id:
+         raise HTTPException(status_code=400, detail="Student ID is required.")
+
+    data = repo.load(request.student_id)
     if not data or not data.get("text"):
         raise HTTPException(status_code=400, detail="No material found. Upload a file first.")
     
@@ -247,7 +253,21 @@ def evaluate_answer_endpoint(
     request: EvaluationRequest,
     repo: StudyRepository = Depends(get_repository)
 ):
-    data = repo.load()
+    # Determine student context (add student_id to EvaluationRequest model if not there, wait, I need to check model again or just add it)
+    # The user is logged in on frontend, so we expect student_id.
+    
+    # Correction: I need to adding student_id to EvaluationRequest model first, but I can't do two edits in one replace.
+    # I'll assuming I will add it or have added it. Actually I haven't added it to EvaluationRequest yet.
+    # Let me do that in a separate step or just rely on an update.
+    # For now, let's look at the implementation assuming request.student_id exists.
+    
+    if hasattr(request, 'student_id') and request.student_id:
+         data = repo.load(request.student_id)
+    else:
+         # Fallback or Error
+         # Since I control the model, I'll enforce it.
+         raise HTTPException(status_code=400, detail="Student ID required for evaluation context.")
+
     if not data or not data.get("text"):
         raise HTTPException(status_code=400, detail="No material found.")
         

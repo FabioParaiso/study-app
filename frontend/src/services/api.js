@@ -10,24 +10,25 @@ const api = axios.create({
 });
 
 export const studyService = {
-    checkMaterial: async () => {
-        const res = await api.get('/current-material');
+    checkMaterial: async (studentId) => {
+        const res = await api.get(`/current-material?student_id=${studentId}`);
         return res.data;
     },
-    uploadFile: async (file) => {
+    uploadFile: async (file, studentId) => {
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("student_id", studentId);
         const res = await api.post('/upload', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return res.data;
     },
-    analyzeTopics: async () => {
-        const res = await api.post('/analyze-topics', {});
+    analyzeTopics: async (studentId) => {
+        const res = await api.post('/analyze-topics', { student_id: studentId });
         return res.data;
     },
-    clearMaterial: async () => {
-        await api.post('/clear-material');
+    clearMaterial: async (studentId) => {
+        await api.post(`/clear-material?student_id=${studentId}`);
     },
     generateQuiz: async (topics, type, studentId) => {
         const payload = {
@@ -38,10 +39,11 @@ export const studyService = {
         const res = await api.post('/generate-quiz', payload);
         return res.data.questions;
     },
-    evaluateAnswer: async (question, userAnswer) => {
+    evaluateAnswer: async (question, userAnswer, studentId) => {
         const res = await api.post('/evaluate-answer', {
             question,
-            user_answer: userAnswer
+            user_answer: userAnswer,
+            student_id: studentId
         });
         return res.data;
     },

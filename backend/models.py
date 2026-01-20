@@ -11,15 +11,19 @@ class Student(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     quiz_results = relationship("QuizResult", back_populates="student")
+    materials = relationship("StudyMaterial", back_populates="student")
 
 class StudyMaterial(Base):
     __tablename__ = "study_materials"
 
     id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id")) # Link to owner
     source = Column(String, index=True)
     text = Column(Text)
     topics = Column(String) # JSON string of topics list
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    student = relationship("Student", back_populates="materials")
 
 class QuizResult(Base):
     __tablename__ = "quiz_results"

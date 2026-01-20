@@ -20,14 +20,15 @@ class StudyRepository:
         return self.db.query(Student).filter(Student.id == student_id).first()
 
     # --- Material Methods ---
-    def save(self, text: str, source_name: str, topics: list[str] = None) -> StudyMaterial:
-        """Saves or updates the single active study material."""
+    def save(self, student_id: int, text: str, source_name: str, topics: list[str] = None) -> StudyMaterial:
+        """Saves or updates the active study material for a specific student."""
         try:
-            # 1. Clear existing (We only support 1 active material for now)
-            self.db.query(StudyMaterial).delete()
+            # 1. Clear existing for this student
+            self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).delete()
             
             # 2. Add new
             db_item = StudyMaterial(
+                student_id=student_id,
                 text=text,
                 source=source_name,
                 topics=json.dumps(topics or [])
@@ -41,10 +42,10 @@ class StudyRepository:
             self.db.rollback()
             return None
 
-    def load(self) -> dict:
-        """Loads the study material."""
+    def load(self, student_id: int) -> dict:
+        """Loads the study material for a specific student."""
         try:
-            item = self.db.query(StudyMaterial).first()
+            item = self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).first()
             if item:
                 return {
                     "id": item.id,
@@ -57,10 +58,10 @@ class StudyRepository:
             print(f"Error loading material: {e}")
             return None
 
-    def clear(self) -> bool:
-        """Deletes the saved study material."""
+    def clear(self, student_id: int) -> bool:
+        """Deletes the saved study material for a specific student."""
         try:
-            self.db.query(StudyMaterial).delete()
+            self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).delete()
             self.db.commit()
             return True
         except Exception as e:
@@ -135,15 +136,21 @@ class StudyRepository:
             print(f"Error calculating analytics: {e}")
             return []
 
-    def get_all_topics(self) -> list[str]:
-        """Returns a list of all unique topics used in analytics and materials."""
+    def get_all_topics(self, student_id: int) -> list[str]:
+        """Returns a list of all unique topics used in analytics and materials for a student."""
         try:
-            # Get topics from analytics
-            analytics_topics = self.db.query(QuestionAnalytics.topic).distinct().all()
+            # Get topics from analytics for this student
+            analytics_topics = (
+                self.db.query(QuestionAnalytics.topic)
+                .join(QuizResult)
+                .filter(QuizResult.student_id == student_id)
+                .distinct()
+                .all()
+            )
             topics = {t[0] for t in analytics_topics if t[0]}
             
-            # Get topics from current material
-            materials = self.db.query(StudyMaterial).all()
+            # Get topics from current material for this student
+            materials = self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).all()
             for m in materials:
                 if m.topics:
                     try:

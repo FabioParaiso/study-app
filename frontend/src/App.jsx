@@ -56,8 +56,13 @@ export default function App() {
 
     // --- Effects ---
     useEffect(() => {
-        checkSavedMaterial();
-    }, []);
+        if (student) {
+            checkSavedMaterial();
+        } else {
+            setSavedMaterial(null);
+            setAvailableTopics([]);
+        }
+    }, [student]);
 
     useEffect(() => {
         window.speechSynthesis.cancel();
@@ -67,8 +72,9 @@ export default function App() {
 
     // --- Setup Facade ---
     const checkSavedMaterial = async () => {
+        if (!student) return;
         try {
-            const data = await studyService.checkMaterial();
+            const data = await studyService.checkMaterial(student.id);
             if (data.has_material) {
                 setSavedMaterial(data);
                 setAvailableTopics(data.topics || []);
@@ -87,7 +93,7 @@ export default function App() {
         setIsAnalyzing(true);
         setErrorMsg('');
         try {
-            await studyService.uploadFile(file);
+            await studyService.uploadFile(file, student.id);
             await checkSavedMaterial();
         } catch (err) {
             console.error(err);
@@ -101,7 +107,7 @@ export default function App() {
         setIsAnalyzing(true);
         setErrorMsg('');
         try {
-            const data = await studyService.analyzeTopics();
+            const data = await studyService.analyzeTopics(student.id);
             setAvailableTopics(data.topics);
             await checkSavedMaterial();
         } catch (err) {
@@ -113,8 +119,9 @@ export default function App() {
     };
 
     const clearMaterial = async () => {
+        if (!student) return;
         try {
-            await studyService.clearMaterial();
+            await studyService.clearMaterial(student.id);
             setSavedMaterial(null);
             setGameState('intro');
         } catch (err) {

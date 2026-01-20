@@ -127,29 +127,33 @@ const IntroScreen = ({
                             </div>
 
                             {/* Filters */}
+                            {/* Filters */}
                             {availableTopics.length > 0 && (
-                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                    <button
-                                        onClick={() => setSelectedTopic('all')}
-                                        className={`px-4 py-2 rounded-xl font-bold uppercase text-sm whitespace-nowrap border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedTopic === 'all'
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Filtrar por Tópico</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => setSelectedTopic('all')}
+                                            className={`px-4 py-2 rounded-xl font-bold uppercase text-sm border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedTopic === 'all'
                                                 ? 'bg-duo-blue border-duo-blue-dark text-white'
                                                 : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        Todos
-                                    </button>
-                                    {availableTopics.map((t, i) => (
-                                        <button
-                                            key={i}
-                                            onClick={() => setSelectedTopic(t)}
-                                            className={`px-4 py-2 rounded-xl font-bold uppercase text-sm whitespace-nowrap border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedTopic === t
-                                                    ? 'bg-duo-blue border-duo-blue-dark text-white'
-                                                    : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'
                                                 }`}
                                         >
-                                            {t}
+                                            Todos
                                         </button>
-                                    ))}
+                                        {availableTopics.map((t, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => setSelectedTopic(t)}
+                                                className={`px-4 py-2 rounded-xl font-bold uppercase text-sm border-b-4 transition-all active:border-b-0 active:translate-y-1 ${selectedTopic === t
+                                                    ? 'bg-duo-blue border-duo-blue-dark text-white'
+                                                    : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {t}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 

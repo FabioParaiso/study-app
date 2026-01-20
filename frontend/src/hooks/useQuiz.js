@@ -30,7 +30,7 @@ export function useQuiz(student) {
         setCurrentQuestionIndex(0);
 
         try {
-            const qs = await studyService.generateQuiz(topic, type);
+            const qs = await studyService.generateQuiz(topic, type, student?.id);
             setQuestions(qs);
             setGameState('playing');
         } catch (err) {
@@ -86,7 +86,7 @@ export function useQuiz(student) {
         const currentQ = questions[currentQuestionIndex];
 
         try {
-            const evalData = await studyService.evaluateAnswer(currentQ.question, userText);
+            const evalData = await studyService.evaluateAnswer(currentQ.question, userText, student?.id);
             setOpenEndedEvaluations(prev => ({
                 ...prev,
                 [currentQuestionIndex]: { ...evalData, userText }
