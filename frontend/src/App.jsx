@@ -22,7 +22,7 @@ export default function App() {
 
     const {
         highScore, totalXP, selectedAvatar, changeAvatar, addXP, updateHighScore, level, nextLevel, LEVELS
-    } = useGamification();
+    } = useGamification(student, savedMaterial);
 
     const {
         questions, loading, errorMsg: quizError, quizType, gameState, setGameState,

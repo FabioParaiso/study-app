@@ -149,7 +149,13 @@ def generate_quiz_endpoint(
     priority_topics = []
     if request.student_id:
         analytics_service = AnalyticsService(quiz_repo)
-        priority_topics = analytics_service.get_adaptive_topics(request.student_id)
+        # Scope adaptive learning to the current material
+        material_id = data.get("id")
+        adaptive_data = analytics_service.get_adaptive_topics(request.student_id, material_id)
+        # Extract topics from "boost" (weak points) and "mastered" (for review)
+        # We prioritize boost, but can also include some mastered for spaced repetition
+        if adaptive_data:
+             priority_topics = adaptive_data.get("boost", []) + adaptive_data.get("mastered", [])
 
     target_topics = request.topics
     if not target_topics and priority_topics:
@@ -160,7 +166,9 @@ def generate_quiz_endpoint(
     else:
         strategy = MultipleChoiceStrategy()
 
-    questions = ai_service.generate_quiz(strategy, text, target_topics, priority_topics)
+    material_topics = data.get("topics", [])
+
+    questions = ai_service.generate_quiz(strategy, text, target_topics, priority_topics, material_topics)
     
     if not questions:
         raise HTTPException(status_code=500, detail="Failed to generate quiz. Please try again.")
@@ -205,7 +213,8 @@ def save_quiz_result(
         total=result.total_questions,
         quiz_type=result.quiz_type,
         analytics_data=analytics_data,
-        material_id=material_id
+        material_id=material_id,
+        xp_earned=result.xp_earned
     )
     if not success:
         raise HTTPException(status_code=500, detail="Failed to save results")
@@ -214,7 +223,13 @@ def save_quiz_result(
 @router.get("/analytics/weak-points")
 def get_weak_points(
     student_id: int,
-    repo: QuizRepository = Depends(get_quiz_repo)
+    repo: QuizRepository = Depends(get_quiz_repo),
+    material_repo: MaterialRepository = Depends(get_material_repo)
 ):
+    # Get active material
+    current = material_repo.load(student_id)
+    material_id = current["id"] if current else None
+    
+    # Scope analytics to current material if exists
     analytics = AnalyticsService(repo)
-    return analytics.get_weak_points(student_id)
+    return analytics.get_weak_points(student_id, material_id)

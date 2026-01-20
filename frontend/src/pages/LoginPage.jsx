@@ -12,7 +12,7 @@ const StudentLogin = ({ onLogin }) => {
 
         setLoading(true);
         try {
-            const student = await studyService.loginStudent(name);
+            const student = await authService.loginStudent(name);
             onLogin(student); // {id, name}
         } catch (err) {
             console.error(err);

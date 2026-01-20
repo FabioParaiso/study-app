@@ -21,37 +21,45 @@ const getLevelInfo = (xp) => {
     return { level, nextLevel };
 };
 
-export function useGamification() {
+export function useGamification(student, stats) {
     const [highScore, setHighScore] = useState(0);
     const [totalXP, setTotalXP] = useState(0);
     const [selectedAvatar, setSelectedAvatar] = useState('👩‍🎓');
 
+    // Sync with student and stats
     useEffect(() => {
-        const savedScore = localStorage.getItem('scienceQuizHighScore');
-        if (savedScore) setHighScore(parseInt(savedScore, 10));
+        if (student) {
+            setSelectedAvatar(student.current_avatar || '👩‍🎓');
+        }
+        if (stats) {
+            setHighScore(stats.high_score || 0);
+            setTotalXP(stats.total_xp || 0);
+        } else {
+            setHighScore(0);
+            setTotalXP(0);
+        }
+    }, [student, stats]);
 
-        const savedXP = localStorage.getItem('scienceQuizTotalXP');
-        if (savedXP) setTotalXP(parseInt(savedXP, 10));
 
-        const savedAvatar = localStorage.getItem('scienceQuizAvatar');
-        if (savedAvatar) setSelectedAvatar(savedAvatar);
-    }, []);
 
-    const changeAvatar = (emoji) => {
-        setSelectedAvatar(emoji);
-        localStorage.setItem('scienceQuizAvatar', emoji);
+    const changeAvatar = async (emoji) => {
+        if (!student?.id) return;
+        try {
+            setSelectedAvatar(emoji);
+            await studyService.updateAvatar(student.id, emoji);
+        } catch (e) {
+            console.error("Failed to update avatar:", e);
+        }
     };
 
     const addXP = (amount) => {
-        const newXP = totalXP + amount;
-        setTotalXP(newXP);
-        localStorage.setItem('scienceQuizTotalXP', newXP.toString());
+        // Optimistic / Local only. Backend is updated via Quiz Submission.
+        setTotalXP(prev => prev + amount);
     };
 
     const updateHighScore = (score) => {
         if (score > highScore) {
             setHighScore(score);
-            localStorage.setItem('scienceQuizHighScore', score.toString());
         }
     };
 

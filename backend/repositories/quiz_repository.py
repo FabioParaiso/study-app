@@ -6,8 +6,8 @@ class QuizRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def save_quiz_result(self, student_id: int, score: int, total: int, quiz_type: str, analytics_data: list[dict], material_id: int = None):
-        """Saves quiz result and granular analytics."""
+    def save_quiz_result(self, student_id: int, score: int, total: int, quiz_type: str, analytics_data: list[dict], material_id: int = None, xp_earned: int = 0):
+        """Saves quiz result and granular analytics, and updates study material stats."""
         try:
             result = QuizResult(
                 student_id=student_id,
@@ -17,9 +17,22 @@ class QuizRepository:
                 quiz_type=quiz_type
             )
             self.db.add(result)
+            
+            # Update StudyMaterial stats
+            if material_id:
+                material = self.db.query(StudyMaterial).filter(StudyMaterial.id == material_id).first()
+                if material:
+                    material.total_questions_answered += total
+                    material.correct_answers_count += score
+                    material.total_xp += xp_earned
+                    # Check and update high score (assuming score is absolute, or percentage? 
+                    # Usually high score is per quiz run. If score is e.g. 5/5, high score is 5.
+                    if score > material.high_score:
+                        material.high_score = score
+                        
             self.db.commit()
             self.db.refresh(result)
-
+            
             for item in analytics_data:
                 analytic = QuestionAnalytics(
                     quiz_result_id=result.id,
@@ -35,16 +48,20 @@ class QuizRepository:
             self.db.rollback()
             return False
 
-    def get_student_analytics(self, student_id: int):
-        """Calculates success rate per topic for a specific student."""
+    def get_student_analytics(self, student_id: int, material_id: int = None):
+        """Calculates success rate per topic for a specific student, optionally scoped to a material."""
         try:
             # Get all analytics for this student
-            analytics = (
+            query = (
                 self.db.query(QuestionAnalytics)
                 .join(QuizResult)
                 .filter(QuizResult.student_id == student_id)
-                .all()
             )
+            
+            if material_id:
+                query = query.filter(QuizResult.study_material_id == material_id)
+                
+            analytics = query.all()
             
             if not analytics: return []
 

@@ -8,6 +8,9 @@ class Student(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
+    total_xp = Column(Integer, default=0)
+    current_avatar = Column(String, default='👩‍🎓')
+    high_score = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     quiz_results = relationship("QuizResult", back_populates="student")
@@ -21,6 +24,15 @@ class StudyMaterial(Base):
     source = Column(String, index=True)
     text = Column(Text)
     topics = Column(String) # JSON string of topics list
+    
+    # New fields for per-material gamification and state
+    total_xp = Column(Integer, default=0)
+    high_score = Column(Integer, default=0)
+    total_questions_answered = Column(Integer, default=0)
+    correct_answers_count = Column(Integer, default=0)
+    last_accessed = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=False)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     student = relationship("Student", back_populates="materials")

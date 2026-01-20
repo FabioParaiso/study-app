@@ -38,6 +38,7 @@ class QuizResultCreate(BaseModel):
     quiz_type: str
     detailed_results: List[AnalyticsItem]
     student_id: int
+    xp_earned: int = 0
 
 class AnalyzeRequest(BaseModel):
     student_id: int

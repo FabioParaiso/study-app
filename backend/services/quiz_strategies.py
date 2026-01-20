@@ -3,7 +3,8 @@ import json
 
 class QuizGenerationStrategy(ABC):
     @abstractmethod
-    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None) -> str:
+    @abstractmethod
+    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_topics: list[str] = None) -> str:
         pass
 
     @abstractmethod
@@ -11,7 +12,7 @@ class QuizGenerationStrategy(ABC):
         pass
 
 class MultipleChoiceStrategy(QuizGenerationStrategy):
-    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None) -> str:
+    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_topics: list[str] = None) -> str:
         topic_instruction = ""
         if topics and len(topics) > 0:
             topic_str = ", ".join(topics)
@@ -22,12 +23,18 @@ class MultipleChoiceStrategy(QuizGenerationStrategy):
             p_str = ", ".join(priority_topics)
             priority_instruction = f"\nATENÇÃO: O aluno tem DIFICULDADE nos seguintes tópicos: {p_str}. Cria pelo menos 3 perguntas focadas neles para reforço."
 
+        vocab_instruction = ""
+        if material_topics and len(material_topics) > 0:
+            v_str = ", ".join(material_topics)
+            vocab_instruction = f"\nCONSISTÊNCIA DE TÓPICOS: Ao categorizar cada pergunta no campo JSON 'topic', NUNCA inventes novos nomes. Usa APENAS um dos seguintes: [{v_str}]. Escolhe o que melhor se adapta."
+
         return f"""
         Atua como um professor experiente e pedagógico do 6º ano.
         Com base no texto fornecido, cria um Quiz de 10 perguntas de escolha múltipla.
 
         {topic_instruction}
         {priority_instruction}
+        {vocab_instruction}
 
         REGRAS DE CRIAÇÃO:
         1. Cria 10 perguntas focadas na compreensão de conceitos-chave.
@@ -63,16 +70,22 @@ class MultipleChoiceStrategy(QuizGenerationStrategy):
         return data.get("questions", [])
 
 class OpenEndedStrategy(QuizGenerationStrategy):
-    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None) -> str:
+    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_topics: list[str] = None) -> str:
         topic_instruction = ""
         if topics and len(topics) > 0:
             topic_str = ", ".join(topics)
             topic_instruction = f"INSTRUÇÃO CRÍTICA: O utilizador selecionou TÓPICOS ESPECÍFICOS: {topic_str}. Tens de gerar perguntas APENAS relacionadas com estes tópicos. Ignora todas as outras secções do texto."
 
+        vocab_instruction = ""
+        if material_topics and len(material_topics) > 0:
+            v_str = ", ".join(material_topics)
+            vocab_instruction = f"\nCONSISTÊNCIA DE TÓPICOS: Ao categorizar cada pergunta no campo JSON 'topic', NUNCA inventes novos nomes. Usa APENAS um dos seguintes: [{v_str}]."
+
         return f"""
         Atua como um professor experiente. Cria um mini-teste de 5 perguntas de resposta aberta.
 
         {topic_instruction}
+        {vocab_instruction}
 
         REGRAS:
         1. Cria exatamente 5 perguntas que exijam uma resposta explicativa curta (1-2 frases).

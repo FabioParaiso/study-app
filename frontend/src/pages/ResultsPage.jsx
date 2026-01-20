@@ -53,7 +53,9 @@ const ResultsScreen = ({
                         <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4">
                             <div className="flex items-center justify-center gap-2 mb-1">
                                 <CheckCircle className="text-duo-blue" size={24} />
-                                <span className="text-xl font-black text-duo-blue">Top</span>
+                                <span className="text-xl font-black text-duo-blue">
+                                    {finalScore >= 90 ? "Top" : finalScore >= 70 ? "Boa" : finalScore >= 50 ? "Média" : "Baixa"}
+                                </span>
                             </div>
                             <p className="text-xs uppercase font-bold text-duo-blue/60">Precisão</p>
                         </div>

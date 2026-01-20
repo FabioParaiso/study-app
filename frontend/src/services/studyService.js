@@ -38,13 +38,14 @@ export const studyService = {
         });
         return res.data;
     },
-    submitQuizResult: async (score, total, type, detailedResults, studentId) => {
+    submitQuizResult: async (score, total, type, detailedResults, studentId, xpEarned) => {
         await api.post('/quiz/result', {
             score,
             total_questions: total,
             quiz_type: type,
             detailed_results: detailedResults,
-            student_id: studentId
+            student_id: studentId,
+            xp_earned: xpEarned
         });
     },
     getWeakPoints: async (studentId) => {
@@ -54,6 +55,18 @@ export const studyService = {
     },
     getRecommendations: async (studentId) => {
         const res = await api.get(`/students/${studentId}/recommendations`);
+        return res.data;
+    },
+    updateXP: async (studentId, amount) => {
+        const res = await api.post('/gamification/xp', { student_id: studentId, amount });
+        return res.data;
+    },
+    updateAvatar: async (studentId, avatar) => {
+        const res = await api.post('/gamification/avatar', { student_id: studentId, avatar });
+        return res.data;
+    },
+    updateHighScore: async (studentId, score) => {
+        const res = await api.post('/gamification/highscore', { student_id: studentId, score });
         return res.data;
     }
 };

@@ -8,10 +8,10 @@ class AIService:
     def __init__(self, api_key: str):
         self.client = OpenAI(api_key=api_key) if api_key else None
 
-    def generate_quiz(self, strategy: QuizGenerationStrategy, text: str, topics: list[str] = None, priority_topics: list[str] = None) -> list[dict]:
+    def generate_quiz(self, strategy: QuizGenerationStrategy, text: str, topics: list[str] = None, priority_topics: list[str] = None, material_topics: list[str] = None) -> list[dict]:
         if not self.client: return None
         
-        prompt = strategy.generate_prompt(text, topics, priority_topics)
+        prompt = strategy.generate_prompt(text, topics, priority_topics, material_topics)
 
         try:
             response = self.client.chat.completions.create(

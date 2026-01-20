@@ -14,10 +14,13 @@ export function useQuiz(student) {
     const [errorMsg, setErrorMsg] = useState("");
     const [quizType, setQuizType] = useState(null);
 
+    const [sessionXP, setSessionXP] = useState(0);
+
     const startQuiz = async (type, topic) => {
         setLoading(true);
         setErrorMsg("");
         setQuizType(type);
+        setSessionXP(0); // Reset session XP
 
         try {
             const qs = await studyService.generateQuiz(topic, type, student?.id);
@@ -38,11 +41,15 @@ export function useQuiz(student) {
         const correct = questions[qIndex].correctIndex;
         const result = recordAnswer(qIndex, oIndex, oIndex === correct);
 
+        let xp = 0;
         if (result === 'correct') {
-            addXPCallback(10);
+            xp = 10;
         } else {
-            addXPCallback(2);
+            xp = 2;
         }
+
+        setSessionXP(prev => prev + xp);
+        addXPCallback(xp);
     };
 
     const handleEvaluation = async (userText, addXPCallback) => {
@@ -56,6 +63,8 @@ export function useQuiz(student) {
 
             // XP Logic
             const xpEarned = 5 + (evalData.score >= 50 ? 5 : 0) + (evalData.score >= 80 ? 5 : 0);
+
+            setSessionXP(prev => prev + xpEarned);
             addXPCallback(xpEarned);
 
         } catch (err) {
@@ -90,7 +99,14 @@ export function useQuiz(student) {
 
             try {
                 if (student?.id) {
-                    await studyService.submitQuizResult(score, questions.length, quizType, detailedResults, student.id);
+                    await studyService.submitQuizResult(
+                        score,
+                        questions.length,
+                        quizType,
+                        detailedResults,
+                        student.id,
+                        sessionXP // Send total session XP
+                    );
                 }
             } catch (err) {
                 console.error("Failed to submit analytics", err);

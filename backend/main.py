@@ -4,28 +4,14 @@ from dotenv import load_dotenv
 from pathlib import Path
 import models
 from database import engine
-from routers import auth, study
+from routers import auth, study, gamification
 
-# Create Tables
-models.Base.metadata.create_all(bind=engine)
-
-env_path = Path(__file__).parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
-
-app = FastAPI()
-
-# Allow CORS for frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # For development
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ...
 
 # Include Routers
 app.include_router(auth.router)
 app.include_router(study.router)
+app.include_router(gamification.router)
 
 @app.get("/health")
 def health_check():
