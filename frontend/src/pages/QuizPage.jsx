@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { QuestionFactory } from '../components/Quiz/QuestionFactory';
 import ComboCounter from '../components/Quiz/ComboCounter';
+import QuitConfirmationModal from '../components/Quiz/QuitConfirmationModal';
 
 const QuizPage = ({
     questions,
@@ -21,19 +22,24 @@ const QuizPage = ({
     addXP, // Passed down if needed by handlers
     streak
 }) => {
+    const [showExitModal, setShowExitModal] = React.useState(false);
     const currentQ = questions[currentQuestionIndex];
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
             <ComboCounter combo={streak} />
+
+            {/* Exit Modal */}
+            <QuitConfirmationModal
+                isOpen={showExitModal}
+                onClose={() => setShowExitModal(false)}
+                onConfirm={onExit}
+            />
+
             {/* Header */}
-            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-50">
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-40">
                 <button
-                    onClick={() => {
-                        if (window.confirm("Tens a certeza que queres sair? Vais perder o progresso atual.")) {
-                            onExit();
-                        }
-                    }}
+                    onClick={() => setShowExitModal(true)}
                     className="p-3 rounded-2xl bg-white border-b-4 border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-red-500 hover:border-red-200 transition-all active:border-b-0 active:translate-y-1"
                     aria-label="Sair"
                 >
