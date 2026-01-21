@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, XCircle, Volume2, StopCircle, ArrowRight, BrainCircuit } from 'lucide-react';
+import { CheckCircle, XCircle, Volume2, StopCircle, ArrowRight } from 'lucide-react';
 
 const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, handleSpeak, speakingPart, showFeedback }) => {
     // Derived state
@@ -61,8 +61,8 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                                 className={`${baseClass} ${stateClass}`}
                             >
                                 <span className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center text-sm ${isAnswered && optIndex === question.correctIndex ? 'border-duo-green text-duo-green' :
-                                        isAnswered && optIndex === userAnswer ? 'border-duo-red text-duo-red' :
-                                            'border-gray-200 text-gray-400'
+                                    isAnswered && optIndex === userAnswer ? 'border-duo-red text-duo-red' :
+                                        'border-gray-200 text-gray-400'
                                     }`}>
                                     {letters[optIndex]}
                                 </span>
@@ -104,8 +104,8 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                         <button
                             onClick={onNext}
                             className={`w-full md:w-auto px-10 py-4 rounded-2xl border-b-4 font-bold text-white uppercase tracking-wider transition-all active:border-b-0 active:translate-y-1 ${isCorrect
-                                    ? 'bg-duo-green border-duo-green-dark hover:bg-green-500'
-                                    : 'bg-duo-red border-duo-red-dark hover:bg-red-500'
+                                ? 'bg-duo-green border-duo-green-dark hover:bg-green-500'
+                                : 'bg-duo-red border-duo-red-dark hover:bg-red-500'
                                 }`}
                         >
                             {index < total - 1 ? 'Continuar' : 'Ver Nota'}

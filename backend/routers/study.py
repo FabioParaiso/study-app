@@ -176,9 +176,15 @@ def generate_quiz_endpoint(
     if not target_topics and priority_topics:
         target_topics = priority_topics
 
+    material_xp = data.get("total_xp", 0)
+
     if request.quiz_type == "open-ended":
+        if material_xp < 900:
+             raise HTTPException(status_code=403, detail="Level Locked. Requires 900 XP.")
         strategy = OpenEndedStrategy()
     elif request.quiz_type == "short_answer":
+        if material_xp < 300:
+             raise HTTPException(status_code=403, detail="Level Locked. Requires 300 XP.")
         strategy = ShortAnswerStrategy()
     else:
         strategy = MultipleChoiceStrategy()

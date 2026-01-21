@@ -45,7 +45,7 @@ const WeakPointsPanel = ({ studentId, materialId }) => {
                 })}
             </div>
 
-            {points.some(p => p.success_rate < 60) ? (
+            {points.some(p => p.success_rate < 70) ? (
                 <div className="mt-6 bg-red-50 border border-red-100 rounded-xl p-4 flex gap-3 text-sm text-red-800">
                     <AlertTriangle className="shrink-0 mt-0.5 text-duo-red" size={18} />
                     <div>
