@@ -24,7 +24,7 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
     return (
         <>
             {/* Main Card */}
-            <div className="w-full max-w-2xl mx-auto animate-fade-in mb-32">
+            <div className="w-full max-w-2xl mx-auto animate-fade-in mb-40">
                 {/* Progress Bar */}
                 <div className="w-full h-4 bg-gray-200 rounded-full mb-8 relative overflow-hidden">
                     <div className="h-full bg-purple-500 transition-all duration-500 rounded-full" style={{ width: `${((index + 1) / total) * 100}%` }}>
@@ -34,9 +34,14 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
 
                 {/* Header & Question */}
                 <div className="flex items-start gap-4 mb-8">
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-700 leading-tight flex-1">
-                        {question.question}
-                    </h2>
+                    <div className="flex-1">
+                        <span className="inline-block bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1 rounded-lg mb-3 tracking-widest uppercase">
+                            {question.topic}
+                        </span>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-700 leading-tight">
+                            {question.question}
+                        </h2>
+                    </div>
                     <button
                         onClick={() => handleSpeak(question.question, 'question')}
                         className={`p-3 rounded-2xl border-b-4 transition-all active:border-b-0 active:translate-y-1 ${speakingPart === 'question'
@@ -49,7 +54,7 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
                 </div>
 
                 {/* Input Area */}
-                <div className="relative w-full">
+                <div className="relative w-full mb-6">
                     <textarea
                         className={`w-full p-6 text-xl rounded-2xl border-2 border-b-4 outline-none transition-all font-medium min-h-[200px] resize-y ${evaluation
                             ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
@@ -74,88 +79,87 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
                         </button>
                     )}
                 </div>
-            </div>
 
-            {/* Bottom Sheet Feedback / Action */}
-            <div
-                className={`fixed bottom-0 left-0 w-full transform transition-transform duration-300 ease-out z-50 ${evaluation ? 'translate-y-0' : 'translate-y-0'
-                    }`}
-            >
-                <div className={`p-6 pb-8 border-t-2 ${evaluation
-                    ? (isGoodScore ? 'bg-green-100 border-transparent' : 'bg-red-50 border-transparent')
-                    : 'bg-white border-gray-200'
-                    }`}>
-                    <div className="max-w-3xl mx-auto flex flex-col gap-6">
+                {/* Feedback Section (In Flow) */}
+                {evaluation && (
+                    <div className="animate-slide-up space-y-4 w-full">
+                        {/* Score & Feedback Header */}
+                        <div className="flex items-start gap-4">
+                            <div className={`p-3 rounded-2xl flex flex-col items-center justify-center w-20 h-20 flex-shrink-0 border-b-4 ${isGoodScore
+                                ? 'bg-white text-green-600 border-green-200'
+                                : 'bg-white text-red-600 border-red-200'}`}>
+                                <span className="text-2xl font-black">{evaluation.score}</span>
+                                <span className="text-[10px] font-bold uppercase">Nota</span>
+                            </div>
+                            <div className="flex-1 py-2">
+                                <h3 className={`font-bold text-xl mb-1 ${isGoodScore ? 'text-green-600' : 'text-red-600'}`}>
+                                    {isGoodScore
+                                        ? ["Fantástico! 🎉", "Muito bem! 🌟", "Acertaste! 💪"][Math.floor(Math.random() * 3)]
+                                        : ["Fica a saber que: 🧠", "Quase! Olha só: 👀", "Não desanimes! 💪"][Math.floor(Math.random() * 3)]}
+                                </h3>
+                                <p className="text-sm font-medium text-gray-500">{evaluation.feedback}</p>
+                            </div>
+                        </div>
 
-                        {/* Detailed Feedback Content (Only if evaluated) */}
-                        {evaluation ? (
-                            <div className="animate-slide-up space-y-4">
-                                {/* Score & Feedback Header */}
-                                <div className="flex items-start gap-4">
-                                    <div className={`p-3 rounded-2xl flex flex-col items-center justify-center w-20 h-20 flex-shrink-0 border-b-4 ${isGoodScore
-                                        ? 'bg-white text-green-600 border-green-200'
-                                        : 'bg-white text-red-600 border-red-200'}`}>
-                                        <span className="text-2xl font-black">{evaluation.score}</span>
-                                        <span className="text-[10px] font-bold uppercase">Nota</span>
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className={`font-bold text-xl mb-1 ${isGoodScore ? 'text-green-800' : 'text-red-800'}`}>
-                                            {isGoodScore
-                                                ? ["Fantástico! 🎉", "Muito bem! 🌟", "Excelente! 🚀"][Math.floor(Math.random() * 3)]
-                                                : "Vamos aprender: 🧠"}
-                                        </h3>
-                                        <div className="flex items-start gap-2">
-                                            <p className="text-gray-700 leading-relaxed flex-1">{evaluation.feedback}</p>
-                                            <button
-                                                onClick={() => handleSpeak(evaluation.feedback, 'feedback')}
-                                                className={`p-2 rounded-full transition-all ${speakingPart === 'feedback'
-                                                    ? 'bg-blue-100 text-blue-600'
-                                                    : 'bg-white/50 text-gray-400 hover:text-blue-600'}`}
-                                            >
-                                                {speakingPart === 'feedback' ? <StopCircle size={20} /> : <Volume2 size={20} />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Model Answer */}
-                                {evaluation.model_answer && (
-                                    <div className="bg-white/60 border border-black/5 rounded-xl p-4">
-                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">💡 Resposta Sugerida</p>
-                                        <p className="text-gray-800 text-sm leading-relaxed">{evaluation.model_answer}</p>
-                                    </div>
-                                )}
+                        {/* Logic: Score < 50 -> Global Re-teaching (Text) | Score >= 50 -> Specific Refining (List) */}
+                        {evaluation.score < 50 ? (
+                            /* Re-teaching Mode: Show Full Model Answer */
+                            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
+                                <p className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-2">💡 Resposta Completa:</p>
+                                <p className="text-gray-800 text-sm leading-relaxed">{evaluation.model_answer}</p>
                             </div>
                         ) : (
-                            <div className="hidden md:block"></div>
+                            /* Refining Mode: Show Missing Points (if any) */
+                            evaluation.missing_points && evaluation.missing_points.length > 0 && (
+                                <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                                    <p className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2">Faltou referir:</p>
+                                    <ul className="list-disc list-inside space-y-1">
+                                        {evaluation.missing_points.map((point, i) => (
+                                            <li key={i} className="text-gray-800 text-sm leading-relaxed font-medium">
+                                                {point}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )
                         )}
 
-                        {/* Action Button */}
-                        <div className="flex justify-end w-full">
-                            <button
-                                onClick={evaluation ? onNext : handleEvaluation}
-                                disabled={(!evaluation && userText.trim().length === 0) || isEvaluating}
-                                className={`w-full md:w-auto px-10 py-4 rounded-2xl border-b-4 font-bold text-white uppercase tracking-wider transition-all active:border-b-0 active:translate-y-1 text-center flex items-center justify-center gap-2 ${isEvaluating
-                                    ? 'bg-gray-400 border-gray-600 cursor-wait'
-                                    : !evaluation
-                                        ? (userText.trim().length === 0
-                                            ? 'bg-gray-300 border-gray-400 cursor-not-allowed text-gray-500'
-                                            : 'bg-purple-600 border-purple-800 hover:bg-purple-500')
-                                        : (isGoodScore
-                                            ? 'bg-green-500 border-green-700 hover:bg-green-400'
-                                            : 'bg-red-500 border-red-700 hover:bg-red-400')
-                                    }`}
-                            >
-                                {isEvaluating ? (
-                                    <>A CORRIGIR...</>
-                                ) : evaluation ? (
-                                    index < total - 1 ? 'CONTINUAR' : 'VER NOTA'
-                                ) : (
-                                    <>ENVIAR RESPOSTA <Send size={20} className="ml-2" /></>
-                                )}
-                            </button>
-                        </div>
+                        {/* Curiosity Block (Always show) */}
+                        {evaluation.curiosity && (
+                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                                <p className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-2">🤔 Sabias que...</p>
+                                <p className="text-gray-800 text-sm leading-relaxed">{evaluation.curiosity}</p>
+                            </div>
+                        )}
                     </div>
+                )}
+            </div>
+
+            {/* Fixed Bottom Action Bar */}
+            <div className={`fixed bottom-0 left-0 w-full p-4 border-t-2 bg-white border-gray-200 z-50`}>
+                <div className="max-w-2xl mx-auto">
+                    <button
+                        onClick={evaluation ? onNext : handleEvaluation}
+                        disabled={(!evaluation && userText.trim().length === 0) || isEvaluating}
+                        className={`w-full py-4 rounded-2xl border-b-4 font-bold text-white uppercase tracking-wider transition-all active:border-b-0 active:translate-y-1 text-center flex items-center justify-center gap-2 outline-none focus:outline-none ${isEvaluating
+                            ? 'bg-gray-400 border-gray-600 cursor-wait'
+                            : !evaluation
+                                ? (userText.trim().length === 0
+                                    ? 'bg-gray-300 border-gray-400 cursor-not-allowed text-gray-500'
+                                    : 'bg-purple-600 border-purple-800 hover:bg-purple-500')
+                                : (isGoodScore
+                                    ? 'bg-green-500 border-green-700 hover:bg-green-400'
+                                    : 'bg-red-500 border-red-700 hover:bg-red-400')
+                            }`}
+                    >
+                        {isEvaluating ? (
+                            <>A CORRIGIR...</>
+                        ) : evaluation ? (
+                            index < total - 1 ? 'CONTINUAR' : 'VER NOTA'
+                        ) : (
+                            <>ENVIAR RESPOSTA <Send size={20} className="ml-2" /></>
+                        )}
+                    </button>
                 </div>
             </div>
         </>

@@ -44,6 +44,7 @@ export const QuestionFactory = ({
                     total={total}
                     onSubmit={onSubmitShortAnswer}
                     evaluation={evaluation}
+                    isEvaluating={isEvaluating}
                     onNext={onNext}
                     handleSpeak={handleSpeak}
                     speakingPart={speakingPart}

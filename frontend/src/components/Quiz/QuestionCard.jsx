@@ -20,9 +20,14 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                 </div>
 
                 <div className="flex items-start gap-4 mb-8">
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-700 leading-tight flex-1">
-                        {question.question}
-                    </h2>
+                    <div className="flex-1">
+                        <span className="inline-block bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1 rounded-lg mb-3 tracking-widest uppercase">
+                            {question.topic}
+                        </span>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-700 leading-tight">
+                            {question.question}
+                        </h2>
+                    </div>
                     <button
                         onClick={() => handleSpeak(question.question, 'question')}
                         className={`p-3 rounded-2xl border-b-4 transition-all active:border-b-0 active:translate-y-1 ${speakingPart === 'question'
@@ -89,7 +94,7 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                                 <h3 className={`font-bold text-xl mb-1 ${isCorrect ? 'text-duo-green-dark' : 'text-duo-red-dark'}`}>
                                     {isCorrect
                                         ? ["Fantástico! 🎉", "Muito bem! 🌟", "Acertaste! 💪"][Math.floor(Math.random() * 3)]
-                                        : "Fica a saber que: 🧠"}
+                                        : ["Fica a saber que: 🧠", "Ups! Vamos ver... 🤔", "Quase! Olha só: 💡"][Math.floor(Math.random() * 3)]}
                                 </h3>
                                 {!isCorrect && (
                                     <div className="text-gray-800 font-medium mb-2">
