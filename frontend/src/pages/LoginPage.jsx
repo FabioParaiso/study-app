@@ -39,8 +39,8 @@ const StudentLogin = ({ onLogin }) => {
                     </div>
                 </div>
 
-                <h1 className="text-3xl font-bold text-gray-700 mb-2 tracking-tight">Vamos aprender!</h1>
-                <p className="text-gray-400 font-bold uppercase text-sm tracking-wide mb-10">Entra para começar</p>
+                <h1 className="text-3xl font-bold text-gray-700 mb-2 tracking-tight">Hora de Estudar! 🚀</h1>
+                <p className="text-gray-400 font-bold uppercase text-sm tracking-wide mb-10">Faz login para começar</p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <input
@@ -57,7 +57,7 @@ const StudentLogin = ({ onLogin }) => {
                         disabled={loading || !name.trim()}
                         className="w-full bg-duo-green border-b-4 border-duo-green-dark hover:bg-[#61E002] active:border-b-0 active:translate-y-1 text-white font-bold py-4 rounded-2xl uppercase tracking-wider transition-all flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-300"
                     >
-                        {loading ? 'A entrar...' : 'CONTINUAR'}
+                        {loading ? 'A entrar...' : 'COMEÇAR'}
                     </button>
                 </form>
             </div>

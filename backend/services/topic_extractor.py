@@ -1,7 +1,9 @@
 class TopicExtractor:
     @staticmethod
     def generate_prompt(text: str, existing_topics: list[str]) -> str:
-        existing_topics_str = ", ".join(existing_topics) if existing_topics else "Nenhum"
+        # Limit existing topics to avoid huge prompts
+        safe_topics = existing_topics[:30] if existing_topics else []
+        existing_topics_str = ", ".join(safe_topics) if safe_topics else "Nenhum"
         
         return f"""
         Atua como um assistente de organização de estudo.
@@ -18,8 +20,12 @@ class TopicExtractor:
         2. Cria NOVOS tópicos apenas se o conceito for substancialmente novo e não encaixar nos existentes.
         3. Sê conciso. Retorna apenas tópicos de alto nível (máximo 5).
         
+        LINGUAGEM (PT-PT OBRIGATÓRIA):
+        - Usa APENAS Português de Portugal.
+        - Ex: "Desporto" (não Esporte), "Ecrã" (não Tela), "Ficheiro" (não Arquivo), "Equipa" (não Time).
+        
         TEXTO PARA ANÁLISE:
-        {text[:15000]}...
+        {text[:5000]}...
 
         SAÍDA (JSON):
         {{ "topics": ["Tópico A", "Tópico B"] }}

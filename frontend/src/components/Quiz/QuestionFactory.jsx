@@ -1,6 +1,7 @@
 import React from 'react';
 import QuestionCard from './QuestionCard';
 import OpenEndedCard from './OpenEndedCard';
+import ShortAnswerCard from './ShortAnswerCard';
 
 export const QuestionFactory = ({
     type,
@@ -12,6 +13,7 @@ export const QuestionFactory = ({
     isEvaluating,
     onAnswer,
     onEvaluate,
+    onSubmitShortAnswer,
     onNext,
     handleSpeak,
     speakingPart,
@@ -33,7 +35,22 @@ export const QuestionFactory = ({
                     showFeedback={showFeedback}
                 />
             );
+        case 'short_answer':
+            return (
+                <ShortAnswerCard
+                    key={index}
+                    question={question}
+                    index={index}
+                    total={total}
+                    onSubmit={onSubmitShortAnswer}
+                    evaluation={evaluation}
+                    onNext={onNext}
+                    handleSpeak={handleSpeak}
+                    speakingPart={speakingPart}
+                />
+            );
         case 'open_ended':
+        case 'open-ended':
             return (
                 <OpenEndedCard
                     key={index}
@@ -52,3 +69,4 @@ export const QuestionFactory = ({
             return <div className="p-4 text-red-500">Unknown Question Type: {type}</div>;
     }
 };
+

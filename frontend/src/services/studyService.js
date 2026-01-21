@@ -23,34 +23,41 @@ export const studyService = {
     },
     generateQuiz: async (topics, type, studentId) => {
         const payload = {
-            topics: topics === 'all' ? [] : [topics],
+            // If it's an array, use it directly. If 'all', empty list. If string, wrap in list.
+            topics: Array.isArray(topics) ? topics : (topics === 'all' ? [] : [topics]),
             quiz_type: type === 'open-ended' ? 'open-ended' : 'multiple',
             student_id: studentId
         };
         const res = await api.post('/generate-quiz', payload);
         return res.data.questions;
     },
-    evaluateAnswer: async (question, userAnswer, studentId) => {
+    evaluateAnswer: async (question, userAnswer, studentId, type = 'open-ended') => {
         const res = await api.post('/evaluate-answer', {
             question,
             user_answer: userAnswer,
-            student_id: studentId
+            student_id: studentId,
+            quiz_type: type
         });
         return res.data;
     },
-    submitQuizResult: async (score, total, type, detailedResults, studentId, xpEarned) => {
+    submitQuizResult: async (score, total, type, detailedResults, studentId, xpEarned, materialId) => {
         await api.post('/quiz/result', {
             score,
             total_questions: total,
             quiz_type: type,
             detailed_results: detailedResults,
             student_id: studentId,
+            study_material_id: materialId,
             xp_earned: xpEarned
         });
     },
-    getWeakPoints: async (studentId) => {
+    getWeakPoints: async (studentId, materialId) => {
         if (!studentId) return [];
-        const res = await api.get(`/analytics/weak-points?student_id=${studentId}`);
+        let url = `/analytics/weak-points?student_id=${studentId}&t=${Date.now()}`;
+        if (materialId) {
+            url += `&material_id=${materialId}`;
+        }
+        const res = await api.get(url);
         return res.data;
     },
     getRecommendations: async (studentId) => {
@@ -67,6 +74,14 @@ export const studyService = {
     },
     updateHighScore: async (studentId, score) => {
         const res = await api.post('/gamification/highscore', { student_id: studentId, score });
+        return res.data;
+    },
+    getMaterials: async (studentId) => {
+        const res = await api.get(`/materials?student_id=${studentId}`);
+        return res.data;
+    },
+    activateMaterial: async (studentId, materialId) => {
+        const res = await api.post(`/materials/${materialId}/activate?student_id=${studentId}`);
         return res.data;
     }
 };

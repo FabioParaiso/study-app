@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { studyService } from '../services/studyService';
 import { useQuizEngine } from './useQuizEngine';
 
-export function useQuiz(student) {
+export function useQuiz(student, materialId) {
     const {
         questions, gameState, currentQuestionIndex, score, streak, userAnswers,
         openEndedEvaluations, missedIndices, showFeedback, isEvaluating,
@@ -75,6 +75,42 @@ export function useQuiz(student) {
         }
     };
 
+    /**
+     * Handler for Short Answer mode - uses local fuzzy matching, no API call.
+     */
+    /**
+     * Handler for Short Answer mode - uses AI evaluation with specific strictness for simple sentences.
+     */
+    const handleShortAnswer = async (userText, addXPCallback) => {
+        if (!userText.trim()) return;
+        setIsEvaluating(true);
+        const currentQ = questions[currentQuestionIndex];
+
+        try {
+            // Pass 'short_answer' as type to trigger the simple sentence prompt on backend
+            const rawEval = await studyService.evaluateAnswer(currentQ.question, userText, student?.id, 'short_answer');
+
+            const evalData = {
+                ...rawEval,
+                is_correct: rawEval.score >= 50
+            };
+
+            recordEvaluation(currentQuestionIndex, evalData, userText);
+
+            // XP Logic
+            const xpEarned = 5 + (evalData.score >= 50 ? 5 : 0) + (evalData.score >= 80 ? 5 : 0);
+
+            setSessionXP(prev => prev + xpEarned);
+            addXPCallback(xpEarned);
+
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao avaliar. Tenta novamente.");
+        } finally {
+            setIsEvaluating(false);
+        }
+    };
+
     const nextQuestion = async (updateHighScoreCallback) => {
         const finished = advanceQuestion();
 
@@ -105,7 +141,8 @@ export function useQuiz(student) {
                         quizType,
                         detailedResults,
                         student.id,
-                        sessionXP // Send total session XP
+                        sessionXP, // Send total session XP
+                        materialId // Pass it here
                     );
                 }
             } catch (err) {
@@ -138,7 +175,7 @@ export function useQuiz(student) {
     return {
         questions, loading, errorMsg, setErrorMsg, quizType, gameState, setGameState,
         currentQuestionIndex, score, streak, userAnswers, openEndedEvaluations, isEvaluating, showFeedback,
-        missedIndices,
-        startQuiz, handleAnswer, handleEvaluation, nextQuestion, exitQuiz, getOpenEndedAverage, startReviewMode
+        missedIndices, sessionXP,
+        startQuiz, handleAnswer, handleEvaluation, handleShortAnswer, nextQuestion, exitQuiz, getOpenEndedAverage, startReviewMode
     };
 }

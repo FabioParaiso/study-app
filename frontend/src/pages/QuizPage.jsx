@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { QuestionFactory } from '../components/Quiz/QuestionFactory';
+import ComboCounter from '../components/Quiz/ComboCounter';
 
 const QuizPage = ({
     questions,
@@ -11,17 +12,20 @@ const QuizPage = ({
     isEvaluating,
     onAnswer,
     onEvaluate,
+    onShortAnswer,
     onNext,
     onExit,
     handleSpeak,
     speakingPart,
     showFeedback,
-    addXP // Passed down if needed by handlers
+    addXP, // Passed down if needed by handlers
+    streak
 }) => {
     const currentQ = questions[currentQuestionIndex];
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 relative">
+            <ComboCounter combo={streak} />
             {/* Header */}
             <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-50">
                 <button
@@ -47,6 +51,7 @@ const QuizPage = ({
                 isEvaluating={isEvaluating}
                 onAnswer={(qId, oId) => onAnswer(qId, oId, addXP)}
                 onEvaluate={(text) => onEvaluate(text, addXP)}
+                onSubmitShortAnswer={(text) => onShortAnswer(text, addXP)}
                 onNext={onNext}
                 handleSpeak={handleSpeak}
                 speakingPart={speakingPart}

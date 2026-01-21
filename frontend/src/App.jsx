@@ -17,7 +17,8 @@ export default function App() {
 
     const {
         file, savedMaterial, availableTopics, selectedTopic, isAnalyzing, errorMsg,
-        setSelectedTopic, handleFileChange, analyzeFile, detectTopics, clearMaterial
+        setSelectedTopic, handleFileChange, analyzeFile, detectTopics, clearMaterial,
+        materialsList, activateMaterial, refreshMaterial
     } = useMaterial(student?.id);
 
     const {
@@ -27,9 +28,9 @@ export default function App() {
     const {
         questions, loading, errorMsg: quizError, quizType, gameState, setGameState,
         currentQuestionIndex, score, streak, userAnswers, openEndedEvaluations, isEvaluating,
-        startQuiz, handleAnswer, handleEvaluation, nextQuestion, exitQuiz, getOpenEndedAverage,
-        showFeedback, missedIndices, startReviewMode
-    } = useQuiz(student);
+        startQuiz, handleAnswer, handleEvaluation, handleShortAnswer, nextQuestion, exitQuiz, getOpenEndedAverage,
+        showFeedback, missedIndices, startReviewMode, sessionXP
+    } = useQuiz(student, savedMaterial?.id);
 
     const { speakingPart, handleSpeak } = useTTS();
 
@@ -39,6 +40,7 @@ export default function App() {
     };
 
     const handleStart = (type) => startQuiz(type, selectedTopic);
+    const handleTrainWeakPoints = (topics) => startQuiz('multiple', topics);
 
     // --- Render ---
 
@@ -73,6 +75,9 @@ export default function App() {
                 highScore={highScore}
                 nextLevel={nextLevel}
                 LEVELS={LEVELS}
+                materialsList={materialsList}
+                activateMaterial={activateMaterial}
+                onTrainWeakPoints={handleTrainWeakPoints}
             />
         );
     }
@@ -88,12 +93,14 @@ export default function App() {
                 isEvaluating={isEvaluating}
                 onAnswer={handleAnswer}
                 onEvaluate={handleEvaluation}
+                onShortAnswer={handleShortAnswer}
                 onNext={() => nextQuestion(updateHighScore)}
                 onExit={exitQuiz}
                 handleSpeak={handleSpeak}
                 speakingPart={speakingPart}
                 showFeedback={showFeedback}
                 addXP={addXP}
+                streak={streak}
             />
         );
     }
@@ -103,11 +110,11 @@ export default function App() {
             <ResultsPage
                 score={score}
                 totalQuestions={questions.length}
-                xpEarned={0}
+                xpEarned={sessionXP}
                 streak={streak}
                 quizType={quizType}
                 getOpenEndedAverage={getOpenEndedAverage}
-                exitQuiz={exitQuiz}
+                exitQuiz={() => { refreshMaterial(); exitQuiz(); }}
                 onRestart={() => startQuiz(quizType, selectedTopic)}
                 numMissed={missedIndices ? missedIndices.length : 0}
                 onReview={startReviewMode}

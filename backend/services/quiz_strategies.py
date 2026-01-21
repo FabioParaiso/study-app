@@ -36,15 +36,20 @@ class MultipleChoiceStrategy(QuizGenerationStrategy):
         {priority_instruction}
         {vocab_instruction}
 
-        REGRAS DE CRIAÇÃO:
-        1. Cria 10 perguntas focadas na compreensão de conceitos-chave.
-        2. As opções incorretas (distratores) devem ser plausíveis, evitando opções obviamente erradas ou ridículas.
-        3. Apenas uma opção deve ser inequivocamente correta.
-        4. Varia o tipo de perguntas (Definição, Identificação, Raciocínio).
+        REGRAS DE CRIAÇÃO (TAXONOMIA DE BLOOM):
+        Distribui as 10 perguntas pelos seguintes NÍVEIS COGNITIVOS:
+        - 3 de LEMBRAR/COMPREENDER: "O que é...?", "Define...", "Qual é a função de...?"
+        - 3 de APLICAR/ANALISAR: "Dá um exemplo de...", "Compara X com Y", "Porque é que...?"
+        - 2 de AVALIAR: "Na tua opinião, qual é mais importante e porquê?", "O que aconteceria se...?"
+        - 2 de CRIAR/SINTETIZAR: "Imagina que... como resolverias?", "Propõe uma forma de..."
+        
+        As opções incorretas (distratores) devem ser plausíveis, evitando opções obviamente erradas.
+        Apenas uma opção deve ser inequivocamente correta.
 
-        CRITÉRIOS DE LINGUAGEM (PT-PT):
-        - Usa Português de Portugal correto (e.g., "Ecrã" e não "Tela", "Ficheiro" e não "Arquivo").
-        - Trata o aluno por "Tu" ou usa impessoal. Nunca uses "Você".
+        CRITÉRIOS DE LINGUAGEM (PT-PT OBRIGATÓRIO):
+        - Usa Português de Portugal APENAS (PT-PT).
+        - PROIBIDO usar termos brasileiros como: "Tela" (usa Ecrã), "Arquivo" (usa Ficheiro), "Time" (usa Equipa), "Esporte" (usa Desporto), "Usuário" (usa Utilizador).
+        - Trata o aluno por "Tu" (2ª pessoa do singular). Nunca uses "Você".
         - Tom encorajador e claro.
 
         FORMATO DE SAÍDA (JSON ESTRITO):
@@ -87,10 +92,12 @@ class OpenEndedStrategy(QuizGenerationStrategy):
         {topic_instruction}
         {vocab_instruction}
 
-        REGRAS:
-        1. Cria exatamente 5 perguntas que exijam uma resposta explicativa curta (1-2 frases).
-        2. Foca-te nos conceitos mais importantes do texto.
-        3. Evita perguntas de "sim/não".
+        REGRAS (TAXONOMIA DE BLOOM):
+        Distribui as 5 perguntas assim:
+        - 2 de COMPREENDER: "Explica por palavras tuas...", "O que significa...?"
+        - 2 de ANALISAR/APLICAR: "Dá um exemplo prático de...", "Compara..."
+        - 1 de AVALIAR/CRIAR: "Na tua opinião...", "Como resolverias...?"
+        Evita perguntas de "sim/não". Cada resposta deve ser explicativa (1-2 frases).
 
         LINGUAGEM (PT-PT):
         - Português de Portugal.
@@ -110,3 +117,56 @@ class OpenEndedStrategy(QuizGenerationStrategy):
     def parse_response(self, response_content: str) -> list[dict]:
         data = json.loads(response_content)
         return data.get("questions", [])
+
+class ShortAnswerStrategy(QuizGenerationStrategy):
+    """
+    Modo Intermédio: Perguntas de resposta curta (Frase simples).
+    Exige construção de frase, mas sem a complexidade de um texto longo.
+    """
+    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_topics: list[str] = None) -> str:
+        topic_instruction = ""
+        if topics and len(topics) > 0:
+            topic_str = ", ".join(topics)
+            topic_instruction = f"INSTRUÇÃO CRÍTICA: O utilizador selecionou TÓPICOS ESPECÍFICOS: {topic_str}. Gera perguntas APENAS destes tópicos."
+
+        vocab_instruction = ""
+        if material_topics and len(material_topics) > 0:
+            v_str = ", ".join(material_topics)
+            vocab_instruction = f"\nCONSISTÊNCIA DE TÓPICOS: Usa APENAS um dos seguintes: [{v_str}]."
+
+        return f"""
+        Atua como um professor do 6º ano. Cria um mini-teste de 8 perguntas de RESPOSTA CURTA (FRASE SIMPLES).
+
+        {topic_instruction}
+        {vocab_instruction}
+
+        REGRAS IMPORTANTES:
+        1. Cada pergunta deve exigir uma resposta de UMA FRASE SIMPLES (5 a 15 palavras).
+        2. NÃO aceites respostas de apenas 1 palavra. A pergunta deve ser formulada para evitar isso.
+        3. Exemplo: 
+           - MAU: "Qual o nome do processo...?" (Resposta: Fotossíntese)
+           - BOM: "O que acontece durante a fotossíntese?" (Resposta: As plantas usam a luz solar para criar energia.)
+        4. O objetivo é treinar a literacia e a construção de frases.
+
+        LINGUAGEM (PT-PT):
+        - Português de Portugal.
+        - Tratamento por "Tu".
+
+        FORMATO DE SAÍDA (JSON):
+        {{ 
+            "questions": [
+                {{ 
+                    "topic": "Tema",
+                    "question": "Pergunta que exige frase simples?",
+                }}
+            ] 
+        }}
+
+        TEXTO:
+        {text[:50000]}
+        """
+
+    def parse_response(self, response_content: str) -> list[dict]:
+        data = json.loads(response_content)
+        return data.get("questions", [])
+

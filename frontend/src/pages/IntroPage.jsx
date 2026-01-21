@@ -4,12 +4,14 @@ import WeakPointsPanel from '../components/WeakPointsPanel';
 import IntroHeader from '../components/Intro/IntroHeader';
 import UploadSection from '../components/Intro/UploadSection';
 import MaterialDashboard from '../components/Intro/MaterialDashboard';
+import MaterialLibrary from '../components/MaterialLibrary';
 
 const IntroScreen = ({
     student, onLogout,
     file, handleFileChange, analyzeFile, isAnalyzing, savedMaterial, clearMaterial,
     availableTopics, selectedTopic, setSelectedTopic, detectTopics, errorMsg, loading, startQuiz,
-    changeAvatar, selectedAvatar, level, totalXP, highScore, nextLevel, LEVELS
+    changeAvatar, selectedAvatar, level, totalXP, highScore, nextLevel, LEVELS,
+    materialsList, activateMaterial, onTrainWeakPoints
 }) => {
 
     // Duolingo-style Button Component
@@ -67,30 +69,37 @@ const IntroScreen = ({
                             clearMaterial={clearMaterial}
                             startQuiz={startQuiz}
                             loading={loading}
+                            studentId={student.id}
+                            onTrainWeakPoints={onTrainWeakPoints}
                         />
                     )}
                 </div>
 
                 {/* Sidebar (Right) */}
                 <div className="space-y-6">
-                    <div className="bg-white rounded-2xl border-2 border-gray-200 p-6">
-                        <h3 className="font-bold text-lg text-gray-700 mb-4 uppercase tracking-wide border-b-2 border-gray-100 pb-2">O teu Progresso</h3>
-                        <WeakPointsPanel studentId={student.id} />
-                    </div>
+                    {/* Library (Navigation) - Absolute top for maximum stability */}
+                    <MaterialLibrary
+                        materials={materialsList}
+                        onActivate={activateMaterial}
+                        currentId={savedMaterial?.id}
+                    />
 
+                    {/* Level & Stats Card */}
                     <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 flex flex-col items-center text-center">
-                        <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-500">
+                        <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-500 shadow-inner">
                             <Trophy size={40} />
                         </div>
                         <h3 className="font-bold text-gray-700 text-xl">Nível {LEVELS.indexOf(level) + 1}</h3>
-                        <p className="text-gray-400 font-bold uppercase text-xs mb-4">{level.title}</p>
-                        <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
+                        <p className="text-gray-400 font-bold uppercase text-xs mb-4 tracking-widest">{level.title}</p>
+                        <div className="w-full bg-gray-100 rounded-full h-4 border-b border-white shadow-inner relative overflow-hidden">
                             <div
-                                className="bg-yellow-400 h-full rounded-full transition-all duration-500"
+                                className="bg-yellow-400 h-full rounded-full transition-all duration-700 ease-out"
                                 style={{ width: `${nextLevel ? Math.max(0, Math.min(100, ((totalXP - level.min) / (nextLevel.min - level.min)) * 100)) : 100}%` }}
-                            ></div>
+                            >
+                                <div className="absolute top-0 left-0 right-0 h-1/3 bg-white/30"></div>
+                            </div>
                         </div>
-                        <p className="mt-2 font-bold text-yellow-500">{totalXP} XP</p>
+                        <p className="mt-3 font-black text-yellow-500 tracking-wider font-mono">{totalXP} XP</p>
                     </div>
                 </div>
             </main>

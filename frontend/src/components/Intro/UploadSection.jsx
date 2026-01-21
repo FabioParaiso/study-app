@@ -1,5 +1,6 @@
 import React from 'react';
 import { Upload, RefreshCw } from 'lucide-react';
+import LoadingTips from '../UI/LoadingTips';
 
 const UploadSection = ({ file, handleFileChange, analyzeFile, isAnalyzing, DuoButton }) => {
     return (
@@ -7,9 +8,9 @@ const UploadSection = ({ file, handleFileChange, analyzeFile, isAnalyzing, DuoBu
             <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center text-gray-400">
                 <Upload size={40} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-700 mb-2">Carregar Apontamentos</h2>
+            <h2 className="text-2xl font-bold text-gray-700 mb-2">Carrega a Matéria 📚</h2>
             <p className="text-gray-500 mb-8 max-w-sm mx-auto">
-                Faz upload de um PDF ou TXT e a IA vai criar testes personalizados para ti.
+                Carrega um PDF ou TXT e a IA cria quizzes personalizados para ti.
             </p>
 
             <div className="relative inline-block w-full max-w-xs">
@@ -32,8 +33,10 @@ const UploadSection = ({ file, handleFileChange, analyzeFile, isAnalyzing, DuoBu
                 disabled={!file || isAnalyzing}
                 className="max-w-xs mx-auto"
             >
-                {isAnalyzing ? <RefreshCw className="animate-spin" /> : "COMEÇAR A ESTUDAR"}
+                {isAnalyzing ? <RefreshCw className="animate-spin" /> : "COMEÇAR"}
             </DuoButton>
+
+            {isAnalyzing && <LoadingTips />}
         </div>
     );
 };

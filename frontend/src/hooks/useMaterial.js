@@ -9,20 +9,27 @@ export const useMaterial = (studentId) => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
+    const [materialsList, setMaterialsList] = useState([]);
+
     const checkSavedMaterial = useCallback(async () => {
         if (!studentId) {
             setSavedMaterial(null);
             setAvailableTopics([]);
+            setMaterialsList([]);
             return;
         }
         try {
             const data = await studyService.checkMaterial(studentId);
+            console.log("DEBUG: checkMaterial returned", data);
             if (data.has_material) {
                 setSavedMaterial(data);
                 setAvailableTopics(data.topics || []);
             } else {
                 setSavedMaterial(null);
             }
+            // Fetch library list
+            const list = await studyService.getMaterials(studentId);
+            setMaterialsList(list);
         } catch (err) {
             console.error(err);
         }
@@ -73,6 +80,16 @@ export const useMaterial = (studentId) => {
         }
     };
 
+    const activateMaterial = async (materialId) => {
+        if (!studentId) return;
+        try {
+            await studyService.activateMaterial(studentId, materialId);
+            await checkSavedMaterial();
+        } catch (err) {
+            console.error("Failed to activate material", err);
+        }
+    };
+
     // Auto-check on mount or studentId change
     useEffect(() => {
         checkSavedMaterial();
@@ -85,11 +102,14 @@ export const useMaterial = (studentId) => {
         selectedTopic,
         isAnalyzing,
         errorMsg,
+        materialsList,
         setSelectedTopic,
         handleFileChange,
         analyzeFile,
         detectTopics,
         clearMaterial,
-        setErrorMsg
+        activateMaterial,
+        setErrorMsg,
+        refreshMaterial: checkSavedMaterial
     };
 };

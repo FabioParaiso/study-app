@@ -7,7 +7,7 @@ from repositories.quiz_repository import QuizRepository
 from services.document_service import DocumentService
 from services.topic_service import TopicService
 from services.ai_service import AIService
-from services.quiz_strategies import MultipleChoiceStrategy, OpenEndedStrategy
+from services.quiz_strategies import MultipleChoiceStrategy, OpenEndedStrategy, ShortAnswerStrategy
 from services.analytics_service import AnalyticsService
 from schemas.study import QuizRequest, AnalyzeRequest, EvaluationRequest, QuizResultCreate
 
@@ -34,10 +34,14 @@ def get_current_material(student_id: int, repo: MaterialRepository = Depends(get
     data = repo.load(student_id)
     if data:
         return {
-            "has_material": True, 
+            "has_material": True,
+            "id": data.get("id"),  # CRITICAL: Frontend needs this.
             "source": data.get("source"), 
             "preview": data.get("text")[:200] if data.get("text") else "",
-            "topics": data.get("topics", [])
+            "topics": data.get("topics", []),
+            # Gamification stats for this material
+            "total_xp": data.get("total_xp", 0),
+            "high_score": data.get("high_score", 0)
         }
     return {"has_material": False}
 
@@ -45,6 +49,17 @@ def get_current_material(student_id: int, repo: MaterialRepository = Depends(get
 def clear_material(student_id: int, repo: MaterialRepository = Depends(get_material_repo)):
     repo.clear(student_id)
     return {"status": "cleared"}
+
+@router.get("/materials")
+def list_materials(student_id: int, repo: MaterialRepository = Depends(get_material_repo)):
+    return repo.list_all(student_id)
+
+@router.post("/materials/{material_id}/activate")
+def activate_material(material_id: int, student_id: int, repo: MaterialRepository = Depends(get_material_repo)):
+    success = repo.activate(student_id, material_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Material not found")
+    return {"status": "activated"}
 
 def get_document_service():
     return DocumentService()
@@ -163,6 +178,8 @@ def generate_quiz_endpoint(
 
     if request.quiz_type == "open-ended":
         strategy = OpenEndedStrategy()
+    elif request.quiz_type == "short_answer":
+        strategy = ShortAnswerStrategy()
     else:
         strategy = MultipleChoiceStrategy()
 
@@ -192,7 +209,7 @@ def evaluate_answer_endpoint(
     if not ai_service.client:
          raise HTTPException(status_code=400, detail="API Key is required for evaluation.")
          
-    result = ai_service.evaluate_answer(text, request.question, request.user_answer)
+    result = ai_service.evaluate_answer(text, request.question, request.user_answer, request.quiz_type)
     return result
 
 @router.post("/quiz/result")
@@ -201,9 +218,11 @@ def save_quiz_result(
     repo: QuizRepository = Depends(get_quiz_repo),
     material_repo: MaterialRepository = Depends(get_material_repo)
 ):
-    current = material_repo.load(result.student_id) 
-    
-    material_id = current["id"] if current else None
+    # Use explicit ID from frontend, or fallback to active if missing
+    material_id = result.study_material_id
+    if not material_id:
+        current = material_repo.load(result.student_id) 
+        material_id = current["id"] if current else None
 
     analytics_data = [item.dict() for item in result.detailed_results]
 
@@ -223,13 +242,21 @@ def save_quiz_result(
 @router.get("/analytics/weak-points")
 def get_weak_points(
     student_id: int,
+    material_id: int = None,
     repo: QuizRepository = Depends(get_quiz_repo),
     material_repo: MaterialRepository = Depends(get_material_repo)
 ):
-    # Get active material
-    current = material_repo.load(student_id)
-    material_id = current["id"] if current else None
+    print(f"DEBUG: get_weak_points CALLED. student_id={student_id}, material_id={material_id}")
     
-    # Scope analytics to current material if exists
+    if not material_id:
+        current = material_repo.load(student_id)
+        if not current:
+            print(f"DEBUG: No material_id provided AND no active material found for student {student_id}")
+            return []
+        material_id = current["id"]
+        print(f"DEBUG: Falling back to active material ID: {material_id} ({current['source']})")
+    
     analytics = AnalyticsService(repo)
-    return analytics.get_weak_points(student_id, material_id)
+    result = analytics.get_weak_points(student_id, material_id)
+    print(f"DEBUG: Returning {len(result)} topics for material_id {material_id}")
+    return result

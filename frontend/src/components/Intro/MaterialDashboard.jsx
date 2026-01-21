@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen, XCircle, RefreshCw, Trophy, PenTool } from 'lucide-react';
+import WeakPointsPanel from '../WeakPointsPanel';
 
 const MaterialDashboard = ({
     savedMaterial,
@@ -8,7 +9,9 @@ const MaterialDashboard = ({
     setSelectedTopic,
     clearMaterial,
     startQuiz,
-    loading
+    loading,
+    studentId,
+    onTrainWeakPoints
 }) => {
     return (
         <div className="space-y-6 animate-fade-in">
@@ -20,7 +23,7 @@ const MaterialDashboard = ({
                     </div>
                     <div>
                         <p className="font-bold text-gray-700 text-lg">{savedMaterial.source}</p>
-                        <p className="text-xs uppercase font-bold text-duo-green tracking-wider">Matéria Ativa</p>
+                        <p className="text-xs uppercase font-bold text-duo-green tracking-wider">Matéria Atual</p>
                     </div>
                 </div>
                 <button onClick={clearMaterial} className="text-gray-400 hover:text-duo-red-dark transition-colors">
@@ -31,7 +34,7 @@ const MaterialDashboard = ({
             {/* Filters */}
             {availableTopics.length > 0 && (
                 <div className="space-y-3">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Filtrar por Tópico</h3>
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Tópicos</h3>
                     <div className="flex flex-wrap gap-2">
                         <button
                             onClick={() => setSelectedTopic('all')}
@@ -58,40 +61,59 @@ const MaterialDashboard = ({
                 </div>
             )}
 
-            {/* Quiz Modes */}
-            <div className="grid gap-4">
+            {/* Mastery / Weak Points */}
+            <WeakPointsPanel
+                key={savedMaterial?.id}
+                studentId={studentId}
+                materialId={savedMaterial?.id}
+                onTrain={onTrainWeakPoints}
+            />
+
+            {/* Level Selection - Duolingo Style */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Beginner Level */}
                 <button
                     onClick={() => startQuiz('multiple')}
                     disabled={loading}
-                    className="bg-white border-2 border-gray-200 border-b-4 p-6 rounded-2xl flex items-center justify-between hover:bg-gray-50 active:border-b-2 active:translate-y-1 transition-all group"
+                    className="group relative bg-white rounded-2xl border-2 border-gray-200 border-b-4 hover:border-green-500 hover:bg-green-50 active:border-b-2 active:translate-y-1 transition-all p-6 flex flex-col items-center gap-4 h-full"
                 >
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-duo-green rounded-xl flex items-center justify-center text-white">
-                            <Trophy size={32} />
-                        </div>
-                        <div className="text-left">
-                            <h3 className="font-bold text-gray-700 text-xl">Modo Clássico</h3>
-                            <p className="text-gray-400 font-medium">Perguntas de escolha múltipla</p>
-                        </div>
+                    <div className="w-20 h-20 rounded-2xl bg-green-500 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                        <Trophy size={40} strokeWidth={2.5} />
                     </div>
-                    {loading ? <RefreshCw className="animate-spin text-duo-gray-dark" /> : <div className="bg-duo-green text-white font-bold px-6 py-3 rounded-xl shadow-lg uppercase">Começar</div>}
+                    <div className="text-center">
+                        <h3 className="font-black text-gray-700 text-lg uppercase tracking-wide group-hover:text-green-600">Iniciante</h3>
+                        <p className="text-gray-400 text-sm font-medium mt-1">Quiz Rápido</p>
+                    </div>
                 </button>
 
+                {/* Intermediate Level */}
+                <button
+                    onClick={() => startQuiz('short_answer')}
+                    disabled={loading}
+                    className="group relative bg-white rounded-2xl border-2 border-gray-200 border-b-4 hover:border-yellow-500 hover:bg-yellow-50 active:border-b-2 active:translate-y-1 transition-all p-6 flex flex-col items-center gap-4 h-full"
+                >
+                    <div className="w-20 h-20 rounded-2xl bg-yellow-500 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                        <BookOpen size={40} strokeWidth={2.5} />
+                    </div>
+                    <div className="text-center">
+                        <h3 className="font-black text-gray-700 text-lg uppercase tracking-wide group-hover:text-yellow-600">Intermédio</h3>
+                        <p className="text-gray-400 text-sm font-medium mt-1">Frases Simples</p>
+                    </div>
+                </button>
+
+                {/* Advanced Level */}
                 <button
                     onClick={() => startQuiz('open-ended')}
                     disabled={loading}
-                    className="bg-white border-2 border-gray-200 border-b-4 p-6 rounded-2xl flex items-center justify-between hover:bg-gray-50 active:border-b-2 active:translate-y-1 transition-all group"
+                    className="group relative bg-white rounded-2xl border-2 border-gray-200 border-b-4 hover:border-purple-600 hover:bg-purple-50 active:border-b-2 active:translate-y-1 transition-all p-6 flex flex-col items-center gap-4 h-full"
                 >
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-duo-blue rounded-xl flex items-center justify-center text-white">
-                            <PenTool size={32} />
-                        </div>
-                        <div className="text-left">
-                            <h3 className="font-bold text-gray-700 text-xl">Modo Escrita</h3>
-                            <p className="text-gray-400 font-medium">Respostas abertas com avaliação</p>
-                        </div>
+                    <div className="w-20 h-20 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                        <PenTool size={40} strokeWidth={2.5} />
                     </div>
-                    <div className="bg-duo-blue text-white font-bold px-6 py-3 rounded-xl shadow-lg uppercase">Praticar</div>
+                    <div className="text-center">
+                        <h3 className="font-black text-gray-700 text-lg uppercase tracking-wide group-hover:text-purple-700">Avançado</h3>
+                        <p className="text-gray-400 text-sm font-medium mt-1">Escrita Livre</p>
+                    </div>
                 </button>
             </div>
         </div>

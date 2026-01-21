@@ -1,30 +1,49 @@
 import { useState, useEffect } from 'react';
 import { studyService } from '../services/studyService';
 
-export function useAnalytics(studentId) {
+export function useAnalytics(studentId, materialId) {
     const [points, setPoints] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (!studentId) return;
+        if (!studentId) {
+            setPoints([]);
+            return;
+        }
+
+        let isActive = true;
+        setLoading(true);
+        // Clear old points immediately to avoid "ghost topics"
+        setPoints([]);
 
         const loadPoints = async () => {
-            setLoading(true);
             try {
-                const data = await studyService.getWeakPoints(studentId);
-                setPoints(data);
-                setError(null);
+                // Backend automatically scopes to active material for this student
+                const data = await studyService.getWeakPoints(studentId, materialId);
+
+                if (isActive) {
+                    setPoints(data);
+                    setError(null);
+                }
             } catch (err) {
-                console.error(err);
-                setError(err);
+                if (isActive) {
+                    console.error(err);
+                    setError(err);
+                }
             } finally {
-                setLoading(false);
+                if (isActive) {
+                    setLoading(false);
+                }
             }
         };
 
         loadPoints();
-    }, [studentId]);
+
+        return () => {
+            isActive = false;
+        };
+    }, [studentId, materialId]);
 
     return { points, loading, error };
 }

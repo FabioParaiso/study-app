@@ -38,6 +38,7 @@ class QuizResultCreate(BaseModel):
     quiz_type: str
     detailed_results: List[AnalyticsItem]
     student_id: int
+    study_material_id: Optional[int] = None # NEW: Explicit link
     xp_earned: int = 0
 
 class AnalyzeRequest(BaseModel):
@@ -47,4 +48,5 @@ class EvaluationRequest(BaseModel):
     student_id: int
     question: str
     user_answer: str
+    quiz_type: str = "open-ended" # "open-ended" or "short_answer"
     api_key: Optional[str] = None

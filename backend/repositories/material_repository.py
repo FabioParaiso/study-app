@@ -73,12 +73,54 @@ class MaterialRepository:
             return None
 
     def clear(self, student_id: int) -> bool:
-        """Deletes the saved study material for a specific student."""
+        """Deactivates the current study material (does not delete)."""
         try:
-            self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).delete()
+            self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).update({"is_active": False})
             self.db.commit()
             return True
         except Exception as e:
             print(f"Error clearing material: {e}")
+            self.db.rollback()
+            return False
+
+    def list_all(self, student_id: int) -> list[dict]:
+        """Lists all study materials for a specific student."""
+        try:
+            items = self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).all()
+            return [
+                {
+                    "id": item.id,
+                    "source": item.source,
+                    "created_at": item.created_at,
+                    "is_active": item.is_active,
+                    "preview": item.text[:100] if item.text else "",
+                    "total_xp": item.total_xp
+                }
+                for item in items
+            ]
+        except Exception as e:
+            print(f"Error listing materials: {e}")
+            return []
+
+    def activate(self, student_id: int, material_id: int) -> bool:
+        """Activates a specific material and deactivates others."""
+        try:
+            # 1. Deactivate all
+            self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).update({"is_active": False})
+            
+            # 2. Activate specific
+            item = self.db.query(StudyMaterial).filter(
+                StudyMaterial.student_id == student_id, 
+                StudyMaterial.id == material_id
+            ).first()
+            
+            if item:
+                item.is_active = True
+                item.last_accessed = datetime.utcnow()
+                self.db.commit()
+                return True
+            return False
+        except Exception as e:
+            print(f"Error activating material: {e}")
             self.db.rollback()
             return False

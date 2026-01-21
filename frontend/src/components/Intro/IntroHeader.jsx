@@ -30,7 +30,7 @@ const IntroHeader = ({ student, selectedAvatar, changeAvatar, totalXP, onLogout,
                         onClick={onLogout}
                         className="text-xs font-bold text-duo-gray-dark hover:text-duo-red uppercase tracking-wider px-3 py-1 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                        Sair
+                        Bazar 👋
                     </button>
                 </div>
             </div>

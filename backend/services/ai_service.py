@@ -28,10 +28,13 @@ class AIService:
             print(f"Error generating quiz: {e}")
             return None
 
-    def evaluate_answer(self, text: str, question: str, user_answer: str) -> dict:
+    def evaluate_answer(self, text: str, question: str, user_answer: str, quiz_type: str = "open-ended") -> dict:
         if not self.client: return None
 
-        prompt = AnswerEvaluator.generate_prompt(text, question, user_answer)
+        if quiz_type == "short_answer":
+            prompt = AnswerEvaluator.generate_simple_answer_prompt(text, question, user_answer)
+        else:
+            prompt = AnswerEvaluator.generate_prompt(text, question, user_answer)
 
         try:
             response = self.client.chat.completions.create(
