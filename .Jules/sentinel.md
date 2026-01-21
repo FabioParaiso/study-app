@@ -7,3 +7,8 @@
 **Vulnerability:** User-controlled input (`topics` list) was injected directly into the LLM system prompt without sanitization. An attacker could inject newlines and instructions to override the system prompt.
 **Learning:** Even structured inputs like lists can be vectors for Prompt Injection if they are concatenated into a prompt string.
 **Prevention:** Implemented strict Pydantic validation on the `QuizRequest` model to whitelist allowed characters (alphanumeric, punctuation) and block control characters (newlines) and length abuse.
+
+## 2024-02-12 - Missing Security Headers
+**Vulnerability:** Application lacked standard HTTP security headers (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection), increasing exposure to clickjacking and MIME-sniffing.
+**Learning:** FastAPI/Starlette does not enable these headers by default. Explicit middleware is required.
+**Prevention:** Implemented `add_security_headers` middleware in `backend/main.py` to enforce these headers globally.
