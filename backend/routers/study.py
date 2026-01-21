@@ -246,17 +246,12 @@ def get_weak_points(
     repo: QuizRepository = Depends(get_quiz_repo),
     material_repo: MaterialRepository = Depends(get_material_repo)
 ):
-    print(f"DEBUG: get_weak_points CALLED. student_id={student_id}, material_id={material_id}")
-    
     if not material_id:
         current = material_repo.load(student_id)
         if not current:
-            print(f"DEBUG: No material_id provided AND no active material found for student {student_id}")
             return []
         material_id = current["id"]
-        print(f"DEBUG: Falling back to active material ID: {material_id} ({current['source']})")
     
     analytics = AnalyticsService(repo)
     result = analytics.get_weak_points(student_id, material_id)
-    print(f"DEBUG: Returning {len(result)} topics for material_id {material_id}")
     return result

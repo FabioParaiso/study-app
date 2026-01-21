@@ -20,7 +20,6 @@ export const useMaterial = (studentId) => {
         }
         try {
             const data = await studyService.checkMaterial(studentId);
-            console.log("DEBUG: checkMaterial returned", data);
             if (data.has_material) {
                 setSavedMaterial(data);
                 setAvailableTopics(data.topics || []);

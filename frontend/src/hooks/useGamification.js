@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { studyService } from '../services/studyService';
 
 const LEVELS = [
     { min: 0, title: "Estudante Curiosa", emoji: "🌱" },

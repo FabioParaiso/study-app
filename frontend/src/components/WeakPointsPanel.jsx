@@ -2,7 +2,7 @@ import React from 'react';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 
-const WeakPointsPanel = ({ studentId, onTrain, materialId }) => {
+const WeakPointsPanel = ({ studentId, materialId }) => {
     // We pass materialId to force re-fetch when it changes
     const { points, loading } = useAnalytics(studentId, materialId);
 

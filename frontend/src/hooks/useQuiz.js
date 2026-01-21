@@ -76,10 +76,7 @@ export function useQuiz(student, materialId) {
     };
 
     /**
-     * Handler for Short Answer mode - uses local fuzzy matching, no API call.
-     */
-    /**
-     * Handler for Short Answer mode - uses AI evaluation with specific strictness for simple sentences.
+     * Handler for Short Answer mode - uses AI evaluation for simple sentences.
      */
     const handleShortAnswer = async (userText, addXPCallback) => {
         if (!userText.trim()) return;

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Trophy } from 'lucide-react';
-import WeakPointsPanel from '../components/WeakPointsPanel';
 import IntroHeader from '../components/Intro/IntroHeader';
 import UploadSection from '../components/Intro/UploadSection';
 import MaterialDashboard from '../components/Intro/MaterialDashboard';

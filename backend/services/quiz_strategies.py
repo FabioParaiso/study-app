@@ -3,7 +3,6 @@ import json
 
 class QuizGenerationStrategy(ABC):
     @abstractmethod
-    @abstractmethod
     def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_topics: list[str] = None) -> str:
         pass
 

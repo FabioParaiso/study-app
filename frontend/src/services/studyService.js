@@ -25,7 +25,7 @@ export const studyService = {
         const payload = {
             // If it's an array, use it directly. If 'all', empty list. If string, wrap in list.
             topics: Array.isArray(topics) ? topics : (topics === 'all' ? [] : [topics]),
-            quiz_type: type === 'open-ended' ? 'open-ended' : 'multiple',
+            quiz_type: type, // Pass the type directly (multiple, short_answer, open-ended)
             student_id: studentId
         };
         const res = await api.post('/generate-quiz', payload);

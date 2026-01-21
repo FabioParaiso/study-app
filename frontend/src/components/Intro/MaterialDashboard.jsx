@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, XCircle, RefreshCw, Trophy, PenTool, Lock } from 'lucide-react';
+import { BookOpen, XCircle, Trophy, PenTool, Lock } from 'lucide-react';
 import WeakPointsPanel from '../WeakPointsPanel';
 
 const MaterialDashboard = ({
