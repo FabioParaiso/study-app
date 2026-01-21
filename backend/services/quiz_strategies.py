@@ -59,21 +59,24 @@ class QuizGenerationStrategy(ABC):
     def _get_model_answer_criteria(self) -> str:
         """Critérios partilhados para a resposta modelo nos prompts de avaliação."""
         return """- RESPOSTA MODELO (model_answer): 
-          * OBRIGATÓRIA. A explicação completa da resposta correta.
-          * Escrita como se estivesses a explicar a um amigo de 12 anos.
-          * Usa ANALOGIAS do dia-a-dia (ex: "É como quando...", "Imagina que...").
-          * Frases CURTAS. Nada de palavras difíceis sem explicação.
-        - CURIOSIDADE: "Sabias que...\""""
+          * OBRIGATÓRIA. MÁXIMO 50 PALAVRAS (2-3 frases curtas).
+          * Linguagem ULTRA-SIMPLES para criança de 10 anos.
+          * Começa com o essencial: "O ar entra pelo nariz..." não "O sistema respiratório..."
+          * 1 analogia simples no máximo (ex: "É como um tubo").
+          * PROIBIDO: parágrafos longos, listas, palavras técnicas.
+        - CURIOSIDADE (curiosity): 
+          * 1 frase curta APENAS (máx. 15 palavras).
+          * Formato: "Sabias que [facto curioso]?\""""
 
     def _get_evaluation_json_format(self) -> str:
         """Formato JSON de saída partilhado para prompts de avaliação."""
         return """SAÍDA (JSON):
         { 
             "score": 0-100,
-            "feedback": "Frase motivacional curta.",
-            "missing_points": ["Ponto 1", "Ponto 2"],
-            "model_answer": "Explicação super simples para uma criança de 12 anos.",
-            "curiosity": "Curiosidade divertida sobre o tema."
+            "feedback": "Frase motivacional curta (5-10 palavras).",
+            "missing_points": ["Ponto curto 1", "Ponto curto 2"],
+            "model_answer": "Resposta simples em 2-3 frases curtas. Máximo 50 palavras!",
+            "curiosity": "Sabias que [facto curto]?"
         }"""
 
     def _build_evaluation_context(self, text: str, question: str, user_answer: str) -> str:
