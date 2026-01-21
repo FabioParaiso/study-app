@@ -1,68 +1,229 @@
 import React, { useState } from 'react';
-import { User, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Sparkles, GraduationCap, ArrowRight } from 'lucide-react';
 import { authService } from '../services/authService';
+import mascotImg from '../assets/mascot.png';
 
-const StudentLogin = ({ onLogin }) => {
+const LoginPage = ({ onLogin }) => {
+    const [isRegistering, setIsRegistering] = useState(false);
     const [name, setName] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    const handleSubmit = async (e) => {
+    // Frontend validation
+    const isFormValid = () => {
+        if (name.trim().length < 2) return false;
+        if (password.length < 4) return false;
+        if (isRegistering && password !== confirmPassword) return false;
+        return true;
+    };
+
+    const handleAction = async (e) => {
         e.preventDefault();
-        if (!name.trim()) return;
+        setError("");
+
+        // Validate
+        if (name.trim().length < 2) {
+            setError("O nome deve ter pelo menos 2 caracteres.");
+            return;
+        }
+        if (password.length < 4) {
+            setError("A palavra-passe deve ter pelo menos 4 caracteres.");
+            return;
+        }
+        if (isRegistering && password !== confirmPassword) {
+            setError("As palavras-passe não coincidem.");
+            return;
+        }
 
         setLoading(true);
+
         try {
-            const student = await authService.loginStudent(name);
-            onLogin(student); // {id, name}
+            let student;
+            if (isRegistering) {
+                student = await authService.registerStudent(name, password);
+            } else {
+                student = await authService.loginStudent(name, password);
+            }
+            // Clear password from state after successful login (security)
+            setPassword("");
+            setConfirmPassword("");
+            onLogin(student);
         } catch (err) {
             console.error(err);
-            alert("Erro ao entrar. Tenta novamente.");
+            const msg = err.response?.data?.detail || "Ocorreu um erro. Verifica a tua ligação.";
+            setError(msg);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            {/* Background decoration */}
-            <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
-                <div className="absolute top-10 left-10 w-32 h-32 bg-duo-green rounded-full blur-3xl"></div>
-                <div className="absolute bottom-10 right-10 w-48 h-48 bg-duo-blue rounded-full blur-3xl"></div>
-            </div>
+        <div className="min-h-screen bg-gradient-to-br from-blue-500 to-indigo-700 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
 
-            <div className="max-w-md w-full animate-fade-in text-center relative z-10">
-                <div className="w-32 h-32 mx-auto mb-8 relative">
-                    <div className="absolute inset-0 bg-duo-green rounded-3xl rotate-6 opacity-20"></div>
-                    <div className="absolute inset-0 bg-duo-blue rounded-3xl -rotate-6 opacity-20"></div>
-                    <div className="relative bg-white border-4 border-gray-100 rounded-3xl w-full h-full flex items-center justify-center shadow-sm">
-                        <span className="text-6xl">🎓</span>
-                    </div>
+            {/* Animated Background Elements */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {/* Subtle Grid Pattern */}
+                <div className="absolute inset-0 opacity-10"
+                    style={{ backgroundImage: 'radial-gradient(#fff 2px, transparent 2px)', backgroundSize: '30px 30px' }}>
                 </div>
 
-                <h1 className="text-3xl font-bold text-gray-700 mb-2 tracking-tight">Hora de Estudar! 🚀</h1>
-                <p className="text-gray-400 font-bold uppercase text-sm tracking-wide mb-10">Faz login para começar</p>
+                {/* Floating Orbs */}
+                <div className="absolute top-20 left-10 w-40 h-40 bg-white rounded-full blur-3xl opacity-20 animate-pulse"></div>
+                <div className="absolute bottom-20 right-10 w-60 h-60 bg-purple-400 rounded-full blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-yellow-300 rounded-full blur-xl opacity-20 animate-bounce-slow"></div>
+            </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Como te chamas?"
-                        className="w-full text-center text-xl font-bold p-4 bg-gray-50 border-2 border-gray-200 border-b-4 rounded-2xl focus:border-duo-blue focus:bg-white placeholder-gray-300 transition-all outline-none text-gray-700"
-                        autoFocus
-                    />
+            <div className="max-w-md w-full animate-scale-in relative z-10">
 
+                {/* Brand / Mascot Area */}
+                <div className="text-center mb-8">
+                    <div className="inline-block relative">
+                        <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+                        <div className="relative bg-white p-2 rounded-[2rem] shadow-xl border-b-8 border-gray-200 transform hover:scale-105 transition-transform duration-300">
+                            {/* mix-blend-multiply hides the white background of the image against the white card */}
+                            <img src={mascotImg} alt="Mascote Super Study" className="w-32 h-32 object-contain mix-blend-multiply" />
+                        </div>
+                        <div className="absolute -top-4 -right-4 bg-yellow-400 text-yellow-900 font-black text-xs px-3 py-1 rounded-full uppercase tracking-widest border-2 border-yellow-500 transform rotate-12 animate-bounce-short">
+                            Novo!
+                        </div>
+                    </div>
+                    <h1 className="text-4xl font-black text-white mt-6 mb-2 tracking-tight">
+                        Super Study! 🚀
+                    </h1>
+                    <p className="text-blue-200 font-bold uppercase tracking-widest text-sm">
+                        Torna o estudo na tua aventura favorita!
+                    </p>
+                </div>
+
+                {/* Main Card */}
+                <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl border-b-8 border-blue-900/10">
+
+                    <h2 className="text-2xl font-black text-gray-800 mb-6 text-center">
+                        {isRegistering ? "Junta-te a nós! É grátis!" : "Olá de novo, campeão! 👋"}
+                    </h2>
+
+                    {error && (
+                        <div className="bg-red-50 border-2 border-red-100 text-red-500 p-4 rounded-2xl mb-6 text-sm font-bold animate-shake text-center">
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleAction} className="space-y-4">
+                        {/* Name Input */}
+                        <div className="relative group">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
+                                <User size={24} strokeWidth={2.5} />
+                            </div>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Qual é o teu nome de super-herói?"
+                                className="w-full pl-14 pr-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none font-bold text-gray-700 placeholder-gray-400 focus:border-blue-500 focus:bg-white transition-all text-lg"
+                                autoFocus={!isRegistering}
+                            />
+                        </div>
+
+                        {/* Password Input */}
+                        <div className="relative group">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
+                                <Lock size={24} strokeWidth={2.5} />
+                            </div>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="A tua palavra-passe secreta"
+                                className="w-full pl-14 pr-14 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none font-bold text-gray-700 placeholder-gray-400 focus:border-blue-500 focus:bg-white transition-all text-lg"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
+
+                        {/* Confirm Password Input (Registration Only) */}
+                        {isRegistering && (
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors">
+                                    <Lock size={24} strokeWidth={2.5} />
+                                </div>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="Confirma a palavra-passe"
+                                    className={`w-full pl-14 pr-4 py-4 bg-gray-50 border-2 rounded-2xl outline-none font-bold text-gray-700 placeholder-gray-400 focus:bg-white transition-all text-lg ${confirmPassword && password !== confirmPassword
+                                        ? 'border-red-300 focus:border-red-500'
+                                        : 'border-gray-200 focus:border-green-500'
+                                        }`}
+                                />
+                            </div>
+                        )}
+
+                        {/* Inline Validation Hints */}
+                        {(name.length > 0 || password.length > 0 || confirmPassword.length > 0) && !isFormValid() && (
+                            <div className="text-sm font-bold text-orange-500 text-center py-2 px-4 bg-orange-50 rounded-xl border border-orange-100">
+                                {name.trim().length > 0 && name.trim().length < 2 && "Nome curto demais (mín. 2). "}
+                                {password.length > 0 && password.length < 4 && "Palavra-passe curta (mín. 4). "}
+                                {isRegistering && confirmPassword.length > 0 && password !== confirmPassword && "Palavras-passe não coincidem."}
+                            </div>
+                        )}
+
+                        {/* Submit Button */}
+                        <button
+                            type="submit"
+                            disabled={loading || !isFormValid()}
+                            className={`w-full py-4 rounded-2xl border-b-[6px] font-black text-white uppercase tracking-widest text-lg transition-all active:border-b-0 active:translate-y-[6px] flex items-center justify-center gap-2 shadow-lg ${loading || !isFormValid()
+                                ? 'opacity-50 cursor-not-allowed bg-gray-400 border-gray-500'
+                                : isRegistering
+                                    ? 'bg-green-500 border-green-700 hover:bg-green-400'
+                                    : 'bg-blue-500 border-blue-700 hover:bg-blue-400'
+                                }`}
+                        >
+                            {loading ? (
+                                <span className="animate-pulse">A carregar...</span>
+                            ) : (
+                                <>
+                                    {isRegistering ? 'COMEÇAR A AVENTURA' : 'CONTINUAR A JORNADA'}
+                                    <ArrowRight size={24} strokeWidth={3} />
+                                </>
+                            )}
+                        </button>
+                    </form>
+                </div>
+
+                {/* Toggle Mode */}
+                <div className="mt-8 text-center">
                     <button
-                        type="submit"
-                        disabled={loading || !name.trim()}
-                        className="w-full bg-duo-green border-b-4 border-duo-green-dark hover:bg-[#61E002] active:border-b-0 active:translate-y-1 text-white font-bold py-4 rounded-2xl uppercase tracking-wider transition-all flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-300"
+                        onClick={() => {
+                            setIsRegistering(!isRegistering);
+                            setError("");
+                            setName("");
+                            setPassword("");
+                            setConfirmPassword("");
+                        }}
+                        className="text-white/80 font-bold uppercase tracking-wider text-sm hover:text-white hover:underline transition-all"
                     >
-                        {loading ? 'A entrar...' : 'COMEÇAR'}
+                        {isRegistering
+                            ? "JÁ FAZES PARTE DA EQUIPA? ENTRAR"
+                            : "AINDA NÃO TENS CONTA? CRIA UMA GRÁTIS"}
                     </button>
-                </form>
+                </div>
+            </div>
+
+            {/* Version */}
+            <div className="absolute bottom-4 text-slate-800 font-bold text-xs uppercase tracking-widest opacity-40">
+                v2.1 • Super Study
             </div>
         </div>
     );
 };
 
-export default StudentLogin;
+export default LoginPage;

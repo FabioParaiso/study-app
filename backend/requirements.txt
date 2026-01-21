@@ -6,4 +6,5 @@ pypdf
 python-dotenv
 pytest
 httpx
-sqlalchemy
+sqlalchemypasslib[bcrypt]
+slowapi

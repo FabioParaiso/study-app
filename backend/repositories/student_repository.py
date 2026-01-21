@@ -1,17 +1,46 @@
 from sqlalchemy.orm import Session
 from models import Student
 
+from security import get_password_hash, verify_password
+
 class StudentRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_or_create_student(self, name: str) -> Student:
+    def create_student(self, name: str, password: str) -> Student:
+        existing_student = self.db.query(Student).filter(Student.name == name).first()
+        hashed_pw = get_password_hash(password)
+
+        if existing_student:
+            # Migration logic: If user exists but has no password (old system), set it now.
+            if not existing_student.hashed_password:
+                existing_student.hashed_password = hashed_pw
+                self.db.commit()
+                self.db.refresh(existing_student)
+                return existing_student
+            else:
+                return None # User already exists
+
+        # New user
+        student = Student(name=name, hashed_password=hashed_pw)
+        self.db.add(student)
+        self.db.commit()
+        self.db.refresh(student)
+        return student
+
+    def authenticate_student(self, name: str, password: str) -> Student:
         student = self.db.query(Student).filter(Student.name == name).first()
         if not student:
-            student = Student(name=name)
-            self.db.add(student)
-            self.db.commit()
-            self.db.refresh(student)
+            return None
+        
+        # If user has no password set yet (legacy), we can't authenticate securely.
+        # They must 'Register' again to set a password.
+        if not student.hashed_password:
+            return None
+
+        if not verify_password(password, student.hashed_password):
+            return None
+            
         return student
 
     def get_student(self, student_id: int) -> Student:
