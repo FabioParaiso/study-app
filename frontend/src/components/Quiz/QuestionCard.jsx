@@ -87,15 +87,17 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                             </div>
                             <div className="w-full">
                                 <h3 className={`font-bold text-xl mb-1 ${isCorrect ? 'text-duo-green-dark' : 'text-duo-red-dark'}`}>
-                                    {isCorrect ? "Correto!" : "Solução correta:"}
+                                    {isCorrect
+                                        ? ["Fantástico! 🎉", "Muito bem! 🌟", "Acertaste! 💪"][Math.floor(Math.random() * 3)]
+                                        : "Fica a saber que: 🧠"}
                                 </h3>
                                 {!isCorrect && (
                                     <div className="text-gray-800 font-medium mb-2">
-                                        {question.options[question.correctIndex]}
+                                        A resposta certa é: <span className="font-bold">{question.options[question.correctIndex]}</span>
                                     </div>
                                 )}
                                 <div className="bg-white/50 p-3 rounded-xl text-sm text-gray-700 leading-relaxed border border-black/5">
-                                    <span className="font-bold">Porquê? </span>
+                                    <span className="font-bold">💡 Curiosidade: </span>
                                     {question.explanation}
                                 </div>
                             </div>
@@ -112,7 +114,7 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                         </button>
                     </div>
                 </div>
-            </div>
+            </div >
         </>
     );
 };

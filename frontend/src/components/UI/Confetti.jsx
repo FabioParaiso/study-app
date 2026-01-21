@@ -39,12 +39,8 @@ const Confetti = () => {
 
         animate();
 
-        // Auto-stop after 5 seconds to save performance
-        const timer = setTimeout(() => cancelAnimationFrame(animationId), 5000);
-
         return () => {
             cancelAnimationFrame(animationId);
-            clearTimeout(timer);
         }
     }, []);
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 import os
+import random
 from database import get_db
 from repositories.material_repository import MaterialRepository
 from repositories.quiz_repository import QuizRepository
@@ -195,6 +196,19 @@ def generate_quiz_endpoint(
     
     if not questions:
         raise HTTPException(status_code=500, detail="Failed to generate quiz. Please try again.")
+    
+    # Randomize options for multiple choice questions
+    if request.quiz_type == "multiple-choice" or not request.quiz_type:
+        for question in questions:
+            if "options" in question and "correctIndex" in question:
+                # Store the correct answer
+                correct_answer = question["options"][question["correctIndex"]]
+                
+                # Shuffle the options
+                random.shuffle(question["options"])
+                
+                # Update correctIndex to the new position of the correct answer
+                question["correctIndex"] = question["options"].index(correct_answer)
         
     return {"questions": questions}
 

@@ -28,39 +28,45 @@ class MultipleChoiceStrategy(QuizGenerationStrategy):
             vocab_instruction = f"\nCONSISTÊNCIA DE TÓPICOS: Ao categorizar cada pergunta no campo JSON 'topic', NUNCA inventes novos nomes. Usa APENAS um dos seguintes: [{v_str}]. Escolhe o que melhor se adapta."
 
         return f"""
-        Atua como um professor experiente e pedagógico do 6º ano.
-        Com base no texto fornecido, cria um Quiz de 10 perguntas de escolha múltipla.
+        Atua como um professor do 6º ano altamente motivador e empático. Cria um Quiz de 10 perguntas de escolha múltipla SIMPLES.
 
         {topic_instruction}
         {priority_instruction}
         {vocab_instruction}
 
-        REGRAS DE CRIAÇÃO (TAXONOMIA DE BLOOM):
-        Distribui as 10 perguntas pelos seguintes NÍVEIS COGNITIVOS:
-        - 3 de LEMBRAR/COMPREENDER: "O que é...?", "Define...", "Qual é a função de...?"
-        - 3 de APLICAR/ANALISAR: "Dá um exemplo de...", "Compara X com Y", "Porque é que...?"
-        - 2 de AVALIAR: "Na tua opinião, qual é mais importante e porquê?", "O que aconteceria se...?"
-        - 2 de CRIAR/SINTETIZAR: "Imagina que... como resolverias?", "Propõe uma forma de..."
+        OBJETIVO: APRENDER A BRINCAR
+        O objetivo é ajudar o aluno a perceber os conceitos sem sentir que está num teste aborrecido.
         
-        As opções incorretas (distratores) devem ser plausíveis, evitando opções obviamente erradas.
-        Apenas uma opção deve ser inequivocamente correta.
+        REGRAS DE CRIAÇÃO:
+        - Foca em perguntas DIRETAS sobre conceitos.
+        - Evita rasteiras. O objetivo é que o aluno se sinta inteligente.
+        - Cada pergunta deve ter UMA resposta claramente correta.
+        - Os distratores (opções erradas) devem ser plausíveis mas claramente incorretos.
+
+        CRITÉRIOS DE EXPLICAÇÃO (MUITO IMPORTANTE):
+        - A explicação deve ser para uma criança de 10-12 anos.
+        - USA PALAVRAS SIMPLES. Se usares uma palavra difícil, explica-a.
+        - FRASES CURTAS e diretas. Máximo 15 palavras por frase.
+        - Começa com "Sabias que..." ou "Imagina que..." sempre que possível.
+        - Usa ANALOGIAS DO DIA-A-DIA (ex: comparar a célula a uma casa feita de tijolos).
+        - O tom deve ser positivo, curioso e fácil de ler.
 
         CRITÉRIOS DE LINGUAGEM (PT-PT OBRIGATÓRIO):
         - Usa Português de Portugal APENAS (PT-PT).
-        - PROIBIDO usar termos brasileiros como: "Tela" (usa Ecrã), "Arquivo" (usa Ficheiro), "Time" (usa Equipa), "Esporte" (usa Desporto), "Usuário" (usa Utilizador).
-        - Trata o aluno por "Tu" (2ª pessoa do singular). Nunca uses "Você".
-        - Tom encorajador e claro.
+        - Trata o aluno por "Tu".
+        - PROIBIDO: Frases longas, termos técnicos sem explicação, voz passiva complexa.
+        - ESCRITA COMO SE FOSSES UM YOUTUBER A EXPLICAR ALGO FIXE.
 
         FORMATO DE SAÍDA (JSON ESTRITO):
         Retorna APENAS um objeto JSON com a chave "questions".
         {{
             "questions": [
                 {{
-                    "topic": "Tópico Específico da Pergunta",
-                    "question": "Enunciado da pergunta?",
+                    "topic": "Tópico Específico",
+                    "question": "Pergunta?",
                     "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
                     "correctIndex": 0,
-                    "explanation": "Explicação breve e didática sobre a resposta correta."
+                    "explanation": "Sabias que... [Explicação divertida com analogia ou curiosidade]"
                 }}
             ]
         }}
@@ -104,9 +110,10 @@ class OpenEndedStrategy(QuizGenerationStrategy):
         - 1 de AVALIAR/CRIAR: "Na tua opinião...", "Como resolverias...?"
         Evita perguntas de "sim/não". Cada resposta deve ser explicativa (1-2 frases).
 
-        LINGUAGEM (PT-PT):
-        - Português de Portugal.
-        - Tratamento por "Tu".
+        LINGUAGEM (PT-PT OBRIGATÓRIO):
+        - Português de Portugal APENAS.
+        - PROIBIDO termos brasileiros: "Úmido"→"Húmido", "Celular"→"Telemóvel", "Ônibus"→"Autocarro", "Tela"→"Ecrã".
+        - Tratamento por "Tu". Nunca "Você".
 
         FORMATO DE SAÍDA (JSON):
         {{ 
@@ -159,9 +166,10 @@ class ShortAnswerStrategy(QuizGenerationStrategy):
            - BOM: "O que acontece durante a fotossíntese?" (Resposta: As plantas usam a luz solar para criar energia.)
         4. O objetivo é treinar a literacia e a construção de frases.
 
-        LINGUAGEM (PT-PT):
-        - Português de Portugal.
-        - Tratamento por "Tu".
+        LINGUAGEM (PT-PT OBRIGATÓRIO):
+        - Português de Portugal APENAS.
+        - PROIBIDO termos brasileiros: "Úmido"→"Húmido", "Celular"→"Telemóvel", "Ônibus"→"Autocarro", "Tela"→"Ecrã".
+        - Tratamento por "Tu". Nunca "Você".
 
         FORMATO DE SAÍDA (JSON):
         {{ 
