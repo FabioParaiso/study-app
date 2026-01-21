@@ -1,18 +1,21 @@
 from abc import ABC, abstractmethod
 import json
 
+
 class QuizGenerationStrategy(ABC):
     """
     Classe base abstrata para estratégias de geração de quizzes.
     Contém métodos auxiliares partilhados para construir instruções dinâmicas.
     """
-    
+
     def _build_topic_instruction(self, topics: list[str]) -> str:
         """Constrói instrução para filtrar por tópicos selecionados."""
         if not topics or len(topics) == 0:
             return ""
         topic_str = ", ".join(topics)
-        return f"INSTRUÇÃO CRÍTICA: O utilizador selecionou TÓPICOS ESPECÍFICOS: {topic_str}. Tens de gerar perguntas APENAS relacionadas com estes tópicos. Ignora todas as outras secções do texto."
+        # Clear and concise instruction - the priority_topics conflict is now handled upstream
+        return f"""FILTRAGEM DE TÓPICO: O utilizador selecionou [{topic_str}]. 
+        Gera perguntas APENAS sobre este tópico. Ignora o resto do texto."""
 
     def _build_priority_instruction(self, priority_topics: list[str], min_questions: int = 2) -> str:
         """Constrói instrução para focar em tópicos com dificuldade."""
@@ -99,19 +102,22 @@ class QuizGenerationStrategy(ABC):
         except json.JSONDecodeError:
             return []
 
+
 class MultipleChoiceStrategy(QuizGenerationStrategy):
     """
     Modo Iniciante: Perguntas de escolha múltipla.
     Foco na compreensão de conceitos com feedback explicativo.
     """
+
     def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_topics: list[str] = None) -> str:
         topic_instruction, priority_instruction, vocab_instruction, persona, language_rules = \
             self._build_base_instructions(topics, priority_topics, material_topics, min_priority_questions=4)
 
         return f"""
+        {topic_instruction}
+
         {persona}. Cria um Quiz de 10 perguntas de escolha múltipla SIMPLES.
 
-        {topic_instruction}
         {priority_instruction}
         {vocab_instruction}
 
@@ -158,19 +164,22 @@ class MultipleChoiceStrategy(QuizGenerationStrategy):
         {text[:50000]}
         """
 
+
 class OpenEndedStrategy(QuizGenerationStrategy):
     """
     Modo Avançado: Perguntas de resposta aberta.
     Exige pensamento crítico seguindo a Taxonomia de Bloom.
     """
+
     def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_topics: list[str] = None) -> str:
         topic_instruction, priority_instruction, vocab_instruction, persona, language_rules = \
             self._build_base_instructions(topics, priority_topics, material_topics, min_priority_questions=1)
 
         return f"""
+        {topic_instruction}
+
         {persona}. Cria um mini-teste de 5 perguntas de resposta aberta.
 
-        {topic_instruction}
         {priority_instruction}
         {vocab_instruction}
 
@@ -229,19 +238,22 @@ class OpenEndedStrategy(QuizGenerationStrategy):
         {json_format}
         """
 
+
 class ShortAnswerStrategy(QuizGenerationStrategy):
     """
     Modo Intermédio: Perguntas de resposta curta (Frase simples).
     Exige construção de frase, mas sem a complexidade de um texto longo.
     """
+
     def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_topics: list[str] = None) -> str:
         topic_instruction, priority_instruction, vocab_instruction, persona, language_rules = \
             self._build_base_instructions(topics, priority_topics, material_topics, min_priority_questions=2)
 
         return f"""
+        {topic_instruction}
+
         {persona}. Cria um mini-teste de 8 perguntas de RESPOSTA CURTA (FRASE SIMPLES).
 
-        {topic_instruction}
         {priority_instruction}
         {vocab_instruction}
 

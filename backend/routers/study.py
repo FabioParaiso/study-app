@@ -174,8 +174,13 @@ def generate_quiz_endpoint(
              priority_topics = adaptive_data.get("boost", []) + adaptive_data.get("mastered", [])
 
     target_topics = request.topics
-    if not target_topics and priority_topics:
-        target_topics = priority_topics
+    
+    # If user explicitly selected topics, don't add priority_topics to avoid conflicting instructions
+    # Priority topics (adaptive learning) only apply when user selects "all topics"
+    if target_topics:
+        priority_topics = []  # Clear - user selection takes absolute precedence
+    elif priority_topics:
+        target_topics = priority_topics  # Fallback to adaptive if no explicit selection
 
     material_xp = data.get("total_xp", 0)
 
