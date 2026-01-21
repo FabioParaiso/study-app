@@ -11,7 +11,7 @@ const IntroScreen = ({
     file, handleFileChange, analyzeFile, isAnalyzing, savedMaterial, clearMaterial,
     availableTopics, selectedTopic, setSelectedTopic, detectTopics, errorMsg, loading, startQuiz,
     changeAvatar, selectedAvatar, level, totalXP, highScore, nextLevel, LEVELS,
-    materialsList, activateMaterial, onTrainWeakPoints
+    materialsList, activateMaterial
 }) => {
 
     // Duolingo-style Button Component
@@ -70,7 +70,6 @@ const IntroScreen = ({
                             startQuiz={startQuiz}
                             loading={loading}
                             studentId={student.id}
-                            onTrainWeakPoints={onTrainWeakPoints}
                         />
                     )}
                 </div>

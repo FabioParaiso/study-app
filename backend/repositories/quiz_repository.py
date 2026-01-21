@@ -65,22 +65,28 @@ class QuizRepository:
             
             if not analytics: return []
 
-            stats = {} # {topic: {total: 0, correct: 0}}
+            # Group all analytics by topic
+            topic_history = {} # {topic: [is_correct, is_correct, ...]}
             
             for a in analytics:
-                if a.topic not in stats:
-                    stats[a.topic] = {"total": 0, "correct": 0}
-                stats[a.topic]["total"] += 1
-                if a.is_correct:
-                    stats[a.topic]["correct"] += 1
+                if a.topic not in topic_history:
+                    topic_history[a.topic] = []
+                topic_history[a.topic].append(a.is_correct)
             
             results = []
-            for topic, data in stats.items():
-                success_rate = (data["correct"] / data["total"]) * 100
+            for topic, history in topic_history.items():
+                # Rolling Window: Take only the last 10 answers
+                recent_history = history[-10:]
+                
+                total = len(recent_history)
+                correct = sum(1 for x in recent_history if x)
+                
+                success_rate = (correct / total) * 100
+                
                 results.append({
                     "topic": topic,
                     "success_rate": round(success_rate),
-                    "total_questions": data["total"]
+                    "total_questions": total # We report the window size, not all-time total
                 })
             
             return sorted(results, key=lambda x: x["success_rate"])

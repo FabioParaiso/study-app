@@ -40,7 +40,6 @@ export default function App() {
     };
 
     const handleStart = (type) => startQuiz(type, selectedTopic);
-    const handleTrainWeakPoints = (topics) => startQuiz('multiple', topics);
 
     // --- Render ---
 
@@ -77,7 +76,6 @@ export default function App() {
                 LEVELS={LEVELS}
                 materialsList={materialsList}
                 activateMaterial={activateMaterial}
-                onTrainWeakPoints={handleTrainWeakPoints}
             />
         );
     }

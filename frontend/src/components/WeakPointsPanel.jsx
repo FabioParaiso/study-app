@@ -45,19 +45,27 @@ const WeakPointsPanel = ({ studentId, onTrain, materialId }) => {
                 })}
             </div>
 
-            {points.some(p => p.success_rate < 60) && (
-                <button
-                    onClick={() => onTrain(points.filter(p => p.success_rate < 60).map(p => p.topic))}
-                    className="mt-8 w-full py-3 px-6 rounded-xl border-b-4 font-bold uppercase tracking-wider transition-all active:border-b-0 active:translate-y-1 flex items-center justify-center gap-2 bg-duo-red border-duo-red-dark text-white hover:brightness-110"
-                >
-                    <AlertTriangle size={18} />
-                    Melhorar Pontos Fracos
-                </button>
+            {points.some(p => p.success_rate < 60) ? (
+                <div className="mt-6 bg-red-50 border border-red-100 rounded-xl p-4 flex gap-3 text-sm text-red-800">
+                    <AlertTriangle className="shrink-0 mt-0.5 text-duo-red" size={18} />
+                    <div>
+                        <p className="font-bold">O sistema detetou pontos fracos!</p>
+                        <p className="text-red-600/80 mt-1">
+                            Não te preocupes. O próximo quiz vai <b>automaticamente</b> incluir perguntas sobre estes temas para te ajudar a subir a nota. 💪
+                        </p>
+                    </div>
+                </div>
+            ) : (
+                <div className="mt-6 bg-green-50 border border-green-100 rounded-xl p-4 flex gap-3 text-sm text-green-800">
+                    <CheckCircle className="shrink-0 mt-0.5 text-duo-green" size={18} />
+                    <div>
+                        <p className="font-bold">Estás em grande!</p>
+                        <p className="text-green-600/80 mt-1">
+                            Continua assim para desbloqueares mais níveis. 🚀
+                        </p>
+                    </div>
+                </div>
             )}
-
-            <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-center text-gray-400">
-                Melhora os tópicos a vermelho para evoluíres! 🚀
-            </div>
         </div>
     );
 };

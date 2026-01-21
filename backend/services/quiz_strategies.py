@@ -81,6 +81,11 @@ class OpenEndedStrategy(QuizGenerationStrategy):
             topic_str = ", ".join(topics)
             topic_instruction = f"INSTRUÇÃO CRÍTICA: O utilizador selecionou TÓPICOS ESPECÍFICOS: {topic_str}. Tens de gerar perguntas APENAS relacionadas com estes tópicos. Ignora todas as outras secções do texto."
 
+        priority_instruction = ""
+        if priority_topics and len(priority_topics) > 0:
+            p_str = ", ".join(priority_topics)
+            priority_instruction = f"\nATENÇÃO: O aluno tem DIFICULDADE nos seguintes tópicos: {p_str}. Cria pelo menos 2 perguntas focadas neles para reforço."
+
         vocab_instruction = ""
         if material_topics and len(material_topics) > 0:
             v_str = ", ".join(material_topics)
@@ -90,6 +95,7 @@ class OpenEndedStrategy(QuizGenerationStrategy):
         Atua como um professor experiente. Cria um mini-teste de 5 perguntas de resposta aberta.
 
         {topic_instruction}
+        {priority_instruction}
         {vocab_instruction}
 
         REGRAS (TAXONOMIA DE BLOOM):
@@ -129,6 +135,11 @@ class ShortAnswerStrategy(QuizGenerationStrategy):
             topic_str = ", ".join(topics)
             topic_instruction = f"INSTRUÇÃO CRÍTICA: O utilizador selecionou TÓPICOS ESPECÍFICOS: {topic_str}. Gera perguntas APENAS destes tópicos."
 
+        priority_instruction = ""
+        if priority_topics and len(priority_topics) > 0:
+            p_str = ", ".join(priority_topics)
+            priority_instruction = f"\nATENÇÃO: O aluno tem DIFICULDADE nos seguintes tópicos: {p_str}. Tenta incluir perguntas sobre estes temas."
+
         vocab_instruction = ""
         if material_topics and len(material_topics) > 0:
             v_str = ", ".join(material_topics)
@@ -138,6 +149,7 @@ class ShortAnswerStrategy(QuizGenerationStrategy):
         Atua como um professor do 6º ano. Cria um mini-teste de 8 perguntas de RESPOSTA CURTA (FRASE SIMPLES).
 
         {topic_instruction}
+        {priority_instruction}
         {vocab_instruction}
 
         REGRAS IMPORTANTES:
