@@ -16,12 +16,21 @@ load_dotenv()
 # Create Tables
 models.Base.metadata.create_all(bind=engine)
 
-# Rate Limiter
-limiter = Limiter(key_func=get_remote_address)
-
+# Rate Limiter (disabled in test mode)
 app = FastAPI()
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+if Path(__file__).parent.name != "tests" and not Path.cwd().name == "tests":
+    # Only enable rate limiting in production/dev, not in tests
+    import os
+    if os.getenv("TEST_MODE") != "true":
+        limiter = Limiter(key_func=get_remote_address)
+        app.state.limiter = limiter
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    else:
+        # Test mode: create a dummy limiter that does nothing
+        app.state.limiter = None
+else:
+    app.state.limiter = None
 
 app.add_middleware(
     CORSMiddleware,

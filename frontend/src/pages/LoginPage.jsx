@@ -15,7 +15,16 @@ const LoginPage = ({ onLogin }) => {
     // Frontend validation
     const isFormValid = () => {
         if (name.trim().length < 2) return false;
-        if (password.length < 4) return false;
+
+        // Backend Policy: 8+ chars, 1 upper, 1 lower, 1 digit, 1 special
+        const hasUpper = /[A-Z]/.test(password);
+        const hasLower = /[a-z]/.test(password);
+        const hasDigit = /\d/.test(password);
+        const hasSpecial = /[@$!%*?&]/.test(password);
+
+        if (password.length < 8) return false;
+        if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) return false;
+
         if (isRegistering && password !== confirmPassword) return false;
         return true;
     };
@@ -29,8 +38,14 @@ const LoginPage = ({ onLogin }) => {
             setError("O nome deve ter pelo menos 2 caracteres.");
             return;
         }
-        if (password.length < 4) {
-            setError("A palavra-passe deve ter pelo menos 4 caracteres.");
+
+        const hasUpper = /[A-Z]/.test(password);
+        const hasLower = /[a-z]/.test(password);
+        const hasDigit = /\d/.test(password);
+        const hasSpecial = /[@$!%*?&]/.test(password);
+
+        if (password.length < 8 || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+            setError("A password deve ter 8+ caracteres, maiúscula, minúscula, número e símbolo (@$!%*?&).");
             return;
         }
         if (isRegistering && password !== confirmPassword) {
@@ -172,10 +187,18 @@ const LoginPage = ({ onLogin }) => {
 
                         {/* Inline Validation Hints */}
                         {(name.length > 0 || password.length > 0 || confirmPassword.length > 0) && !isFormValid() && (
-                            <div className="text-sm font-bold text-orange-500 text-center py-2 px-4 bg-orange-50 rounded-xl border border-orange-100">
-                                {name.trim().length > 0 && name.trim().length < 2 && "Nome curto demais (mín. 2). "}
-                                {password.length > 0 && password.length < 4 && "Palavra-passe curta (mín. 4). "}
-                                {isRegistering && confirmPassword.length > 0 && password !== confirmPassword && "Palavras-passe não coincidem."}
+                            <div className="text-sm font-bold text-orange-500 text-center py-2 px-4 bg-orange-50 rounded-xl border border-orange-100 flex flex-col gap-1">
+                                {name.trim().length > 0 && name.trim().length < 2 && <span>Nome curto demais (mín. 2).</span>}
+                                {password.length > 0 && (
+                                    <>
+                                        {password.length < 8 && <span>Mín. 8 caracteres.</span>}
+                                        {!/[A-Z]/.test(password) && <span>Falta maiúscula.</span>}
+                                        {!/[a-z]/.test(password) && <span>Falta minúscula.</span>}
+                                        {!/\d/.test(password) && <span>Falta número.</span>}
+                                        {!/[@$!%*?&]/.test(password) && <span>Falta símbolo.</span>}
+                                    </>
+                                )}
+                                {isRegistering && confirmPassword.length > 0 && password !== confirmPassword && <span>Palavras-passe não coincidem.</span>}
                             </div>
                         )}
 

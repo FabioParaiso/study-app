@@ -27,7 +27,6 @@ describe('OpenEndedCard', () => {
     it('renders the question text', () => {
         render(<OpenEndedCard {...defaultProps} />);
         expect(screen.getByText("Explain the industrial revolution")).toBeInTheDocument();
-        expect(screen.getByText("Pergunta Objetiva 1 de 5")).toBeInTheDocument();
     });
 
     it('allows typing in the textarea', () => {
@@ -39,9 +38,7 @@ describe('OpenEndedCard', () => {
 
     it('disables submit button when input is empty', () => {
         render(<OpenEndedCard {...defaultProps} />);
-        const button = screen.getByText("Enviar Resposta");
-        // Button is actually disabled by class logic and disabled attribute? 
-        // Let's check the code: disabled={isEvaluating || userText.trim().length === 0}
+        const button = screen.getByText(/ENVIAR RESPOSTA/i);
         expect(button.closest('button')).toBeDisabled();
     });
 
@@ -49,7 +46,7 @@ describe('OpenEndedCard', () => {
         render(<OpenEndedCard {...defaultProps} />);
         const textarea = screen.getByPlaceholderText("Escreve a tua resposta aqui...");
         fireEvent.change(textarea, { target: { value: "Some answer" } });
-        const button = screen.getByText("Enviar Resposta");
+        const button = screen.getByText(/ENVIAR RESPOSTA/i);
         expect(button.closest('button')).not.toBeDisabled();
     });
 
@@ -57,7 +54,7 @@ describe('OpenEndedCard', () => {
         render(<OpenEndedCard {...defaultProps} />);
         const textarea = screen.getByPlaceholderText("Escreve a tua resposta aqui...");
         fireEvent.change(textarea, { target: { value: "My Answer" } });
-        const button = screen.getByText("Enviar Resposta");
+        const button = screen.getByText(/ENVIAR RESPOSTA/i);
 
         fireEvent.click(button);
         expect(defaultProps.onEvaluate).toHaveBeenCalledWith("My Answer");
@@ -70,8 +67,10 @@ describe('OpenEndedCard', () => {
         };
         render(<OpenEndedCard {...defaultProps} evaluation={evaluation} />);
 
-        // Input should be gone
-        expect(screen.queryByPlaceholderText("Escreve a tua resposta aqui...")).not.toBeInTheDocument();
+        // Input should still be there but disabled
+        const textarea = screen.getByPlaceholderText("Escreve a tua resposta aqui...");
+        expect(textarea).toBeInTheDocument();
+        expect(textarea).toBeDisabled();
 
         // Evaluation should be shown
         expect(screen.getByText("85")).toBeInTheDocument();

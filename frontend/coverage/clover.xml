@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1769092742563" clover="3.2.0">
+  <project timestamp="1769092742564" name="All files">
+    <metrics statements="199" coveredstatements="126" conditionals="122" coveredconditionals="71" methods="56" coveredmethods="30" elements="377" coveredelements="227" complexity="0" loc="199" ncloc="199" packages="5" files="12" classes="12"/>
+    <package name="components.Quiz">
+      <metrics statements="26" coveredstatements="24" conditionals="65" coveredconditionals="43" methods="10" coveredmethods="7"/>
+      <file name="ComboCounter.jsx" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/components/Quiz/ComboCounter.jsx">
+        <metrics statements="13" coveredstatements="13" conditionals="8" coveredconditionals="8" methods="4" coveredmethods="3"/>
+        <line num="3" count="1" type="stmt"/>
+        <line num="4" count="10" type="stmt"/>
+        <line num="6" count="10" type="stmt"/>
+        <line num="7" count="7" type="cond" truecount="2" falsecount="0"/>
+        <line num="8" count="5" type="stmt"/>
+        <line num="9" count="5" type="stmt"/>
+        <line num="10" count="5" type="stmt"/>
+        <line num="14" count="10" type="cond" truecount="2" falsecount="0"/>
+        <line num="16" count="8" type="stmt"/>
+        <line num="17" count="8" type="stmt"/>
+        <line num="18" count="8" type="cond" truecount="2" falsecount="0"/>
+        <line num="19" count="8" type="cond" truecount="2" falsecount="0"/>
+        <line num="21" count="8" type="stmt"/>
+      </file>
+      <file name="OpenEndedCard.jsx" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/components/Quiz/OpenEndedCard.jsx">
+        <metrics statements="13" coveredstatements="11" conditionals="57" coveredconditionals="35" methods="6" coveredmethods="4"/>
+        <line num="6" count="1" type="stmt"/>
+        <line num="7" count="15" type="stmt"/>
+        <line num="8" count="15" type="stmt"/>
+        <line num="11" count="15" type="stmt"/>
+        <line num="12" count="6" type="cond" truecount="3" falsecount="1"/>
+        <line num="13" count="0" type="stmt"/>
+        <line num="17" count="15" type="stmt"/>
+        <line num="18" count="1" type="cond" truecount="1" falsecount="1"/>
+        <line num="19" count="1" type="stmt"/>
+        <line num="23" count="15" type="stmt"/>
+        <line num="25" count="15" type="stmt"/>
+        <line num="49" count="3" type="stmt"/>
+        <line num="102" count="0" type="stmt"/>
+      </file>
+    </package>
+    <package name="components.Quiz.shared">
+      <metrics statements="14" coveredstatements="13" conditionals="9" coveredconditionals="6" methods="4" coveredmethods="3"/>
+      <file name="ProgressBar.jsx" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/components/Quiz/shared/ProgressBar.jsx">
+        <metrics statements="3" coveredstatements="3" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
+        <line num="9" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="10" count="15" type="stmt"/>
+        <line num="12" count="15" type="stmt"/>
+      </file>
+      <file name="QuestionHeader.jsx" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/components/Quiz/shared/QuestionHeader.jsx">
+        <metrics statements="5" coveredstatements="4" conditionals="8" coveredconditionals="5" methods="2" coveredmethods="1"/>
+        <line num="12" count="1" type="stmt"/>
+        <line num="19" count="15" type="stmt"/>
+        <line num="30" count="15" type="cond" truecount="1" falsecount="1"/>
+        <line num="32" count="15" type="stmt"/>
+        <line num="43" count="0" type="stmt"/>
+      </file>
+      <file name="feedbackMessages.js" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/components/Quiz/shared/feedbackMessages.js">
+        <metrics statements="5" coveredstatements="5" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="6" count="1" type="stmt"/>
+        <line num="12" count="1" type="stmt"/>
+        <line num="18" count="1" type="stmt"/>
+        <line num="27" count="1" type="stmt"/>
+        <line num="28" count="2" type="stmt"/>
+      </file>
+      <file name="index.js" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/components/Quiz/shared/index.js">
+        <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+        <line num="3" count="1" type="stmt"/>
+      </file>
+    </package>
+    <package name="hooks">
+      <metrics statements="116" coveredstatements="80" conditionals="33" coveredconditionals="16" methods="27" coveredmethods="19"/>
+      <file name="useGamification.js" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/hooks/useGamification.js">
+        <metrics statements="35" coveredstatements="23" conditionals="18" coveredconditionals="6" methods="7" coveredmethods="5"/>
+        <line num="4" count="1" type="stmt"/>
+        <line num="13" count="1" type="stmt"/>
+        <line num="14" count="5" type="stmt"/>
+        <line num="15" count="5" type="stmt"/>
+        <line num="16" count="5" type="stmt"/>
+        <line num="17" count="30" type="cond" truecount="2" falsecount="0"/>
+        <line num="18" count="11" type="stmt"/>
+        <line num="19" count="11" type="cond" truecount="2" falsecount="0"/>
+        <line num="22" count="5" type="stmt"/>
+        <line num="26" count="5" type="stmt"/>
+        <line num="27" count="5" type="stmt"/>
+        <line num="28" count="5" type="stmt"/>
+        <line num="31" count="5" type="stmt"/>
+        <line num="32" count="3" type="cond" truecount="1" falsecount="1"/>
+        <line num="33" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="35" count="3" type="cond" truecount="1" falsecount="1"/>
+        <line num="36" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="37" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="39" count="3" type="stmt"/>
+        <line num="40" count="3" type="stmt"/>
+        <line num="46" count="5" type="stmt"/>
+        <line num="47" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="48" count="0" type="stmt"/>
+        <line num="51" count="0" type="stmt"/>
+        <line num="53" count="0" type="stmt"/>
+        <line num="54" count="0" type="stmt"/>
+        <line num="56" count="0" type="stmt"/>
+        <line num="58" count="0" type="stmt"/>
+        <line num="62" count="5" type="stmt"/>
+        <line num="64" count="2" type="stmt"/>
+        <line num="67" count="5" type="stmt"/>
+        <line num="68" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="69" count="0" type="stmt"/>
+        <line num="73" count="5" type="stmt"/>
+        <line num="75" count="5" type="stmt"/>
+      </file>
+      <file name="useQuizEngine.js" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/hooks/useQuizEngine.js">
+        <metrics statements="45" coveredstatements="45" conditionals="7" coveredconditionals="7" methods="12" coveredmethods="12"/>
+        <line num="3" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="4" count="29" type="stmt"/>
+        <line num="5" count="29" type="stmt"/>
+        <line num="6" count="29" type="stmt"/>
+        <line num="7" count="29" type="stmt"/>
+        <line num="8" count="29" type="stmt"/>
+        <line num="9" count="29" type="stmt"/>
+        <line num="10" count="29" type="stmt"/>
+        <line num="11" count="29" type="stmt"/>
+        <line num="12" count="29" type="stmt"/>
+        <line num="13" count="29" type="stmt"/>
+        <line num="15" count="29" type="stmt"/>
+        <line num="16" count="9" type="stmt"/>
+        <line num="17" count="9" type="stmt"/>
+        <line num="18" count="9" type="stmt"/>
+        <line num="19" count="9" type="stmt"/>
+        <line num="20" count="9" type="stmt"/>
+        <line num="21" count="9" type="stmt"/>
+        <line num="22" count="9" type="stmt"/>
+        <line num="25" count="29" type="stmt"/>
+        <line num="26" count="9" type="stmt"/>
+        <line num="27" count="9" type="stmt"/>
+        <line num="28" count="9" type="stmt"/>
+        <line num="31" count="29" type="stmt"/>
+        <line num="32" count="9" type="stmt"/>
+        <line num="33" count="9" type="stmt"/>
+        <line num="35" count="9" type="cond" truecount="2" falsecount="0"/>
+        <line num="36" count="5" type="stmt"/>
+        <line num="37" count="5" type="stmt"/>
+        <line num="38" count="5" type="stmt"/>
+        <line num="40" count="4" type="stmt"/>
+        <line num="41" count="4" type="stmt"/>
+        <line num="42" count="4" type="cond" truecount="2" falsecount="0"/>
+        <line num="43" count="1" type="stmt"/>
+        <line num="45" count="4" type="stmt"/>
+        <line num="49" count="29" type="stmt"/>
+        <line num="50" count="1" type="stmt"/>
+        <line num="56" count="29" type="stmt"/>
+        <line num="57" count="4" type="stmt"/>
+        <line num="58" count="4" type="cond" truecount="2" falsecount="0"/>
+        <line num="59" count="3" type="stmt"/>
+        <line num="60" count="3" type="stmt"/>
+        <line num="62" count="1" type="stmt"/>
+        <line num="63" count="1" type="stmt"/>
+        <line num="67" count="29" type="stmt"/>
+      </file>
+      <file name="useSpeechRecognition.js" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/hooks/useSpeechRecognition.js">
+        <metrics statements="36" coveredstatements="12" conditionals="8" coveredconditionals="3" methods="8" coveredmethods="2"/>
+        <line num="3" count="1" type="stmt"/>
+        <line num="4" count="15" type="stmt"/>
+        <line num="5" count="15" type="stmt"/>
+        <line num="6" count="15" type="stmt"/>
+        <line num="7" count="15" type="stmt"/>
+        <line num="9" count="15" type="stmt"/>
+        <line num="10" count="6" type="cond" truecount="2" falsecount="0"/>
+        <line num="11" count="6" type="cond" truecount="1" falsecount="1"/>
+        <line num="12" count="0" type="stmt"/>
+        <line num="13" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
+        <line num="15" count="0" type="stmt"/>
+        <line num="17" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
+        <line num="21" count="0" type="stmt"/>
+        <line num="22" count="0" type="stmt"/>
+        <line num="24" count="0" type="stmt"/>
+        <line num="25" count="0" type="stmt"/>
+        <line num="26" count="0" type="stmt"/>
+        <line num="27" count="0" type="stmt"/>
+        <line num="29" count="0" type="stmt"/>
+        <line num="32" count="0" type="stmt"/>
+        <line num="34" count="6" type="stmt"/>
+        <line num="38" count="15" type="stmt"/>
+        <line num="39" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="40" count="0" type="stmt"/>
+        <line num="41" count="0" type="stmt"/>
+        <line num="42" count="0" type="stmt"/>
+        <line num="43" count="0" type="stmt"/>
+        <line num="45" count="0" type="stmt"/>
+        <line num="50" count="15" type="stmt"/>
+        <line num="51" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="52" count="0" type="stmt"/>
+        <line num="56" count="15" type="stmt"/>
+      </file>
+    </package>
+    <package name="services">
+      <metrics statements="38" coveredstatements="4" conditionals="11" coveredconditionals="2" methods="14" coveredmethods="0"/>
+      <file name="api.js" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/services/api.js">
+        <metrics statements="7" coveredstatements="3" conditionals="4" coveredconditionals="2" methods="1" coveredmethods="0"/>
+        <line num="3" count="1" type="cond" truecount="2" falsecount="0"/>
+        <line num="5" count="1" type="stmt"/>
+        <line num="12" count="1" type="stmt"/>
+        <line num="13" count="0" type="stmt"/>
+        <line num="14" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="15" count="0" type="stmt"/>
+        <line num="17" count="0" type="stmt"/>
+      </file>
+      <file name="studyService.js" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/services/studyService.js">
+        <metrics statements="31" coveredstatements="1" conditionals="7" coveredconditionals="0" methods="13" coveredmethods="0"/>
+        <line num="3" count="1" type="stmt"/>
+        <line num="5" count="0" type="stmt"/>
+        <line num="6" count="0" type="stmt"/>
+        <line num="9" count="0" type="stmt"/>
+        <line num="10" count="0" type="stmt"/>
+        <line num="11" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
+        <line num="17" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="21" count="0" type="stmt"/>
+        <line num="24" count="0" type="stmt"/>
+        <line num="29" count="0" type="stmt"/>
+        <line num="30" count="0" type="stmt"/>
+        <line num="33" count="0" type="stmt"/>
+        <line num="38" count="0" type="stmt"/>
+        <line num="41" count="0" type="stmt"/>
+        <line num="51" count="0" type="stmt"/>
+        <line num="52" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="53" count="0" type="stmt"/>
+        <line num="55" count="0" type="stmt"/>
+        <line num="56" count="0" type="stmt"/>
+        <line num="59" count="0" type="stmt"/>
+        <line num="60" count="0" type="stmt"/>
+        <line num="63" count="0" type="stmt"/>
+        <line num="64" count="0" type="stmt"/>
+        <line num="67" count="0" type="stmt"/>
+        <line num="68" count="0" type="stmt"/>
+        <line num="71" count="0" type="stmt"/>
+        <line num="72" count="0" type="stmt"/>
+        <line num="75" count="0" type="stmt"/>
+        <line num="76" count="0" type="stmt"/>
+      </file>
+    </package>
+    <package name="utils">
+      <metrics statements="5" coveredstatements="5" conditionals="4" coveredconditionals="4" methods="1" coveredmethods="1"/>
+      <file name="xpCalculator.js" path="/Users/fabio.oliveira/Desktop/Projetos/study-app/frontend/src/utils/xpCalculator.js">
+        <metrics statements="5" coveredstatements="5" conditionals="4" coveredconditionals="4" methods="1" coveredmethods="1"/>
+        <line num="15" count="1" type="stmt"/>
+        <line num="16" count="14" type="stmt"/>
+        <line num="17" count="14" type="cond" truecount="2" falsecount="0"/>
+        <line num="18" count="14" type="cond" truecount="2" falsecount="0"/>
+        <line num="19" count="14" type="stmt"/>
+      </file>
+    </package>
+  </project>
+</coverage>

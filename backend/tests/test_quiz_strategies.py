@@ -1,0 +1,99 @@
+import pytest
+from services.quiz_strategies import MultipleChoiceStrategy, OpenEndedStrategy, ShortAnswerStrategy
+import json
+
+class TestQuizStrategies:
+    
+    @pytest.fixture
+    def strategies(self):
+        return {
+            "multiple": MultipleChoiceStrategy(),
+            "short": ShortAnswerStrategy(),
+            "open": OpenEndedStrategy()
+        }
+
+    def test_topic_instruction_empty(self, strategies):
+        """Test strict logic: empty topics return empty instruction."""
+        strat = strategies["multiple"]
+        assert strat._build_topic_instruction([]) == ""
+
+    def test_topic_instruction_valid(self, strategies):
+        """Test strict logic: valid topics generate instruction."""
+        strat = strategies["multiple"]
+        instr = strat._build_topic_instruction(["Photosynthesis"])
+        assert "Photosynthesis" in instr
+        assert "FILTRAGEM DE TÓPICO" in instr
+
+    def test_priority_instruction(self, strategies):
+        """Test priority topics instruction generation."""
+        strat = strategies["multiple"]
+        # Empty
+        assert strat._build_priority_instruction([]) == ""
+        # Valid
+        instr = strat._build_priority_instruction(["Math"])
+        assert "DIFICULDADE" in instr
+        assert "Math" in instr
+
+    def test_multiple_choice_prompt_structure(self, strategies):
+        """Test that multiple choice prompt contains key instructions."""
+        strat = strategies["multiple"]
+        prompt = strat.generate_prompt(
+            text="Dummy text content about biology.",
+            topics=["Cells"],
+            priority_topics=["Nucleus"]
+        )
+        
+        # Check integrity of the prompt
+        assert "Dummy text content" in prompt
+        assert "Cells" in prompt
+        assert "Nucleus" in prompt
+        assert "correctIndex" in prompt  # JSON key specific to multiple choice
+        assert "options" in prompt
+        assert "PT-PT ESTRITO" in prompt
+
+    def test_open_ended_prompt_structure(self, strategies):
+        """Test that open ended prompt contains bloom taxonomy references."""
+        strat = strategies["open"]
+        prompt = strat.generate_prompt("Text", ["History"])
+        
+        assert "TAXONOMIA DE BLOOM" in prompt
+        assert "COMPREENDER" in prompt
+        assert "ANALISAR" in prompt
+        # Should NOT have options
+        assert "options" not in prompt
+
+    def test_short_answer_prompt_structure(self, strategies):
+        """Test short answer specific constraints."""
+        strat = strategies["short"]
+        prompt = strat.generate_prompt("Text", ["Grammar"])
+        
+        assert "RESPOSTA CURTA" in prompt
+        assert "SUJEITO e VERBO" in prompt
+        assert "FRASE INTERROGATIVA" in prompt
+
+    def test_parse_response_valid_json(self, strategies):
+        """Test JSON parsing logic."""
+        strat = strategies["multiple"]
+        valid_json = json.dumps({
+            "questions": [{"q": 1}]
+        })
+        result = strat.parse_response(valid_json)
+        assert len(result) == 1
+        assert result[0]["q"] == 1
+
+    def test_parse_response_invalid_json(self, strategies):
+        """Test resilience to bad JSON."""
+        strat = strategies["multiple"]
+        result = strat.parse_response("Invalid JSON")
+        assert result == []
+
+    def test_evaluation_prompt_generation(self, strategies):
+        """Test evaluation prompt generation for open ended."""
+        strat = strategies["open"]
+        prompt = strat.generate_evaluation_prompt("Context", "Question?", "Answer")
+        
+        assert "Context" in prompt
+        assert "Question?" in prompt
+        assert "Answer" in prompt
+        assert "missing_points" in prompt
+        assert "model_answer" in prompt
