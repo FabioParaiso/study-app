@@ -54,6 +54,7 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
                     {!evaluation && supported && (
                         <button
                             onClick={isListening ? stopListening : startListening}
+                            aria-label={isListening ? "Desativar microfone" : "Ativar microfone"}
                             className={`absolute bottom-4 right-4 p-3 rounded-xl transition-all border-b-4 active:border-b-0 active:translate-y-1 ${isListening
                                 ? 'bg-red-100 text-red-500 border-red-300 animate-pulse'
                                 : 'bg-gray-100 text-gray-400 border-gray-300 hover:text-purple-500 hover:bg-purple-50'
