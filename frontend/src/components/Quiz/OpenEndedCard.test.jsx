@@ -3,6 +3,18 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import OpenEndedCard from './OpenEndedCard';
 
+// Mock the useSpeechRecognition hook
+vi.mock('../../hooks/useSpeechRecognition', () => ({
+    useSpeechRecognition: () => ({
+        isListening: false,
+        transcript: '',
+        startListening: vi.fn(),
+        stopListening: vi.fn(),
+        supported: true,
+        error: null
+    })
+}));
+
 describe('OpenEndedCard', () => {
     const mockQuestion = {
         question: "Explain the industrial revolution",
@@ -75,5 +87,11 @@ describe('OpenEndedCard', () => {
         // Evaluation should be shown
         expect(screen.getByText("85")).toBeInTheDocument();
         expect(screen.getByText("Good job!")).toBeInTheDocument();
+    });
+
+    it('has an accessible microphone button', () => {
+        render(<OpenEndedCard {...defaultProps} />);
+        const micButton = screen.getByLabelText("Ativar microfone");
+        expect(micButton).toBeInTheDocument();
     });
 });
