@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 import os
 import random
+import asyncio
 from database import get_db
 from repositories.material_repository import MaterialRepository
 from repositories.quiz_repository import QuizRepository
@@ -98,7 +99,8 @@ async def upload_file(
                  file_type = 'text/plain'
 
         # 1. Extract Text
-        text = doc_service.extract_text(content, file_type)
+        # Optimization: Offload blocking PDF/Text extraction to threadpool to prevent blocking event loop
+        text = await asyncio.to_thread(doc_service.extract_text, content, file_type)
         if not text:
             raise HTTPException(status_code=400, detail="Failed to extract text from file.")
 
@@ -106,7 +108,8 @@ async def upload_file(
         ai_service = get_ai_service()
         existing_topics = quiz_repo.get_all_topics(current_user.id)
         
-        topics = topic_service.extract_topics(text, ai_service, existing_topics)
+        # Optimization: Offload blocking AI network call to threadpool
+        topics = await asyncio.to_thread(topic_service.extract_topics, text, ai_service, existing_topics)
 
         # 3. Save
         repo.save(current_user.id, text, file.filename, topics)
