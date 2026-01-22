@@ -34,6 +34,9 @@ htmlcov/
 backend/.coverage
 backend/htmlcov/
 backend/test.db
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
 
 # IDEs & Editors
 .vscode/
