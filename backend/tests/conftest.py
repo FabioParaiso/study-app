@@ -15,6 +15,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from database import Base, get_db
 from main import app
+import models # Register tables for Base.metadata.create_all
 
 # Setup in-memory DB for ALL tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -34,6 +35,13 @@ def override_get_db():
 
 # Apply valid overrides globally for testing
 app.dependency_overrides[get_db] = override_get_db
+
+@pytest.fixture
+def db_session():
+    """Fixture to provide database session per test."""
+    db = TestingSessionLocal()
+    yield db
+    db.close()
 
 @pytest.fixture(scope="session")
 def client():
@@ -75,6 +83,8 @@ def client():
 @pytest.fixture(autouse=True)
 def init_db():
     """Create tables before each test and drop after."""
+    # Debug: Check if tables are registered
+    print(f"DEBUG: Creating tables. Registered models: {list(Base.metadata.tables.keys())}")
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)

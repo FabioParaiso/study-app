@@ -11,7 +11,7 @@ class Student(Base):
     total_xp = Column(Integer, default=0)
     current_avatar = Column(String, default='👩‍🎓')
     high_score = Column(Integer, default=0)
-    hashed_password = Column(String, nullable=True) # New: Password support
+    hashed_password = Column(String, nullable=False) # Password is now mandatory
     created_at = Column(DateTime, default=datetime.utcnow)
 
     quiz_results = relationship("QuizResult", back_populates="student")

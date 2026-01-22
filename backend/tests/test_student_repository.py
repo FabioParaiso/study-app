@@ -5,12 +5,10 @@ from models import Student
 class TestStudentRepository:
     
     @pytest.fixture
-    def repo(self):
+    def repo(self, db_session):
         """Fixture provides repo with test DB session (tables created by autouse init_db)."""
-        from tests.conftest import TestingSessionLocal
-        db = TestingSessionLocal()
-        yield StudentRepository(db)
-        db.close()
+        yield StudentRepository(db_session)
+
 
     def test_create_student_new_user(self, repo):
         """Test creating a completely new student."""
@@ -29,22 +27,7 @@ class TestStudentRepository:
         
         assert duplicate is None
 
-    def test_create_student_legacy_migration(self, repo):
-        """Test legacy user without password gets migrated on register."""
-        # Simulate legacy user (no password)
-        from tests.conftest import TestingSessionLocal
-        db = TestingSessionLocal()
-        legacy = Student(name="LegacyUser", hashed_password=None)
-        db.add(legacy)
-        db.commit()
-        db.close()
-        
-        # Attempt to register
-        migrated = repo.create_student("LegacyUser", "NewPass1!")
-        
-        assert migrated is not None
-        assert migrated.hashed_password is not None
-        assert migrated.name == "LegacyUser"
+
 
     def test_authenticate_valid_credentials(self, repo):
         """Test authentication with correct password."""
@@ -69,18 +52,7 @@ class TestStudentRepository:
         
         assert authenticated is None
 
-    def test_authenticate_legacy_user_without_password(self, repo):
-        """Test that legacy users without password cannot authenticate."""
-        from tests.conftest import TestingSessionLocal
-        db = TestingSessionLocal()
-        legacy = Student(name="LegacyNoAuth", hashed_password=None)
-        db.add(legacy)
-        db.commit()
-        db.close()
-        
-        authenticated = repo.authenticate_student("LegacyNoAuth", "AnyPass")
-        
-        assert authenticated is None
+
 
     def test_update_xp(self, repo):
         """Test XP update increments correctly."""

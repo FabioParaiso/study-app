@@ -12,14 +12,7 @@ class StudentRepository:
         hashed_pw = get_password_hash(password)
 
         if existing_student:
-            # Migration logic: If user exists but has no password (old system), set it now.
-            if not existing_student.hashed_password:
-                existing_student.hashed_password = hashed_pw
-                self.db.commit()
-                self.db.refresh(existing_student)
-                return existing_student
-            else:
-                return None # User already exists
+             return None # User already exists
 
         # New user
         student = Student(name=name, hashed_password=hashed_pw)
@@ -33,10 +26,7 @@ class StudentRepository:
         if not student:
             return None
         
-        # If user has no password set yet (legacy), we can't authenticate securely.
-        # They must 'Register' again to set a password.
-        if not student.hashed_password:
-            return None
+
 
         if not verify_password(password, student.hashed_password):
             return None
