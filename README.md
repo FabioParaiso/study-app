@@ -1,94 +1,117 @@
-# 📚 Estudo Divertido - App para o 6º Ano
+# 🦉 Super Study! - Aprender é uma Aventura
 
-Bem-vindo à app **Estudo Divertido**! Esta aplicação transforma apontamentos escolares (PDF ou ficheiros de texto) em questionários de escolha múltipla interativos, utilizando inteligência artificial.
+Bem-vindo ao **Super Study**, a plataforma de estudo inteligente que transforma apontamentos escolares numa aventura gamificada! 🚀
 
-**Nota:** Esta é a nova versão da aplicação, dividida em Backend (API) e Frontend (Interface Web). A versão antiga (Streamlit) encontra-se na pasta `legacy/`.
-
-## ✨ Funcionalidades
-
-*   **Upload de Apontamentos:** Suporta ficheiros PDF e TXT.
-*   **Geração de Perguntas:** Cria perguntas de escolha múltipla adaptadas ao 6º ano.
-*   **Modo de Jogo:** Responde às perguntas e ganha pontos!
-*   **Identificação de Tópicos:** A IA identifica automaticamente os tópicos principais dos teus apontamentos.
-*   **Persistência:** Podes fechar a página e voltar mais tarde (os dados são guardados localmente).
-
-## 🛠️ Arquitetura
-
-O projeto está dividido em duas partes:
-
-*   **Backend (`/backend`):** Servidor Python com FastAPI. Trata do processamento de ficheiros e comunicação com a OpenAI.
-*   **Frontend (`/frontend`):** Interface Web construída com React e Vite.
-
-## 📋 Pré-requisitos
-
-*   **Python** (versão 3.8 ou superior)
-*   **Node.js** (para correr o frontend)
-*   **OpenAI API Key** (necessária para gerar as perguntas)
-
-## 🚀 Instalação e Execução
-
-Para a aplicação funcionar, precisas de correr o **Backend** e o **Frontend** em terminais separados.
-
-### 1. Configurar o Backend
-
-1.  Abre um terminal e entra na pasta `backend`:
-    ```bash
-    cd backend
-    ```
-
-2.  (Recomendado) Cria e ativa um ambiente virtual:
-    ```bash
-    python -m venv venv
-    # Windows:
-    .\venv\Scripts\activate
-    # Mac/Linux:
-    source venv/bin/activate
-    ```
-
-3.  Instala as dependências:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  Configura a chave da OpenAI:
-    *   Cria um ficheiro `.env` na pasta `backend/`.
-    *   Adiciona a tua chave:
-        ```text
-        OPENAI_API_KEY=sk-proj-xxxxxxxx...
-        ```
-
-5.  Inicia o servidor:
-    ```bash
-    uvicorn main:app --reload
-    ```
-    O servidor ficará a correr em `http://localhost:8000`.
-
-### 2. Configurar o Frontend
-
-1.  Abre um **novo terminal** e entra na pasta `frontend`:
-    ```bash
-    cd frontend
-    ```
-
-2.  Instala as dependências (apenas na primeira vez):
-    ```bash
-    npm install
-    ```
-
-3.  Inicia a aplicação:
-    ```bash
-    npm run dev
-    ```
-    O frontend ficará acessível (geralmente em `http://localhost:5173`).
-
-## 🎮 Como Usar
-
-1.  Abre o link do Frontend no teu navegador (ex: `http://localhost:5173`).
-2.  Se não configuraste o `.env` no backend, podes inserir a tua API Key diretamente na interface.
-3.  Carrega um ficheiro PDF ou TXT.
-4.  Clica em "Carregar e Analisar".
-5.  Escolhe um tópico (ou todos) e clica em "Gerar Quiz".
-6.  Diverte-te a estudar!
+Este projeto foi desenhado especificamente para alunos do **6º ano (10-12 anos)**, combinando Inteligência Artificial com metodologias pedagógicas comprovadas (Taxonomia de Bloom + Repetição Espaçada) para tornar o estudo viciante e eficaz.
 
 ---
-Desenvolvido com ❤️ para ajudar no estudo!
+
+## ✨ Funcionalidades Mágicas
+
+### 🧠 Estudo Inteligente & Adaptativo
+A nossa IA não cria apenas perguntas aleatórias. Ela analisa os teus apontamentos (PDF/Texto) e cria um plano de estudo personalizado:
+*   **Deteção de Tópicos:** A IA organiza a matéria em tópicos claros (ex: "Fotossíntese", "Revolução Liberal").
+*   **Analítica de Pontos Fracos:** O sistema sabe onde erras! Se falhares perguntas sobre "Ruminantes", o próximo quiz terá mais perguntas sobre isso.
+*   **Estudo Focado:** Podes escolher estudar "Tudo" ou apenas um tópico específico para o teste de amanhã.
+
+### 🎮 Gamificação (Aprender a Brincar)
+Estudar não tem de ser chato. No Super Study, cada resposta certa conta!
+*   **XP (Pontos de Experiência):** Ganha XP por cada resposta certa. Acumula pontos para subir de nível!
+*   **Títulos Evolutivos:** Começas como "Estudante Curiosa" 🌱 e evoluis até "Cientista Lendária" 🚀 à medida que ganhas XP.
+*   **Mascote:** O nosso **Super Mocho** acompanha-te em toda a jornada!
+
+### 📈 Sistema de Progressão (Níveis de Dificuldade)
+Para garantir uma aprendizagem sólida, o acesso aos modos de quiz é desbloqueado progressivamente, baseando-se na **Taxonomia de Bloom**:
+
+| Nível | Modo de Quiz | Foco Pedagógico | Requisito |
+| :--- | :--- | :--- | :--- |
+| **Iniciante** 🟢 | Escolha Múltipla | **Compreensão & Conhecimento.** Aprender os conceitos básicos sem pressão. Erros comuns explicados. | Desbloqueado |
+| **Intermédio** 🟡 | Resposta Curta | **Aplicação & Construção de Frase.** O aluno tem de escrever uma frase simples (Sujeito + Verbo) factual. | 300 XP |
+| **Avançado** 🟣 | Resposta Aberta | **Análise & Avaliação.** Perguntas profundas ("Porquê?", "Explica...", "Na tua opinião..."). | 900 XP |
+
+---
+
+## 🛠️ Arquitetura Técnica
+
+O projeto segue uma arquitetura moderna e separada (Frontend + Backend), comunicando via REST API.
+
+### 🎨 Frontend (`/frontend`)
+*   **Framework:** React (Vite)
+*   **Estilo:** Tailwind CSS (Design System personalizado "Duolingo-style": vibrante, arredondado, animado).
+*   **UX:** Feedback em tempo real, validações visuais, animações `framer-motion` suave.
+
+### 🧠 Backend (`/backend`)
+*   **API:** FastAPI (Python).
+*   **Database:** SQLite (SQLAlchemy) para gestão de alunos, progresso e analítica.
+*   **AI Engine:** OpenAI GPT-4o-mini (Optimizado com estratégias de prompt engineering complexas).
+*   **Segurança:** Autenticação com Hashing de Passwords (`bcrypt`) e Rate Limiting (`slowapi`) para proteção contra brute-force.
+
+---
+
+## 🚀 Como Começar (Instalação)
+
+### Pré-requisitos
+*   **Node.js** (v16+)
+*   **Python** (v3.9+)
+*   **OpenAI API Key**
+
+### 1. Configurar o Backend
+```bash
+cd backend
+
+# Criar ambiente virtual
+python -m venv venv
+source venv/bin/activate  # Mac/Linux
+# .\venv\Scripts\activate  # Windows
+
+# Instalar dependências
+pip install -r requirements.txt
+
+# Configurar Variáveis de Ambiente
+# Cria um ficheiro .env na pasta backend/ com:
+# OPENAI_API_KEY=sk-....
+```
+
+Para iniciar o servidor:
+```bash
+python -m uvicorn main:app --reload --port 8000
+```
+
+### 2. Configurar o Frontend
+Num novo terminal:
+```bash
+cd frontend
+
+# Instalar pacotes
+npm install
+
+# Iniciar aplicação
+npm run dev
+```
+
+Acede a `http://localhost:5173` e começa a estudar!
+
+---
+
+## 📚 Estrutura do Projeto
+
+```
+/
+├── backend/
+│   ├── routers/         # Endpoints da API (Auth, Study, Gamification)
+│   ├── services/        # Lógica de Negócio (AI, Analytics, Quiz Strategies)
+│   ├── models.py        # Modelos de Base de Dados (SQLAlchemy)
+│   └── main.py          # Entry point
+│
+└── frontend/
+    ├── src/
+    │   ├── components/  # Componentes UI Reutilizáveis
+    │   ├── pages/       # Páginas Principais (Login, Intro, Quiz)
+    │   ├── services/    # Comunicação com API (Axios)
+    │   ├── hooks/       # Lógica de Estado (Custom Hooks)
+    │   └── assets/      # Imagens e Sons
+    └── public/          # Assets estáticos
+```
+
+---
+Desenvolvido por **Fábio Oliveira** & **Google DeepMind Antigravity** 🤖✨

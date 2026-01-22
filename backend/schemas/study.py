@@ -8,7 +8,6 @@ class QuizRequest(BaseModel):
     topics: list[str] = []
     api_key: Optional[str] = None
     quiz_type: str = "multiple"
-    student_id: Optional[int] = None
 
     @field_validator('topics')
     @classmethod
@@ -37,15 +36,17 @@ class QuizResultCreate(BaseModel):
     total_questions: int
     quiz_type: str
     detailed_results: List[AnalyticsItem]
-    student_id: int
+    # student_id removed
     study_material_id: Optional[int] = None # NEW: Explicit link
     xp_earned: int = 0
 
 class AnalyzeRequest(BaseModel):
-    student_id: int
+    pass # No fields left if we remove student_id, but wait, usually AnalyzeRequest needs something?
+    # Checking previous file view: 'data' was loaded from repo based on student_id. 
+    # If the request body was ONLY student_id, now it's empty.
+    # Pydantic models with no fields are fine, but let's check content.
 
 class EvaluationRequest(BaseModel):
-    student_id: int
     question: str
     user_answer: str
     quiz_type: str = "open-ended" # "open-ended" or "short_answer"

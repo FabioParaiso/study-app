@@ -19,7 +19,7 @@ export const useMaterial = (studentId) => {
             return;
         }
         try {
-            const data = await studyService.checkMaterial(studentId);
+            const data = await studyService.checkMaterial();
             if (data.has_material) {
                 setSavedMaterial(data);
                 setAvailableTopics(data.topics || []);
@@ -27,7 +27,7 @@ export const useMaterial = (studentId) => {
                 setSavedMaterial(null);
             }
             // Fetch library list
-            const list = await studyService.getMaterials(studentId);
+            const list = await studyService.getMaterials();
             setMaterialsList(list);
         } catch (err) {
             console.error(err);
@@ -41,7 +41,7 @@ export const useMaterial = (studentId) => {
         setIsAnalyzing(true);
         setErrorMsg('');
         try {
-            await studyService.uploadFile(file, studentId);
+            await studyService.uploadFile(file);
             await checkSavedMaterial();
             setFile(null); // Clear file selection after upload
         } catch (err) {
@@ -57,7 +57,7 @@ export const useMaterial = (studentId) => {
         setIsAnalyzing(true);
         setErrorMsg('');
         try {
-            const data = await studyService.analyzeTopics(studentId);
+            const data = await studyService.analyzeTopics();
             setAvailableTopics(data.topics || []);
             await checkSavedMaterial(); // Refresh to ensure sync
         } catch (err) {
@@ -71,7 +71,7 @@ export const useMaterial = (studentId) => {
     const clearMaterial = async () => {
         if (!studentId) return;
         try {
-            await studyService.clearMaterial(studentId);
+            await studyService.clearMaterial();
             setSavedMaterial(null);
             setAvailableTopics([]);
         } catch (err) {
@@ -82,7 +82,7 @@ export const useMaterial = (studentId) => {
     const activateMaterial = async (materialId) => {
         if (!studentId) return;
         try {
-            await studyService.activateMaterial(studentId, materialId);
+            await studyService.activateMaterial(materialId);
             await checkSavedMaterial();
         } catch (err) {
             console.error("Failed to activate material", err);

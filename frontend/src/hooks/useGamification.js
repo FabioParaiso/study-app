@@ -45,11 +45,17 @@ export function useGamification(student, stats) {
 
     const changeAvatar = async (emoji) => {
         if (!student?.id) return;
+        const previousAvatar = selectedAvatar;
+
+        // Optimistic Update
+        setSelectedAvatar(emoji);
+
         try {
-            setSelectedAvatar(emoji);
-            await studyService.updateAvatar(student.id, emoji);
+            await studyService.updateAvatar(emoji);
         } catch (e) {
             console.error("Failed to update avatar:", e);
+            // Revert on error
+            setSelectedAvatar(previousAvatar);
         }
     };
 

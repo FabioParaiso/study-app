@@ -1,5 +1,6 @@
 import React from 'react';
-import { CheckCircle, XCircle, Volume2, StopCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
+import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, ERROR_MESSAGES, getRandomMessage } from './shared';
 
 const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, handleSpeak, speakingPart, showFeedback }) => {
     // Derived state
@@ -10,34 +11,15 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
         <>
             {/* Main Card */}
             <div className="w-full max-w-2xl mx-auto animate-fade-in mb-32">
-                <div className="w-full h-4 bg-gray-200 rounded-full mb-8 relative overflow-hidden">
-                    <div
-                        className="h-full bg-duo-green transition-all duration-500 rounded-full"
-                        style={{ width: `${((index + 1) / total) * 100}%` }}
-                    >
-                        <div className="absolute top-1 left-2 w-full h-1 bg-white opacity-20 rounded-full"></div>
-                    </div>
-                </div>
+                <ProgressBar current={index} total={total} />
 
-                <div className="flex items-start gap-4 mb-8">
-                    <div className="flex-1">
-                        <span className="inline-block bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1 rounded-lg mb-3 tracking-widest uppercase">
-                            {question.topic}
-                        </span>
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-700 leading-tight">
-                            {question.question}
-                        </h2>
-                    </div>
-                    <button
-                        onClick={() => handleSpeak(question.question, 'question')}
-                        className={`p-3 rounded-2xl border-b-4 transition-all active:border-b-0 active:translate-y-1 ${speakingPart === 'question'
-                            ? 'bg-duo-blue text-white border-duo-blue-dark'
-                            : 'bg-white text-duo-blue border-gray-200 hover:bg-gray-50'
-                            }`}
-                    >
-                        {speakingPart === 'question' ? <StopCircle size={24} /> : <Volume2 size={24} />}
-                    </button>
-                </div>
+                <QuestionHeader
+                    topic={question.topic}
+                    question={question.question}
+                    onSpeak={handleSpeak}
+                    isSpeaking={speakingPart === 'question'}
+                    accentColor="blue"
+                />
 
                 <div className="grid gap-4">
                     {question.options.map((option, optIndex) => {
@@ -93,8 +75,8 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                             <div className="w-full">
                                 <h3 className={`font-bold text-xl mb-1 ${isCorrect ? 'text-duo-green-dark' : 'text-duo-red-dark'}`}>
                                     {isCorrect
-                                        ? ["Fantástico! 🎉", "Muito bem! 🌟", "Acertaste! 💪"][Math.floor(Math.random() * 3)]
-                                        : ["Fica a saber que: 🧠", "Ups! Vamos ver... 🤔", "Quase! Olha só: 💡"][Math.floor(Math.random() * 3)]}
+                                        ? getRandomMessage(SUCCESS_MESSAGES)
+                                        : getRandomMessage(ERROR_MESSAGES)}
                                 </h3>
                                 {!isCorrect && (
                                     <div className="text-gray-800 font-medium mb-2">

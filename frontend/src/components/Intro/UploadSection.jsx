@@ -16,6 +16,7 @@ const UploadSection = ({ file, handleFileChange, analyzeFile, isAnalyzing, DuoBu
             <div className="relative inline-block w-full max-w-xs">
                 <input
                     type="file"
+                    aria-label="Carregar documento de estudo (PDF ou TXT)"
                     accept=".pdf,.txt"
                     onChange={handleFileChange}
                     className="hidden"

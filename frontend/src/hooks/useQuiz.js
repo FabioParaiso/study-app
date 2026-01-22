@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { studyService } from '../services/studyService';
 import { useQuizEngine } from './useQuizEngine';
+import { calculateXPFromScore } from '../utils/xpCalculator';
 
 export function useQuiz(student, materialId) {
     const {
@@ -23,7 +24,7 @@ export function useQuiz(student, materialId) {
         setSessionXP(0); // Reset session XP
 
         try {
-            const qs = await studyService.generateQuiz(topic, type, student?.id);
+            const qs = await studyService.generateQuiz(topic, type);
             initQuiz(qs);
         } catch (err) {
             console.error(err);
@@ -58,12 +59,11 @@ export function useQuiz(student, materialId) {
         const currentQ = questions[currentQuestionIndex];
 
         try {
-            const evalData = await studyService.evaluateAnswer(currentQ.question, userText, student?.id);
+            const evalData = await studyService.evaluateAnswer(currentQ.question, userText);
             recordEvaluation(currentQuestionIndex, evalData, userText);
 
-            // XP Logic
-            const xpEarned = 5 + (evalData.score >= 50 ? 5 : 0) + (evalData.score >= 80 ? 5 : 0);
-
+            // XP Logic (centralized in utils/xpCalculator.js)
+            const xpEarned = calculateXPFromScore(evalData.score);
             setSessionXP(prev => prev + xpEarned);
             addXPCallback(xpEarned);
 
@@ -85,7 +85,7 @@ export function useQuiz(student, materialId) {
 
         try {
             // Pass 'short_answer' as type to trigger the simple sentence prompt on backend
-            const rawEval = await studyService.evaluateAnswer(currentQ.question, userText, student?.id, 'short_answer');
+            const rawEval = await studyService.evaluateAnswer(currentQ.question, userText, 'short_answer');
 
             const evalData = {
                 ...rawEval,
@@ -94,9 +94,8 @@ export function useQuiz(student, materialId) {
 
             recordEvaluation(currentQuestionIndex, evalData, userText);
 
-            // XP Logic
-            const xpEarned = 5 + (evalData.score >= 50 ? 5 : 0) + (evalData.score >= 80 ? 5 : 0);
-
+            // XP Logic (centralized in utils/xpCalculator.js)
+            const xpEarned = calculateXPFromScore(evalData.score);
             setSessionXP(prev => prev + xpEarned);
             addXPCallback(xpEarned);
 
@@ -112,7 +111,7 @@ export function useQuiz(student, materialId) {
         const finished = advanceQuestion();
 
         if (finished) {
-            // Submit Analytics
+            // Calculate Detailed Results
             const detailedResults = questions.map((q, idx) => {
                 const ua = userAnswers[idx];
                 let correct = false;
@@ -130,24 +129,21 @@ export function useQuiz(student, materialId) {
                 };
             });
 
-            try {
-                if (student?.id) {
-                    await studyService.submitQuizResult(
-                        score,
-                        questions.length,
-                        quizType,
-                        detailedResults,
-                        student.id,
-                        sessionXP, // Send total session XP
-                        materialId // Pass it here
-                    );
-                }
-            } catch (err) {
-                console.error("Failed to submit analytics", err);
-            }
-
+            // Optimistic Completion: Update UI immediately, send data in background.
             if (quizType === 'multiple' && updateHighScoreCallback) {
                 updateHighScoreCallback(score);
+            }
+
+            // Submit Analytics in background
+            if (student?.id) {
+                studyService.submitQuizResult(
+                    score,
+                    questions.length,
+                    quizType,
+                    detailedResults,
+                    sessionXP,
+                    materialId
+                ).catch(err => console.error("Failed to submit analytics", err));
             }
         }
     };

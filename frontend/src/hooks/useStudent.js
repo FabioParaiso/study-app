@@ -11,6 +11,7 @@ export const useStudent = () => {
             localStorage.setItem('study_student', JSON.stringify(student));
         } else {
             localStorage.removeItem('study_student');
+            localStorage.removeItem('study_token');
         }
     }, [student]);
 

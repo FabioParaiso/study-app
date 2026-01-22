@@ -119,6 +119,7 @@ const LoginPage = ({ onLogin }) => {
                             </div>
                             <input
                                 type="text"
+                                aria-label="Nome de super-herói"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="Qual é o teu nome de super-herói?"
@@ -134,6 +135,7 @@ const LoginPage = ({ onLogin }) => {
                             </div>
                             <input
                                 type={showPassword ? "text" : "password"}
+                                aria-label="Palavra-passe"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="A tua palavra-passe secreta"
@@ -156,6 +158,7 @@ const LoginPage = ({ onLogin }) => {
                                 </div>
                                 <input
                                     type={showPassword ? "text" : "password"}
+                                    aria-label="Confirmar palavra-passe"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     placeholder="Confirma a palavra-passe"

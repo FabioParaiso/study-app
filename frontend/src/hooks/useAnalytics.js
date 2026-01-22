@@ -20,7 +20,7 @@ export function useAnalytics(studentId, materialId) {
         const loadPoints = async () => {
             try {
                 // Backend automatically scopes to active material for this student
-                const data = await studyService.getWeakPoints(studentId, materialId);
+                const data = await studyService.getWeakPoints(materialId);
 
                 if (isActive) {
                     setPoints(data);

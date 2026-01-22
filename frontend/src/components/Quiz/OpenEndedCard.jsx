@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
-import { Send, Volume2, StopCircle, ArrowRight, Mic, MicOff, CheckCircle, XCircle } from 'lucide-react';
+import { Send, Mic, MicOff } from 'lucide-react';
+import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, PARTIAL_SUCCESS_MESSAGES, getRandomMessage } from './shared';
 
 const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvaluating, onNext, handleSpeak, speakingPart }) => {
     const [userText, setUserText] = useState("");
@@ -25,37 +26,20 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
         <>
             {/* Main Card */}
             <div className="w-full max-w-2xl mx-auto animate-fade-in mb-40">
-                {/* Progress Bar */}
-                <div className="w-full h-4 bg-gray-200 rounded-full mb-8 relative overflow-hidden">
-                    <div className="h-full bg-purple-500 transition-all duration-500 rounded-full" style={{ width: `${((index + 1) / total) * 100}%` }}>
-                        <div className="absolute top-1 left-2 w-full h-1 bg-white opacity-20 rounded-full"></div>
-                    </div>
-                </div>
+                <ProgressBar current={index} total={total} color="bg-purple-500" />
 
-                {/* Header & Question */}
-                <div className="flex items-start gap-4 mb-8">
-                    <div className="flex-1">
-                        <span className="inline-block bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1 rounded-lg mb-3 tracking-widest uppercase">
-                            {question.topic}
-                        </span>
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-700 leading-tight">
-                            {question.question}
-                        </h2>
-                    </div>
-                    <button
-                        onClick={() => handleSpeak(question.question, 'question')}
-                        className={`p-3 rounded-2xl border-b-4 transition-all active:border-b-0 active:translate-y-1 ${speakingPart === 'question'
-                            ? 'bg-purple-500 text-white border-purple-700'
-                            : 'bg-white text-purple-500 border-gray-200 hover:bg-purple-50'
-                            }`}
-                    >
-                        {speakingPart === 'question' ? <StopCircle size={24} /> : <Volume2 size={24} />}
-                    </button>
-                </div>
+                <QuestionHeader
+                    topic={question.topic}
+                    question={question.question}
+                    onSpeak={handleSpeak}
+                    isSpeaking={speakingPart === 'question'}
+                    accentColor="purple"
+                />
 
                 {/* Input Area */}
                 <div className="relative w-full mb-6">
                     <textarea
+                        aria-label="A tua resposta detalhada"
                         className={`w-full p-6 text-xl rounded-2xl border-2 border-b-4 outline-none transition-all font-medium min-h-[200px] resize-y ${evaluation
                             ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
                             : 'bg-white border-gray-200 focus:border-purple-500 focus:border-b-4 text-gray-700'
@@ -94,8 +78,8 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
                             <div className="flex-1 py-2">
                                 <h3 className={`font-bold text-xl mb-1 ${isGoodScore ? 'text-green-600' : 'text-red-600'}`}>
                                     {isGoodScore
-                                        ? ["Fantástico! 🎉", "Muito bem! 🌟", "Acertaste! 💪"][Math.floor(Math.random() * 3)]
-                                        : ["Fica a saber que: 🧠", "Quase! Olha só: 👀", "Não desanimes! 💪"][Math.floor(Math.random() * 3)]}
+                                        ? getRandomMessage(SUCCESS_MESSAGES)
+                                        : getRandomMessage(PARTIAL_SUCCESS_MESSAGES)}
                                 </h3>
                                 <p className="text-sm font-medium text-gray-500">{evaluation.feedback}</p>
                             </div>

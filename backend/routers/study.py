@@ -11,6 +11,8 @@ from services.ai_service import AIService
 from services.quiz_strategies import MultipleChoiceStrategy, OpenEndedStrategy, ShortAnswerStrategy
 from services.analytics_service import AnalyticsService
 from schemas.study import QuizRequest, AnalyzeRequest, EvaluationRequest, QuizResultCreate
+from dependencies import get_current_user
+from models import Student
 
 router = APIRouter()
 
@@ -31,8 +33,8 @@ def get_ai_service(api_key: str = None):
 # --- Endpoints ---
 
 @router.get("/current-material")
-def get_current_material(student_id: int, repo: MaterialRepository = Depends(get_material_repo)):
-    data = repo.load(student_id)
+def get_current_material(current_user: Student = Depends(get_current_user), repo: MaterialRepository = Depends(get_material_repo)):
+    data = repo.load(current_user.id)
     if data:
         return {
             "has_material": True,
@@ -47,17 +49,17 @@ def get_current_material(student_id: int, repo: MaterialRepository = Depends(get
     return {"has_material": False}
 
 @router.post("/clear-material")
-def clear_material(student_id: int, repo: MaterialRepository = Depends(get_material_repo)):
-    repo.clear(student_id)
+def clear_material(current_user: Student = Depends(get_current_user), repo: MaterialRepository = Depends(get_material_repo)):
+    repo.clear(current_user.id)
     return {"status": "cleared"}
 
 @router.get("/materials")
-def list_materials(student_id: int, repo: MaterialRepository = Depends(get_material_repo)):
-    return repo.list_all(student_id)
+def list_materials(current_user: Student = Depends(get_current_user), repo: MaterialRepository = Depends(get_material_repo)):
+    return repo.list_all(current_user.id)
 
 @router.post("/materials/{material_id}/activate")
-def activate_material(material_id: int, student_id: int, repo: MaterialRepository = Depends(get_material_repo)):
-    success = repo.activate(student_id, material_id)
+def activate_material(material_id: int, current_user: Student = Depends(get_current_user), repo: MaterialRepository = Depends(get_material_repo)):
+    success = repo.activate(current_user.id, material_id)
     if not success:
         raise HTTPException(status_code=404, detail="Material not found")
     return {"status": "activated"}
@@ -70,7 +72,7 @@ def get_topic_service():
 
 @router.post("/upload")
 async def upload_file(
-    student_id: int = Form(...),
+    current_user: Student = Depends(get_current_user),
     file: UploadFile = File(...), 
     repo: MaterialRepository = Depends(get_material_repo),
     quiz_repo: QuizRepository = Depends(get_quiz_repo),
@@ -102,12 +104,12 @@ async def upload_file(
 
         # 2. Extract Topics (AI + Deduplication)
         ai_service = get_ai_service()
-        existing_topics = quiz_repo.get_all_topics(student_id)
+        existing_topics = quiz_repo.get_all_topics(current_user.id)
         
         topics = topic_service.extract_topics(text, ai_service, existing_topics)
 
         # 3. Save
-        repo.save(student_id, text, file.filename, topics)
+        repo.save(current_user.id, text, file.filename, topics)
         
         return {"text": text, "filename": file.filename, "topics": topics}
 
@@ -120,11 +122,13 @@ async def upload_file(
 @router.post("/analyze-topics")
 def analyze_topics_endpoint(
     request: AnalyzeRequest,
+    current_user: Student = Depends(get_current_user),
     repo: MaterialRepository = Depends(get_material_repo),
     quiz_repo: QuizRepository = Depends(get_quiz_repo),
     topic_service: TopicService = Depends(get_topic_service)
 ):
-    data = repo.load(request.student_id)
+    # Ignore request.student_id, use token
+    data = repo.load(current_user.id)
     if not data or not data.get("text"):
         raise HTTPException(status_code=400, detail="No material found to analyze")
 
@@ -133,25 +137,24 @@ def analyze_topics_endpoint(
     
     # Re-analyze (AI + Deduplication)
     ai_service = get_ai_service()
-    existing_topics = quiz_repo.get_all_topics(request.student_id)
+    existing_topics = quiz_repo.get_all_topics(current_user.id)
 
     topics = topic_service.extract_topics(text, ai_service, existing_topics)
     
     # Update storage
-    repo.save(request.student_id, text, source, topics)
+    repo.save(current_user.id, text, source, topics)
     
     return {"topics": topics}
 
 @router.post("/generate-quiz")
 def generate_quiz_endpoint(
     request: QuizRequest,
+    current_user: Student = Depends(get_current_user),
     repo: MaterialRepository = Depends(get_material_repo),
     quiz_repo: QuizRepository = Depends(get_quiz_repo)
 ):
-    if not request.student_id:
-         raise HTTPException(status_code=400, detail="Student ID is required.")
-
-    data = repo.load(request.student_id)
+    # request.student_id is ignored
+    data = repo.load(current_user.id)
     if not data or not data.get("text"):
         raise HTTPException(status_code=400, detail="No material found. Upload a file first.")
     
@@ -163,15 +166,15 @@ def generate_quiz_endpoint(
 
     # Adaptive Logic
     priority_topics = []
-    if request.student_id:
-        analytics_service = AnalyticsService(quiz_repo)
-        # Scope adaptive learning to the current material
-        material_id = data.get("id")
-        adaptive_data = analytics_service.get_adaptive_topics(request.student_id, material_id)
-        # Extract topics from "boost" (weak points) and "mastered" (for review)
-        # We prioritize boost, but can also include some mastered for spaced repetition
-        if adaptive_data:
-             priority_topics = adaptive_data.get("boost", []) + adaptive_data.get("mastered", [])
+    
+    analytics_service = AnalyticsService(quiz_repo)
+    # Scope adaptive learning to the current material
+    material_id = data.get("id")
+    adaptive_data = analytics_service.get_adaptive_topics(current_user.id, material_id)
+    # Extract topics from "boost" (weak points) and "mastered" (for review)
+    # We prioritize boost, but can also include some mastered for spaced repetition
+    if adaptive_data:
+            priority_topics = adaptive_data.get("boost", []) + adaptive_data.get("mastered", [])
 
     target_topics = request.topics
     
@@ -220,10 +223,11 @@ def generate_quiz_endpoint(
 @router.post("/evaluate-answer")
 def evaluate_answer_endpoint(
     request: EvaluationRequest,
+    current_user: Student = Depends(get_current_user),
     repo: MaterialRepository = Depends(get_material_repo)
 ):
-    # Note: request.student_id is required by schema now
-    data = repo.load(request.student_id)
+    # request.student_id is ignored
+    data = repo.load(current_user.id)
 
     if not data or not data.get("text"):
         raise HTTPException(status_code=400, detail="No material found.")
@@ -240,19 +244,20 @@ def evaluate_answer_endpoint(
 @router.post("/quiz/result")
 def save_quiz_result(
     result: QuizResultCreate,
+    current_user: Student = Depends(get_current_user),
     repo: QuizRepository = Depends(get_quiz_repo),
     material_repo: MaterialRepository = Depends(get_material_repo)
 ):
     # Use explicit ID from frontend, or fallback to active if missing
     material_id = result.study_material_id
     if not material_id:
-        current = material_repo.load(result.student_id) 
+        current = material_repo.load(current_user.id) 
         material_id = current["id"] if current else None
 
     analytics_data = [item.dict() for item in result.detailed_results]
 
     success = repo.save_quiz_result(
-        student_id=result.student_id,
+        student_id=current_user.id,
         score=result.score,
         total=result.total_questions,
         quiz_type=result.quiz_type,
@@ -266,11 +271,12 @@ def save_quiz_result(
 
 @router.get("/analytics/weak-points")
 def get_weak_points(
-    student_id: int,
+    current_user: Student = Depends(get_current_user),
     material_id: int = None,
     repo: QuizRepository = Depends(get_quiz_repo),
     material_repo: MaterialRepository = Depends(get_material_repo)
 ):
+    student_id = current_user.id
     if not material_id:
         current = material_repo.load(student_id)
         if not current:
