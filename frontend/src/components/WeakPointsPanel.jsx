@@ -51,7 +51,7 @@ const WeakPointsPanel = ({ studentId, materialId }) => {
                     <div>
                         <p className="font-bold">O sistema detetou pontos fracos!</p>
                         <p className="text-red-600/80 mt-1">
-                            Não te preocupes. O próximo quiz vai <b>automaticamente</b> incluir perguntas sobre estes temas para te ajudar a subir a nota. 💪
+                            Não te preocupes. O próximo quiz vai <b>automaticamente</b> incluir perguntas sobre estes temas para te ajudar a subir a nota.
                         </p>
                     </div>
                 </div>
@@ -61,7 +61,7 @@ const WeakPointsPanel = ({ studentId, materialId }) => {
                     <div>
                         <p className="font-bold">Estás em grande!</p>
                         <p className="text-green-600/80 mt-1">
-                            Continua assim para desbloqueares mais níveis. 🚀
+                            Continua assim para desbloqueares mais níveis.
                         </p>
                     </div>
                 </div>

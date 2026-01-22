@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle, XCircle } from 'lucide-react';
-import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, ERROR_MESSAGES, getRandomMessage } from './shared';
+import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, ERROR_MESSAGES, getRandomMessage, FeedbackIcon } from './shared';
 
 const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, handleSpeak, speakingPart, showFeedback }) => {
     // Derived state
@@ -73,11 +73,17 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
                                 {isCorrect ? <CheckCircle size={32} /> : <XCircle size={32} />}
                             </div>
                             <div className="w-full">
-                                <h3 className={`font-bold text-xl mb-1 ${isCorrect ? 'text-duo-green-dark' : 'text-duo-red-dark'}`}>
-                                    {isCorrect
+                                {(() => {
+                                    const msg = isCorrect
                                         ? getRandomMessage(SUCCESS_MESSAGES)
-                                        : getRandomMessage(ERROR_MESSAGES)}
-                                </h3>
+                                        : getRandomMessage(ERROR_MESSAGES);
+                                    return (
+                                        <h3 className={`font-bold text-xl mb-1 flex items-center gap-2 ${isCorrect ? 'text-duo-green-dark' : 'text-duo-red-dark'}`}>
+                                            <FeedbackIcon iconName={msg.icon} className="w-6 h-6" />
+                                            <span>{msg.text}</span>
+                                        </h3>
+                                    );
+                                })()}
                                 {!isCorrect && (
                                     <div className="text-gray-800 font-medium mb-2">
                                         A resposta certa é: <span className="font-bold">{question.options[question.correctIndex]}</span>

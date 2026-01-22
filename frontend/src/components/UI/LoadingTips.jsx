@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
 const TIPS = [
-    "A IA está a ler e a aprender o teu documento... 🧠",
-    "Sabias que 20 minutos de estudo focado valem por 1 hora distraída? 🕒",
-    "A preparar perguntas para te desafiar... ⚡",
-    "Dica: Tenta explicar a matéria a alguém para aprenderes melhor! 🗣️",
-    "Quase pronto! A organizar os tópicos... 📚",
-    "A gerar quizzes personalizados para ti... 🚀",
-    "Respira fundo. Estudar é uma maratona, não um sprint. 🏃"
+    "A IA está a ler e a aprender o teu documento...",
+    "Sabias que 20 minutos de estudo focado valem por 1 hora distraída?",
+    "A preparar perguntas para te desafiar...",
+    "Dica: Tenta explicar a matéria a alguém para aprenderes melhor!",
+    "Quase pronto! A organizar os tópicos...",
+    "A gerar quizzes personalizados para ti...",
+    "Respira fundo. Estudar é uma maratona, não um sprint."
 ];
 
 const LoadingTips = () => {

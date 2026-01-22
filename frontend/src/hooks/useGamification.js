@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { studyService } from '../services/studyService';
 
 const LEVELS = [
-    { min: 0, title: "Estudante Curiosa", emoji: "🌱" },
-    { min: 100, title: "Exploradora da Natureza", emoji: "🦋" },
-    { min: 300, title: "Assistente de Laboratório", emoji: "🔬" },
-    { min: 600, title: "Bióloga Júnior", emoji: "🧬" },
-    { min: 1000, title: "Mestre das Ciências", emoji: "👩‍🔬" },
-    { min: 2000, title: "Cientista Lendária", emoji: "🚀" },
+    { min: 0, title: "Estudante Curiosa", icon: "Sprout" },
+    { min: 100, title: "Exploradora da Natureza", icon: "Compass" },
+    { min: 300, title: "Assistente de Laboratório", icon: "Microscope" },
+    { min: 600, title: "Bióloga Júnior", icon: "Dna" },
+    { min: 1000, title: "Mestre das Ciências", icon: "FlaskConical" },
+    { min: 2000, title: "Cientista Lendária", icon: "Rocket" },
 ];
 
 const getLevelInfo = (xp) => {
@@ -25,12 +25,12 @@ const getLevelInfo = (xp) => {
 export function useGamification(student, stats) {
     const [highScore, setHighScore] = useState(0);
     const [totalXP, setTotalXP] = useState(0);
-    const [selectedAvatar, setSelectedAvatar] = useState('👩‍🎓');
+    const [selectedAvatar, setSelectedAvatar] = useState('mascot');
 
     // Sync with student and stats
     useEffect(() => {
         if (student) {
-            setSelectedAvatar(student.current_avatar || '👩‍🎓');
+            setSelectedAvatar(student.current_avatar || 'mascot');
         }
         if (stats) {
             setHighScore(stats.high_score || 0);

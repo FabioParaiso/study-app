@@ -18,7 +18,7 @@ const QuitConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
                 {/* Content */}
                 <div className="mb-8">
                     <h3 className="text-3xl font-black text-gray-700 mb-4 uppercase tracking-wide">
-                        Esperaaa! 😱
+                        Esperaaa!
                     </h3>
                     <p className="text-gray-500 font-bold text-lg leading-relaxed px-2">
                         Vais mesmo sair? Todo o teu progresso será perdido!

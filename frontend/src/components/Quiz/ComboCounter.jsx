@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Flame, Zap, Rocket } from 'lucide-react';
 
 const ComboCounter = ({ combo }) => {
     const [scale, setScale] = useState(1);
@@ -14,9 +15,10 @@ const ComboCounter = ({ combo }) => {
     if (combo < 2) return null;
 
     let color = "text-orange-500";
-    let emoji = "🔥";
-    if (combo >= 5) { color = "text-purple-500"; emoji = "⚡"; }
-    if (combo >= 10) { color = "text-red-600"; emoji = "🚀"; }
+    let Icon = Flame;
+
+    if (combo >= 5) { color = "text-purple-500"; Icon = Zap; }
+    if (combo >= 10) { color = "text-red-600"; Icon = Rocket; }
 
     return (
         <div
@@ -26,7 +28,9 @@ const ComboCounter = ({ combo }) => {
             <div className={`text-2xl font-black ${color}`}>
                 {combo}x
             </div>
-            <div className="text-xs font-bold uppercase text-gray-400">Combo {emoji}</div>
+            <div className={`text-xs font-bold uppercase text-gray-400 flex items-center justify-center gap-1`}>
+                Combo <Icon size={16} className={color} fill="currentColor" />
+            </div>
         </div>
     );
 };

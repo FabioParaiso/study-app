@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Send, CheckCircle, XCircle } from 'lucide-react';
-import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, PARTIAL_SUCCESS_MESSAGES, getRandomMessage } from './shared';
+import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, PARTIAL_SUCCESS_MESSAGES, getRandomMessage, FeedbackIcon } from './shared';
 
 const ShortAnswerCard = ({
     question,
@@ -91,11 +91,17 @@ const ShortAnswerCard = ({
                                     </div>
 
                                     <div className="flex-1">
-                                        <h3 className={`font-bold text-xl mb-1 ${isCorrect ? 'text-duo-green-dark' : 'text-duo-red-dark'}`}>
-                                            {isCorrect
+                                        {(() => {
+                                            const msg = isCorrect
                                                 ? getRandomMessage(SUCCESS_MESSAGES)
-                                                : getRandomMessage(PARTIAL_SUCCESS_MESSAGES)}
-                                        </h3>
+                                                : getRandomMessage(PARTIAL_SUCCESS_MESSAGES);
+                                            return (
+                                                <h3 className={`font-bold text-xl mb-1 flex items-center gap-2 ${isCorrect ? 'text-duo-green-dark' : 'text-duo-red-dark'}`}>
+                                                    <FeedbackIcon iconName={msg.icon} className="w-6 h-6" />
+                                                    <span>{msg.text}</span>
+                                                </h3>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
 

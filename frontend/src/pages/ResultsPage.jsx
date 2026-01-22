@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, RefreshCw, RotateCcw, CheckCircle } from 'lucide-react';
+import { Award, RefreshCw, RotateCcw, CheckCircle, Flame } from 'lucide-react';
 import Confetti from '../components/UI/Confetti';
 
 const ResultsScreen = ({
@@ -32,7 +32,7 @@ const ResultsScreen = ({
                         </div>
                         {streak > 1 && (
                             <div className="absolute -bottom-2 -right-2 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full border-2 border-white flex items-center gap-1">
-                                🔥 {streak}
+                                <Flame size={14} fill="currentColor" /> {streak}
                             </div>
                         )}
                     </div>

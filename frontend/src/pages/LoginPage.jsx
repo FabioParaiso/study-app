@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, User, Lock, Sparkles, GraduationCap, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Sparkles, GraduationCap, ArrowRight, Rocket } from 'lucide-react';
 import { authService } from '../services/authService';
 import mascotImg from '../assets/mascot.png';
 
@@ -106,7 +106,7 @@ const LoginPage = ({ onLogin }) => {
                         </div>
                     </div>
                     <h1 className="text-4xl font-black text-white mt-6 mb-2 tracking-tight">
-                        Super Study! 🚀
+                        Super Study! <Rocket className="inline-block ml-2 text-yellow-400 animate-bounce-slow" size={32} />
                     </h1>
                     <p className="text-blue-200 font-bold uppercase tracking-widest text-sm">
                         Torna o estudo na tua aventura favorita!
@@ -117,7 +117,7 @@ const LoginPage = ({ onLogin }) => {
                 <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl border-b-8 border-blue-900/10">
 
                     <h2 className="text-2xl font-black text-gray-800 mb-6 text-center">
-                        {isRegistering ? "Junta-te a nós! É grátis!" : "Olá de novo, campeão! 👋"}
+                        {isRegistering ? "Junta-te a nós! É grátis!" : "Olá de novo, campeão!"}
                     </h2>
 
                     {error && (

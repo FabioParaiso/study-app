@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
-import { Send, Mic, MicOff } from 'lucide-react';
-import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, PARTIAL_SUCCESS_MESSAGES, getRandomMessage } from './shared';
+import { Send, Mic, MicOff, Lightbulb } from 'lucide-react';
+import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, PARTIAL_SUCCESS_MESSAGES, getRandomMessage, FeedbackIcon } from './shared';
 
 const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvaluating, onNext, handleSpeak, speakingPart }) => {
     const [userText, setUserText] = useState("");
@@ -76,11 +76,17 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
                                 <span className="text-[10px] font-bold uppercase">Nota</span>
                             </div>
                             <div className="flex-1 py-2">
-                                <h3 className={`font-bold text-xl mb-1 ${isGoodScore ? 'text-green-600' : 'text-red-600'}`}>
-                                    {isGoodScore
+                                {(() => {
+                                    const msg = isGoodScore
                                         ? getRandomMessage(SUCCESS_MESSAGES)
-                                        : getRandomMessage(PARTIAL_SUCCESS_MESSAGES)}
-                                </h3>
+                                        : getRandomMessage(PARTIAL_SUCCESS_MESSAGES);
+                                    return (
+                                        <h3 className={`font-bold text-xl mb-1 flex items-center gap-2 ${isGoodScore ? 'text-green-600' : 'text-red-600'}`}>
+                                            <FeedbackIcon iconName={msg.icon} className="w-6 h-6" />
+                                            <span>{msg.text}</span>
+                                        </h3>
+                                    );
+                                })()}
                                 <p className="text-sm font-medium text-gray-500">{evaluation.feedback}</p>
                             </div>
                         </div>
@@ -111,7 +117,9 @@ const OpenEndedCard = ({ question, index, total, onEvaluate, evaluation, isEvalu
                         {/* Curiosity Block (Always show) */}
                         {evaluation.curiosity && (
                             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                                <p className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-2">🤔 Sabias que...</p>
+                                <p className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <Lightbulb size={16} /> Sabias que...
+                                </p>
                                 <p className="text-gray-800 text-sm leading-relaxed">{evaluation.curiosity}</p>
                             </div>
                         )}
