@@ -33,6 +33,7 @@ const UploadSection = ({ file, handleFileChange, analyzeFile, isAnalyzing, DuoBu
                 onClick={analyzeFile}
                 disabled={!file || isAnalyzing}
                 className="max-w-xs mx-auto"
+                aria-label={isAnalyzing ? "A analisar ficheiro" : "Começar análise"}
             >
                 {isAnalyzing ? <RefreshCw className="animate-spin" /> : "COMEÇAR"}
             </DuoButton>

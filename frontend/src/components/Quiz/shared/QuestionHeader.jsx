@@ -41,6 +41,7 @@ const QuestionHeader = ({
             </div>
             <button
                 onClick={() => onSpeak(question, 'question')}
+                aria-label={isSpeaking ? "Parar leitura" : "Ler pergunta"}
                 className={`p-3 rounded-2xl border-b-4 transition-all active:border-b-0 active:translate-y-1 ${isSpeaking ? colors.active : colors.inactive
                     }`}
             >
