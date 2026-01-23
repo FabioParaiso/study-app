@@ -16,6 +16,7 @@ const IntroHeader = ({ student, selectedAvatar, changeAvatar, totalXP, onLogout,
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => changeAvatar(selectedAvatar === 'mascot' ? 'user' : 'mascot')}
+                        aria-label="Alternar avatar"
                         className="bg-gray-100 hover:bg-gray-200 p-2 rounded-xl border-b-4 border-gray-200 active:border-b-0 active:translate-y-1 transition-all overflow-hidden w-12 h-12 flex items-center justify-center"
                     >
                         {selectedAvatar === 'mascot' ? (
