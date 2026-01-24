@@ -74,5 +74,9 @@ export const studyService = {
     activateMaterial: async (materialId) => {
         const res = await api.post(`/materials/${materialId}/activate`);
         return res.data;
+    },
+    deleteMaterial: async (materialId) => {
+        const res = await api.delete(`/delete-material/${materialId}`);
+        return res.data;
     }
 };

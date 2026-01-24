@@ -54,6 +54,13 @@ def clear_material(current_user: Student = Depends(get_current_user), repo: Mate
     repo.clear(current_user.id)
     return {"status": "cleared"}
 
+@router.delete("/delete-material/{material_id}")
+def delete_material(material_id: int, current_user: Student = Depends(get_current_user), repo: MaterialRepository = Depends(get_material_repo)):
+    success = repo.delete(current_user.id, material_id)
+    if not success:
+        return {"status": "error", "message": "Material not found or could not be deleted"}
+    return {"status": "deleted"}
+
 @router.get("/materials")
 def list_materials(current_user: Student = Depends(get_current_user), repo: MaterialRepository = Depends(get_material_repo)):
     return repo.list_all(current_user.id)
@@ -104,12 +111,12 @@ async def upload_file(
         if not text:
             raise HTTPException(status_code=400, detail="Failed to extract text from file.")
 
-        # 2. Extract Topics (AI + Deduplication)
+        # 2. Extract Topics (AI)
         ai_service = get_ai_service()
-        existing_topics = quiz_repo.get_all_topics(current_user.id)
+        # Removed existing_topics logic as per user request (File Isolation)
         
         # Offload blocking OpenAI network call to threadpool
-        topics = await asyncio.to_thread(topic_service.extract_topics, text, ai_service, existing_topics)
+        topics = await asyncio.to_thread(topic_service.extract_topics, text, ai_service)
 
         # 3. Save
         repo.save(current_user.id, text, file.filename, topics)
@@ -138,11 +145,10 @@ def analyze_topics_endpoint(
     text = data.get("text")
     source = data.get("source")
     
-    # Re-analyze (AI + Deduplication)
+    # Re-analyze (AI)
     ai_service = get_ai_service()
-    existing_topics = quiz_repo.get_all_topics(current_user.id)
 
-    topics = topic_service.extract_topics(text, ai_service, existing_topics)
+    topics = topic_service.extract_topics(text, ai_service)
     
     # Update storage
     repo.save(current_user.id, text, source, topics)
@@ -201,7 +207,14 @@ def generate_quiz_endpoint(
     else:
         strategy = MultipleChoiceStrategy()
 
-    material_topics = data.get("topics", [])
+    material_topics_data = data.get("topics", {})
+    # Flatten to list of concepts for the AI consistency instruction
+    if isinstance(material_topics_data, dict):
+        material_topics = []
+        for t_concepts in material_topics_data.values():
+            material_topics.extend(t_concepts)
+    else:
+        material_topics = material_topics_data
 
     questions = ai_service.generate_quiz(strategy, text, target_topics, priority_topics, material_topics)
     

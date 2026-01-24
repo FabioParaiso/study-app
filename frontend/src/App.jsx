@@ -20,7 +20,7 @@ export default function App() {
     const {
         file, savedMaterial, availableTopics, selectedTopic, isAnalyzing, errorMsg,
         setSelectedTopic, handleFileChange, analyzeFile, detectTopics, clearMaterial,
-        materialsList, activateMaterial, refreshMaterial
+        materialsList, activateMaterial, refreshMaterial, deleteMaterial
     } = useMaterial(student?.id);
 
     const {
@@ -82,6 +82,7 @@ export default function App() {
                 LEVELS={LEVELS}
                 materialsList={materialsList}
                 activateMaterial={activateMaterial}
+                onDeleteMaterial={deleteMaterial}
             />
         );
     }

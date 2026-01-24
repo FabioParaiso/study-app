@@ -24,7 +24,7 @@ class StudyMaterial(Base):
     student_id = Column(Integer, ForeignKey("students.id")) # Link to owner
     source = Column(String, index=True)
     text = Column(Text)
-    topics = Column(String) # JSON string of topics list
+    # topics column removed in favor of relational tables
     
     # New fields for per-material gamification and state
     total_xp = Column(Integer, default=0)
@@ -37,6 +37,27 @@ class StudyMaterial(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     student = relationship("Student", back_populates="materials")
+    topics = relationship("Topic", back_populates="material", cascade="all, delete-orphan")
+
+class Topic(Base):
+    __tablename__ = "topics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    study_material_id = Column(Integer, ForeignKey("study_materials.id"))
+    name = Column(String, index=True)
+    
+    material = relationship("StudyMaterial", back_populates="topics")
+    concepts = relationship("Concept", back_populates="topic", cascade="all, delete-orphan")
+
+class Concept(Base):
+    __tablename__ = "concepts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    topic_id = Column(Integer, ForeignKey("topics.id"))
+    name = Column(String, index=True)
+
+    topic = relationship("Topic", back_populates="concepts")
+    analytics = relationship("QuestionAnalytics", back_populates="concept")
 
 class QuizResult(Base):
     __tablename__ = "quiz_results"
@@ -58,7 +79,10 @@ class QuestionAnalytics(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     quiz_result_id = Column(Integer, ForeignKey("quiz_results.id"))
-    topic = Column(String, index=True)
+    concept_id = Column(Integer, ForeignKey("concepts.id"), nullable=True) # Linked to granular concept
+    # topic string kept for backward compatibility if needed, but primary link is concept_id
+    topic = Column(String, index=True, nullable=True) 
     is_correct = Column(Boolean)
     
     quiz_result = relationship("QuizResult", back_populates="analytics")
+    concept = relationship("Concept", back_populates="analytics")

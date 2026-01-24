@@ -34,9 +34,32 @@ class QuizRepository:
             self.db.refresh(result)
             
             for item in analytics_data:
+                concept_name = item.get("topic") or "Geral"
+                # Try to link to a concept_id
+                if concept_name and material_id:
+                     from models import Concept, Topic
+
+                     # 1. Exact Match
+                     concept = (self.db.query(Concept)
+                                .join(Topic)
+                                .filter(Topic.study_material_id == material_id, Concept.name == concept_name)
+                                .first())
+                     
+                     # 2. Case Insensitive Fallback
+                     if not concept:
+                         from sqlalchemy import func
+                         concept = (self.db.query(Concept)
+                                    .join(Topic)
+                                    .filter(Topic.study_material_id == material_id, func.lower(Concept.name) == concept_name.lower())
+                                    .first())
+
+                     if concept:
+                         concept_id = concept.id
+
                 analytic = QuestionAnalytics(
                     quiz_result_id=result.id,
-                    topic=item.get("topic") or "Geral",
+                    topic=concept_name, # Stores Concept Name
+                    concept_id=concept_id,
                     is_correct=item.get("is_correct")
                 )
                 self.db.add(analytic)
@@ -49,48 +72,117 @@ class QuizRepository:
             return False
 
     def get_student_analytics(self, student_id: int, material_id: int = None):
-        """Calculates success rate per topic for a specific student, optionally scoped to a material."""
+        """
+        Calculates success rate per topic/concept.
+        ENSURES all concepts from the material are returned, even if never tested (0%).
+        Merges orphan analytics by fuzzy name matching.
+        """
         try:
-            # Get all analytics for this student
+            from models import Concept, Topic, StudyMaterial
+
+            # 1. Build the Skeleton (All Topics & Concepts for this material)
+            # If no material_id, we might need to fetch all materials for student, but user use-case is mostly single material analysis.
+            # For "Weak Points" panel, we usually pass material_id.
+            
+            skeleton = {} # { (topic_name, concept_name): {total: 0, correct: 0} }
+            
+            if material_id:
+                topics = self.db.query(Topic).filter(Topic.study_material_id == material_id).all()
+                for t in topics:
+                    for c in t.concepts:
+                        skeleton[(t.name, c.name)] = {"total": 0, "correct": 0}
+            else:
+                # If no material specified, fetch all for student (less common for this view but safe fallback)
+                materials = self.db.query(StudyMaterial.id).filter(StudyMaterial.student_id == student_id).all()
+                m_ids = [m.id for m in materials]
+                topics = self.db.query(Topic).filter(Topic.study_material_id.in_(m_ids)).all()
+                for t in topics:
+                    for c in t.concepts:
+                        skeleton[(t.name, c.name)] = {"total": 0, "correct": 0}
+
+            # 2. Fetch Analytics (History)
             query = (
                 self.db.query(QuestionAnalytics)
                 .join(QuizResult)
                 .filter(QuizResult.student_id == student_id)
             )
-            
             if material_id:
                 query = query.filter(QuizResult.study_material_id == material_id)
-                
+            
             analytics = query.all()
-            
-            if not analytics: return []
 
-            # Group all analytics by topic
-            topic_history = {} # {topic: [is_correct, is_correct, ...]}
-            
+            # 3. Merge Stats
             for a in analytics:
-                if a.topic not in topic_history:
-                    topic_history[a.topic] = []
-                topic_history[a.topic].append(a.is_correct)
-            
-            results = []
-            for topic, history in topic_history.items():
-                # Rolling Window: Take only the last 10 answers
-                recent_history = history[-10:]
+                # Determine bucket
+                t_name = None
+                c_name = None
+
+                # Strategy A: Link by ID (The robust way)
+                if a.concept_id:
+                    # We need to fetch the Concept -> Topic for this ID
+                    # Optimisation: Pre-fetch map or simple query? 
+                    # Given skeleton is already keyed by names, we might need an ID lookup map.
+                    # Or simpler: Just rely on the names stored in the skeleton?
+                    # We don't have IDs in skeleton keys. 
+                    # Let's trust the 'topic' field string in QuestionAnalytics first if distinct?
+                    # No, data integrity says use a.concept_id.
+                    
+                    # Let's find names from skeletons? No, keys are (Str, Str).
+                    # We need a reverse lookup map or just query DB. N+1 risk?
+                    # Let's use the 'concept' relationship on 'a' if loaded?
+                    # It's an object.
+                    if a.concept:
+                        c_name = a.concept.name
+                        if a.concept.topic:
+                            t_name = a.concept.topic.name
                 
-                total = len(recent_history)
-                correct = sum(1 for x in recent_history if x)
+                # Strategy B: Fallback by Name (For orphans)
+                if not t_name or not c_name:
+                    potential_c_name = a.topic # This field stores the Concept Name string
+                    if potential_c_name:
+                        # Try to find this concept in our skeleton keys
+                        # This matches "Orphans" to the visual tree
+                        found = False
+                        for (sk_t, sk_c) in skeleton.keys():
+                            if sk_c.lower() == potential_c_name.lower():
+                                t_name = sk_t
+                                c_name = sk_c
+                                found = True
+                                break
+                        if not found:
+                             # Truly unknown concept (maybe from deleted topic?). 
+                             # User hates "Outros", but we can't hide data.
+                             # Maybe label as "Outros" but hopefully Strategy B catches most.
+                             t_name = "Outros"
+                             c_name = potential_c_name
+
+                # Aggregate
+                # Only if we successfully identified a bucket
+                if t_name and c_name:
+                    key = (t_name, c_name)
+                    if key not in skeleton:
+                        skeleton[key] = {"total": 0, "correct": 0}
+                    
+                    skeleton[key]["total"] += 1
+                    if a.is_correct:
+                        skeleton[key]["correct"] += 1
+
+            # 4. Format Output
+            final_results = []
+            for (t_name, c_name), stats in skeleton.items():
+                total = stats["total"]
+                correct = stats["correct"]
+                # Use 0% if total is 0 (Unseen)
+                rate = round((correct / total) * 100) if total > 0 else 0
                 
-                success_rate = (correct / total) * 100
-                
-                results.append({
-                    "topic": topic,
-                    "success_rate": round(success_rate),
-                    "total_questions": total # We report the window size, not all-time total
+                final_results.append({
+                    "topic": t_name,
+                    "concept": c_name,
+                    "success_rate": rate,
+                    "total_questions": total
                 })
-            
-            return sorted(results, key=lambda x: x["success_rate"])
-            
+
+            return sorted(final_results, key=lambda x: (x["topic"], x["success_rate"]))
         except Exception as e:
             print(f"Error calculating analytics: {e}")
             return []
@@ -138,15 +230,12 @@ class QuizRepository:
             )
             topics = {t[0] for t in analytics_topics if t[0]}
 
-            # Get topics from material (Direct DB access)
+            # Get topics from material (Via relations)
             materials = self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).all()
             for m in materials:
-                if m.topics:
-                    try:
-                        t_list = json.loads(m.topics)
-                        topics.update(t_list)
-                    except:
-                        pass
+                if m.topics: # m.topics is a list of Topic objects
+                    for t in m.topics:
+                        topics.add(t.name)
             
             return sorted(list(topics))
 

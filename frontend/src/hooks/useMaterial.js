@@ -22,7 +22,11 @@ export const useMaterial = (studentId) => {
             const data = await studyService.checkMaterial();
             if (data.has_material) {
                 setSavedMaterial(data);
-                setAvailableTopics(data.topics || []);
+
+                // Handle new Dictionary structure {Topic: [Concepts]}
+                const rawTopics = data.topics || [];
+                const topicList = Array.isArray(rawTopics) ? rawTopics : Object.keys(rawTopics).sort();
+                setAvailableTopics(topicList);
             } else {
                 setSavedMaterial(null);
             }
@@ -58,7 +62,12 @@ export const useMaterial = (studentId) => {
         setErrorMsg('');
         try {
             const data = await studyService.analyzeTopics();
-            setAvailableTopics(data.topics || []);
+
+            // Handle new Dictionary structure
+            const rawTopics = data.topics || [];
+            const topicList = Array.isArray(rawTopics) ? rawTopics : Object.keys(rawTopics).sort();
+            setAvailableTopics(topicList);
+
             await checkSavedMaterial(); // Refresh to ensure sync
         } catch (err) {
             console.error(err);
@@ -89,6 +98,19 @@ export const useMaterial = (studentId) => {
         }
     };
 
+    const deleteMaterial = async (materialId) => {
+        if (!studentId) return;
+        try {
+            await studyService.deleteMaterial(materialId);
+            // If the deleted material was the current one, standard checkSavedMaterial handles clearing
+            // If it was another one, we just refresh the list
+            await checkSavedMaterial();
+        } catch (err) {
+            console.error("Failed to delete material", err);
+            setErrorMsg("Falha ao apagar material.");
+        }
+    };
+
     // Auto-check on mount or studentId change
     useEffect(() => {
         checkSavedMaterial();
@@ -108,6 +130,7 @@ export const useMaterial = (studentId) => {
         detectTopics,
         clearMaterial,
         activateMaterial,
+        deleteMaterial,
         setErrorMsg,
         refreshMaterial: checkSavedMaterial
     };

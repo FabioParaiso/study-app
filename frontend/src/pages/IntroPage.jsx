@@ -10,7 +10,7 @@ const IntroScreen = ({
     file, handleFileChange, analyzeFile, isAnalyzing, savedMaterial, clearMaterial,
     availableTopics, selectedTopic, setSelectedTopic, detectTopics, errorMsg, loading, startQuiz,
     changeAvatar, selectedAvatar, level, totalXP, highScore, nextLevel, LEVELS,
-    materialsList, activateMaterial
+    materialsList, activateMaterial, onDeleteMaterial
 }) => {
 
     // Duolingo-style Button Component
@@ -79,6 +79,7 @@ const IntroScreen = ({
                     <MaterialLibrary
                         materials={materialsList}
                         onActivate={activateMaterial}
+                        onDelete={onDeleteMaterial}
                         currentId={savedMaterial?.id}
                     />
 
