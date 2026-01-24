@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, User, Lock, Sparkles, GraduationCap, ArrowRight, Rocket } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Sparkles, GraduationCap, ArrowRight, Rocket, Shield, Key } from 'lucide-react';
 import { authService } from '../services/authService';
 import mascotImg from '../assets/mascot.png';
 
-const LoginPage = ({ onLogin }) => {
+const LoginPage = ({ onLogin, onBack }) => {
     const [isRegistering, setIsRegistering] = useState(false);
     const [name, setName] = useState("");
     const [password, setPassword] = useState("");
@@ -16,16 +16,21 @@ const LoginPage = ({ onLogin }) => {
     const isFormValid = () => {
         if (name.trim().length < 2) return false;
 
-        // Backend Policy: 8+ chars, 1 upper, 1 lower, 1 digit, 1 special
-        const hasUpper = /[A-Z]/.test(password);
-        const hasLower = /[a-z]/.test(password);
-        const hasDigit = /\d/.test(password);
-        const hasSpecial = /[@$!%*?&]/.test(password);
+        if (isRegistering) {
+            // Backend Policy: 8+ chars, 1 upper, 1 lower, 1 digit, 1 special
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasDigit = /\d/.test(password);
+            const hasSpecial = /[@$!%*?&]/.test(password);
 
-        if (password.length < 8) return false;
-        if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) return false;
+            if (password.length < 8) return false;
+            if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) return false;
+            if (password !== confirmPassword) return false;
+        } else {
+            // Login: Just needs to be filled
+            if (password.length === 0) return false;
+        }
 
-        if (isRegistering && password !== confirmPassword) return false;
         return true;
     };
 
@@ -35,22 +40,24 @@ const LoginPage = ({ onLogin }) => {
 
         // Validate
         if (name.trim().length < 2) {
-            setError("O nome deve ter pelo menos 2 caracteres.");
+            setError("O nome de agente deve ter pelo menos 2 caracteres.");
             return;
         }
 
-        const hasUpper = /[A-Z]/.test(password);
-        const hasLower = /[a-z]/.test(password);
-        const hasDigit = /\d/.test(password);
-        const hasSpecial = /[@$!%*?&]/.test(password);
+        if (isRegistering) {
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasDigit = /\d/.test(password);
+            const hasSpecial = /[@$!%*?&]/.test(password);
 
-        if (password.length < 8 || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
-            setError("A password deve ter 8+ caracteres, maiúscula, minúscula, número e símbolo (@$!%*?&).");
-            return;
-        }
-        if (isRegistering && password !== confirmPassword) {
-            setError("As palavras-passe não coincidem.");
-            return;
+            if (password.length < 8 || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+                setError("A credencial deve ter 8+ caracteres, maiúscula, minúscula, número e símbolo (@$!%*?&).");
+                return;
+            }
+            if (password !== confirmPassword) {
+                setError("As credenciais não coincidem.");
+                return;
+            }
         }
 
         setLoading(true);
@@ -68,7 +75,7 @@ const LoginPage = ({ onLogin }) => {
             onLogin(student);
         } catch (err) {
             console.error(err);
-            const msg = err.response?.data?.detail || "Ocorreu um erro. Verifica a tua ligação.";
+            const msg = err.response?.data?.detail || "Erro de ligação ao servidor central.";
             setError(msg);
         } finally {
             setLoading(false);
@@ -76,149 +83,165 @@ const LoginPage = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-500 to-indigo-700 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+        <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-yellow-400 selection:text-black">
 
-            {/* Animated Background Elements */}
+            {/* Premium Background Elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {/* Subtle Grid Pattern */}
-                <div className="absolute inset-0 opacity-10"
-                    style={{ backgroundImage: 'radial-gradient(#fff 2px, transparent 2px)', backgroundSize: '30px 30px' }}>
+                <div className="absolute inset-0 opacity-[0.03]"
+                    style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
                 </div>
-
-                {/* Floating Orbs */}
-                <div className="absolute top-20 left-10 w-40 h-40 bg-white rounded-full blur-3xl opacity-20 animate-pulse"></div>
-                <div className="absolute bottom-20 right-10 w-60 h-60 bg-purple-400 rounded-full blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '1s' }}></div>
-                <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-yellow-300 rounded-full blur-xl opacity-20 animate-bounce-slow"></div>
+                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px]"></div>
             </div>
+
+            {/* Back to Home Button */}
+            {onBack && (
+                <button
+                    onClick={onBack}
+                    className="absolute top-6 left-6 z-20 text-gray-400 hover:text-white transition-colors flex items-center gap-2 font-bold uppercase tracking-widest text-xs group"
+                >
+                    <ArrowRight className="rotate-180 group-hover:-translate-x-1 transition-transform" size={16} />
+                    Abortar Missão
+                </button>
+            )}
 
             <div className="max-w-md w-full animate-scale-in relative z-10">
 
                 {/* Brand / Mascot Area */}
-                <div className="text-center mb-8">
-                    <div className="inline-block relative">
-                        <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
-                        <div className="relative bg-white p-2 rounded-[2rem] shadow-xl border-b-8 border-gray-200 transform hover:scale-105 transition-transform duration-300">
-                            {/* mix-blend-multiply hides the white background of the image against the white card */}
-                            <img src={mascotImg} alt="Mascote Super Study" className="w-32 h-32 object-contain mix-blend-multiply" />
-                        </div>
-                        <div className="absolute -top-4 -right-4 bg-yellow-400 text-yellow-900 font-black text-xs px-3 py-1 rounded-full uppercase tracking-widest border-2 border-yellow-500 transform rotate-12 animate-bounce-short">
-                            Novo!
+                <div className="text-center mb-10">
+                    <div className="inline-block relative group">
+                        <div className="absolute inset-0 bg-yellow-400 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+                        <div className="relative bg-gray-800 p-4 rounded-3xl shadow-2xl border border-gray-700 transform group-hover:scale-105 transition-transform duration-300">
+                            <img src={mascotImg} alt="Mascote Super Study" className="w-24 h-24 object-contain mix-blend-multiply filter contrast-125" />
                         </div>
                     </div>
-                    <h1 className="text-4xl font-black text-white mt-6 mb-2 tracking-tight">
-                        Super Study! <Rocket className="inline-block ml-2 text-yellow-400 animate-bounce-slow" size={32} />
+                    <h1 className="text-3xl font-black text-white mt-6 mb-2 tracking-tight">
+                        Super Study <span className="text-yellow-400">HQ</span>
                     </h1>
-                    <p className="text-blue-200 font-bold uppercase tracking-widest text-sm">
-                        Torna o estudo na tua aventura favorita!
+                    <p className="text-gray-400 font-medium text-sm">
+                        Plataforma de Operações de Estudo v2.0
                     </p>
                 </div>
 
                 {/* Main Card */}
-                <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl border-b-8 border-blue-900/10">
+                <div className="bg-gray-800/50 backdrop-blur-xl rounded-[2rem] p-8 shadow-2xl border border-white/10 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50"></div>
 
-                    <h2 className="text-2xl font-black text-gray-800 mb-6 text-center">
-                        {isRegistering ? "Junta-te a nós! É grátis!" : "Olá de novo, campeão!"}
+                    <h2 className="text-xl font-bold text-white mb-8 flex items-center gap-3">
+                        {isRegistering ? (
+                            <>
+                                <div className="p-2 bg-green-500/10 rounded-lg text-green-400"><User size={20} /></div>
+                                Novo Recruta
+                            </>
+                        ) : (
+                            <>
+                                <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400"><Key size={20} /></div>
+                                Acesso de Agente
+                            </>
+                        )}
                     </h2>
 
                     {error && (
-                        <div className="bg-red-50 border-2 border-red-100 text-red-500 p-4 rounded-2xl mb-6 text-sm font-bold animate-shake text-center">
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-200 p-4 rounded-xl mb-6 text-sm font-medium animate-shake flex items-center gap-3">
+                            <Shield size={16} className="shrink-0" />
                             {error}
                         </div>
                     )}
 
-                    <form onSubmit={handleAction} className="space-y-4">
+                    <form onSubmit={handleAction} className="space-y-5">
                         {/* Name Input */}
                         <div className="relative group">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
-                                <User size={24} strokeWidth={2.5} />
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-yellow-400 transition-colors">
+                                <User size={20} />
                             </div>
                             <input
                                 type="text"
-                                aria-label="Nome de super-herói"
+                                aria-label="Nome de Agente"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                placeholder="Qual é o teu nome de super-herói?"
-                                className="w-full pl-14 pr-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none font-bold text-gray-700 placeholder-gray-400 focus:border-blue-500 focus:bg-white transition-all text-lg"
+                                placeholder="Codename do Agente"
+                                className="w-full pl-12 pr-4 py-4 bg-gray-900/50 border border-gray-700 rounded-xl outline-none font-bold text-white placeholder-gray-600 focus:border-yellow-400/50 focus:bg-gray-900 transition-all text-sm"
                                 autoFocus={!isRegistering}
                             />
                         </div>
 
                         {/* Password Input */}
                         <div className="relative group">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
-                                <Lock size={24} strokeWidth={2.5} />
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-yellow-400 transition-colors">
+                                <Lock size={20} />
                             </div>
                             <input
                                 type={showPassword ? "text" : "password"}
-                                aria-label="Palavra-passe"
+                                aria-label="Chave de Acesso"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="A tua palavra-passe secreta"
-                                className="w-full pl-14 pr-14 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl outline-none font-bold text-gray-700 placeholder-gray-400 focus:border-blue-500 focus:bg-white transition-all text-lg"
+                                placeholder="Chave de Acesso"
+                                className="w-full pl-12 pr-12 py-4 bg-gray-900/50 border border-gray-700 rounded-xl outline-none font-bold text-white placeholder-gray-600 focus:border-yellow-400/50 focus:bg-gray-900 transition-all text-sm"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white p-1 transition-colors"
                             >
-                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
 
                         {/* Confirm Password Input (Registration Only) */}
                         {isRegistering && (
-                            <div className="relative group">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors">
-                                    <Lock size={24} strokeWidth={2.5} />
+                            <div className="relative group animate-slide-down">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-green-400 transition-colors">
+                                    <Shield size={20} />
                                 </div>
                                 <input
                                     type={showPassword ? "text" : "password"}
-                                    aria-label="Confirmar palavra-passe"
+                                    aria-label="Confirmar Chave"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    placeholder="Confirma a palavra-passe"
-                                    className={`w-full pl-14 pr-4 py-4 bg-gray-50 border-2 rounded-2xl outline-none font-bold text-gray-700 placeholder-gray-400 focus:bg-white transition-all text-lg ${confirmPassword && password !== confirmPassword
-                                        ? 'border-red-300 focus:border-red-500'
-                                        : 'border-gray-200 focus:border-green-500'
+                                    placeholder="Confirmar Chave de Acesso"
+                                    className={`w-full pl-12 pr-4 py-4 bg-gray-900/50 border rounded-xl outline-none font-bold text-white placeholder-gray-600 focus:bg-gray-900 transition-all text-sm ${confirmPassword && password !== confirmPassword
+                                        ? 'border-red-500/50 focus:border-red-500'
+                                        : 'border-gray-700 focus:border-green-500/50'
                                         }`}
                                 />
                             </div>
                         )}
 
-                        {/* Inline Validation Hints */}
-                        {(name.length > 0 || password.length > 0 || confirmPassword.length > 0) && !isFormValid() && (
-                            <div className="text-sm font-bold text-orange-500 text-center py-2 px-4 bg-orange-50 rounded-xl border border-orange-100 flex flex-col gap-1">
-                                {name.trim().length > 0 && name.trim().length < 2 && <span>Nome curto demais (mín. 2).</span>}
-                                {password.length > 0 && (
-                                    <>
-                                        {password.length < 8 && <span>Mín. 8 caracteres.</span>}
-                                        {!/[A-Z]/.test(password) && <span>Falta maiúscula.</span>}
-                                        {!/[a-z]/.test(password) && <span>Falta minúscula.</span>}
-                                        {!/\d/.test(password) && <span>Falta número.</span>}
-                                        {!/[@$!%*?&]/.test(password) && <span>Falta símbolo.</span>}
-                                    </>
-                                )}
-                                {isRegistering && confirmPassword.length > 0 && password !== confirmPassword && <span>Palavras-passe não coincidem.</span>}
-                            </div>
-                        )}
+                        {/* Validation Hints (Cleaner) */}
+                        {(() => {
+                            const errors = [];
+                            if (isRegistering && password.length > 0) {
+                                if (password.length < 8) errors.push(<span key="len" className="text-red-400">• Mín. 8 chars</span>);
+                                if (!/[A-Z]/.test(password)) errors.push(<span key="upper" className="text-red-400">• Maiúscula</span>);
+                                if (!/[a-z]/.test(password)) errors.push(<span key="lower" className="text-red-400">• Minúscula</span>);
+                                if (!/\d/.test(password)) errors.push(<span key="digit" className="text-red-400">• Número</span>);
+                                if (!/[@$!%*?&]/.test(password)) errors.push(<span key="special" className="text-red-400">• Símbolo</span>);
+                            }
+
+                            if (errors.length === 0) return null;
+
+                            return (
+                                <div className="text-xs font-medium text-gray-400 flex flex-wrap gap-2 px-2">
+                                    {errors}
+                                </div>
+                            );
+                        })()}
 
                         {/* Submit Button */}
                         <button
                             type="submit"
                             disabled={loading || !isFormValid()}
-                            className={`w-full py-4 rounded-2xl border-b-[6px] font-black text-white uppercase tracking-widest text-lg transition-all active:border-b-0 active:translate-y-[6px] flex items-center justify-center gap-2 shadow-lg ${loading || !isFormValid()
-                                ? 'opacity-50 cursor-not-allowed bg-gray-400 border-gray-500'
-                                : isRegistering
-                                    ? 'bg-green-500 border-green-700 hover:bg-green-400'
-                                    : 'bg-blue-500 border-blue-700 hover:bg-blue-400'
+                            className={`w-full py-4 rounded-xl font-black text-black uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2 ${loading || !isFormValid()
+                                ? 'opacity-50 cursor-not-allowed bg-gray-700 text-gray-500'
+                                : 'bg-yellow-400 hover:bg-yellow-300 hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] active:scale-[0.98]'
                                 }`}
                         >
                             {loading ? (
-                                <span className="animate-pulse">A carregar...</span>
+                                <span className="animate-pulse">A desencriptar...</span>
                             ) : (
                                 <>
-                                    {isRegistering ? 'COMEÇAR A AVENTURA' : 'CONTINUAR A JORNADA'}
-                                    <ArrowRight size={24} strokeWidth={3} />
+                                    {isRegistering ? 'INICIAR RECRUTAMENTO' : 'ACEDER AO SISTEMA'}
+                                    <ArrowRight size={18} strokeWidth={3} />
                                 </>
                             )}
                         </button>
@@ -226,7 +249,10 @@ const LoginPage = ({ onLogin }) => {
                 </div>
 
                 {/* Toggle Mode */}
-                <div className="mt-8 text-center">
+                <div className="mt-8 text-center space-y-2">
+                    <p className="text-gray-500 text-xs">
+                        {isRegistering ? "Já tens credenciais?" : "Ainda não tens acesso?"}
+                    </p>
                     <button
                         onClick={() => {
                             setIsRegistering(!isRegistering);
@@ -235,18 +261,18 @@ const LoginPage = ({ onLogin }) => {
                             setPassword("");
                             setConfirmPassword("");
                         }}
-                        className="text-white/80 font-bold uppercase tracking-wider text-sm hover:text-white hover:underline transition-all"
+                        className="text-white font-bold uppercase tracking-wider text-xs hover:text-yellow-400 hover:underline transition-all"
                     >
                         {isRegistering
-                            ? "JÁ FAZES PARTE DA EQUIPA? ENTRAR"
-                            : "AINDA NÃO TENS CONTA? CRIA UMA GRÁTIS"}
+                            ? "LOGIN DE AGENTE"
+                            : "SOLICITAR ACESSO"}
                     </button>
                 </div>
             </div>
 
             {/* Version */}
-            <div className="absolute bottom-4 text-slate-800 font-bold text-xs uppercase tracking-widest opacity-40">
-                v2.1 • Super Study
+            <div className="absolute bottom-6 font-mono text-gray-800 text-[10px] uppercase tracking-widest">
+                System v2.1 • Secure Connection
             </div>
         </div>
     );

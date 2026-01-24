@@ -20,7 +20,7 @@ const IntroHeader = ({ student, selectedAvatar, changeAvatar, totalXP, onLogout,
                         className="bg-gray-100 hover:bg-gray-200 p-2 rounded-xl border-b-4 border-gray-200 active:border-b-0 active:translate-y-1 transition-all overflow-hidden w-12 h-12 flex items-center justify-center"
                     >
                         {selectedAvatar === 'mascot' ? (
-                            <img src={mascot} alt="Mascot" className="w-10 h-10 object-contain" />
+                            <img src={mascot} alt="Mascot" className="w-10 h-10 object-contain mix-blend-multiply" />
                         ) : (
                             <User className="text-gray-400" />
                         )}
@@ -45,7 +45,7 @@ const IntroHeader = ({ student, selectedAvatar, changeAvatar, totalXP, onLogout,
                         onClick={onLogout}
                         className="flex items-center gap-2 text-xs font-bold text-duo-gray-dark hover:text-duo-red uppercase tracking-wider px-3 py-1 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                        <span>Bazar</span>
+                        <span>Sair</span>
                         <LogOut size={16} />
                     </button>
                 </div>

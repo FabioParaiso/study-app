@@ -9,11 +9,13 @@ import IntroPage from './pages/IntroPage';
 import ResultsPage from './pages/ResultsPage';
 import LoadingOverlay from './components/LoadingOverlay';
 import LoginPage from './pages/LoginPage';
+import LandingPage from './pages/LandingPage';
 import QuizPage from './pages/QuizPage';
 
 export default function App() {
     // --- Custom Hooks (SRP) ---
     const { student, setStudent, logout } = useStudent();
+    const [showLanding, setShowLanding] = React.useState(true);
 
     const {
         file, savedMaterial, availableTopics, selectedTopic, isAnalyzing, errorMsg,
@@ -37,6 +39,7 @@ export default function App() {
     const handleLogout = () => {
         logout();
         setGameState('intro');
+        setShowLanding(true); // Return to landing on logout
     };
 
     const handleStart = (type) => startQuiz(type, selectedTopic);
@@ -46,7 +49,10 @@ export default function App() {
     if (loading) return <LoadingOverlay />;
 
     if (!student) {
-        return <LoginPage onLogin={setStudent} />;
+        if (showLanding) {
+            return <LandingPage onStart={() => setShowLanding(false)} />;
+        }
+        return <LoginPage onLogin={setStudent} onBack={() => setShowLanding(true)} />;
     }
 
     if (gameState === 'intro') {
