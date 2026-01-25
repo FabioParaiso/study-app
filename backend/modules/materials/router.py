@@ -71,7 +71,14 @@ async def upload_file(
 ):
     ai_service = get_ai_service()
     try:
-        return await material_service.upload_material(current_user.id, file, ai_service)
+        content = await file.read()
+        return await material_service.upload_material(
+            user_id=current_user.id,
+            file_content=content,
+            filename=file.filename,
+            file_type=file.content_type,
+            ai_service=ai_service
+        )
     except MaterialServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
     except Exception as e:

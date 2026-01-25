@@ -1,18 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from database import get_db
 from repositories.student_repository import StudentRepository
 from schemas.gamification import XPUpdate, AvatarUpdate, HighScoreUpdate
-from dependencies import get_current_user
+from dependencies import get_current_user, get_student_repo
 from models import Student
 from services.gamification_service import GamificationService, GamificationServiceError
 
 router = APIRouter()
 
-def get_repo(db: Session = Depends(get_db)):
-    return StudentRepository(db)
-
-def get_gamification_service(repo: StudentRepository = Depends(get_repo)):
+def get_gamification_service(repo: StudentRepository = Depends(get_student_repo)):
     return GamificationService(repo)
 
 @router.post("/gamification/xp")

@@ -1,5 +1,4 @@
 import asyncio
-from fastapi import UploadFile
 from modules.materials.document_service import DocumentService
 from modules.materials.deletion import MaterialDeletionPolicy
 from modules.materials.mapper import MaterialMapper
@@ -34,29 +33,29 @@ class MaterialService:
         self.upserter = upserter or MaterialUpserter(repo)
         self.deletion_policy = deletion_policy or MaterialDeletionPolicy(repo, student_repo, quiz_repo)
 
-    async def upload_material(self, user_id: int, file: UploadFile, ai_service: TopicAIServicePort) -> dict:
+    async def upload_material(
+        self,
+        user_id: int,
+        file_content: bytes,
+        filename: str,
+        file_type: str | None,
+        ai_service: TopicAIServicePort
+    ) -> dict:
         if not ai_service or not ai_service.client:
             raise MaterialServiceError("API Key is required for topic extraction.")
 
         # Security Check: File Size Limit
-        file.file.seek(0, 2)
-        file_size = file.file.tell()
-        file.file.seek(0)
-
-        if file_size > MAX_FILE_SIZE:
+        if len(file_content) > MAX_FILE_SIZE:
             raise MaterialServiceError("File too large. Maximum size is 10MB.", status_code=413)
 
-        content = await file.read()
-        file_type = file.content_type
-
         if not file_type:
-            if file.filename.endswith(".pdf"):
+            if filename.endswith(".pdf"):
                 file_type = "application/pdf"
             else:
                 file_type = "text/plain"
 
         # 1. Extract Text
-        text = await asyncio.to_thread(self.doc_service.extract_text, content, file_type)
+        text = await asyncio.to_thread(self.doc_service.extract_text, file_content, file_type)
         if not text:
             raise MaterialServiceError("Failed to extract text from file.")
 
@@ -64,9 +63,9 @@ class MaterialService:
         topics = await asyncio.to_thread(self.topic_service.extract_topics, text, ai_service)
 
         # 3. Save
-        self.upserter.upsert(user_id, text, file.filename, topics)
+        self.upserter.upsert(user_id, text, filename, topics)
 
-        return {"text": text, "filename": file.filename, "topics": topics}
+        return {"text": text, "filename": filename, "topics": topics}
 
     def analyze_topics(self, user_id: int, ai_service: TopicAIServicePort) -> dict:
         if not ai_service or not ai_service.client:

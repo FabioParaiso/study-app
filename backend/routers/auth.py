@@ -1,18 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
 from repositories.student_repository import StudentRepository
 from schemas.student import StudentCreate, StudentLogin
-from database import get_db
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from security import create_access_token
 from services.auth_service import AuthService, AuthServiceError
+from dependencies import get_student_repo
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
-
-def get_student_repo(db: Session = Depends(get_db)):
-    return StudentRepository(db)
 
 def get_auth_service(repo: StudentRepository = Depends(get_student_repo)):
     return AuthService(repo)
