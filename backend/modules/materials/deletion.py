@@ -1,12 +1,12 @@
-from services.ports import MaterialRepositoryPort, QuizRepositoryPort, StudentRepositoryPort
+from services.ports import MaterialDeletionRepositoryPort, QuizResultCleanupPort, StudentXpRepositoryPort
 
 
 class MaterialDeletionPolicy:
     def __init__(
         self,
-        material_repo: MaterialRepositoryPort,
-        student_repo: StudentRepositoryPort,
-        quiz_repo: QuizRepositoryPort
+        material_repo: MaterialDeletionRepositoryPort,
+        student_repo: StudentXpRepositoryPort,
+        quiz_repo: QuizResultCleanupPort
     ):
         self.material_repo = material_repo
         self.student_repo = student_repo

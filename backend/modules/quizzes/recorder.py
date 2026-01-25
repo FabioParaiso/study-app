@@ -1,6 +1,6 @@
 from modules.materials.stats import MaterialStatsUpdater
 from modules.quizzes.concept_resolver import ConceptIdResolver
-from services.ports import MaterialRepositoryPort, QuizRepositoryPort
+from services.ports import QuizResultWriterPort
 
 
 class QuizRecordError(Exception):
@@ -12,15 +12,13 @@ class QuizRecordError(Exception):
 class QuizResultRecorder:
     def __init__(
         self,
-        quiz_repo: QuizRepositoryPort,
-        material_repo: MaterialRepositoryPort,
-        resolver: ConceptIdResolver | None = None,
-        stats_updater: MaterialStatsUpdater | None = None
+        quiz_repo: QuizResultWriterPort,
+        resolver: ConceptIdResolver,
+        stats_updater: MaterialStatsUpdater
     ):
         self.quiz_repo = quiz_repo
-        self.material_repo = material_repo
-        self.resolver = resolver or ConceptIdResolver(material_repo)
-        self.stats_updater = stats_updater or MaterialStatsUpdater(material_repo)
+        self.resolver = resolver
+        self.stats_updater = stats_updater
 
     def record(
         self,

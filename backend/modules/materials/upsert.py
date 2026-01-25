@@ -1,10 +1,10 @@
 from datetime import datetime
 from models import StudyMaterial, Topic, Concept
-from services.ports import MaterialRepositoryPort
+from services.ports import MaterialUpsertRepositoryPort
 
 
 class MaterialUpserter:
-    def __init__(self, repo: MaterialRepositoryPort):
+    def __init__(self, repo: MaterialUpsertRepositoryPort):
         self.repo = repo
 
     def upsert(self, student_id: int, text: str, source_name: str, topics: dict[str, list[str]] | None):

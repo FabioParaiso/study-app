@@ -4,7 +4,7 @@ from modules.materials.deletion import MaterialDeletionPolicy
 from modules.materials.mapper import MaterialMapper
 from modules.materials.topic_service import TopicService
 from modules.materials.upsert import MaterialUpserter
-from services.ports import MaterialRepositoryPort, QuizRepositoryPort, StudentRepositoryPort, TopicAIServicePort
+from services.ports import MaterialReaderRepositoryPort, TopicAIServicePort
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
 
@@ -18,20 +18,17 @@ class MaterialServiceError(Exception):
 class MaterialService:
     def __init__(
         self,
-        repo: MaterialRepositoryPort,
+        repo: MaterialReaderRepositoryPort,
         doc_service: DocumentService,
         topic_service: TopicService,
-        student_repo: StudentRepositoryPort,
-        quiz_repo: QuizRepositoryPort,
-        upserter: MaterialUpserter | None = None,
-        deletion_policy: MaterialDeletionPolicy | None = None
+        upserter: MaterialUpserter,
+        deletion_policy: MaterialDeletionPolicy
     ):
         self.repo = repo
         self.doc_service = doc_service
         self.topic_service = topic_service
-        self.student_repo = student_repo
-        self.upserter = upserter or MaterialUpserter(repo)
-        self.deletion_policy = deletion_policy or MaterialDeletionPolicy(repo, student_repo, quiz_repo)
+        self.upserter = upserter
+        self.deletion_policy = deletion_policy
 
     async def upload_material(
         self,

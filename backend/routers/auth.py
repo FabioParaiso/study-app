@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from repositories.student_repository import StudentRepository
 from schemas.student import StudentCreate, StudentLogin
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from security import create_access_token
 from services.auth_service import AuthService, AuthServiceError
+from services.ports import StudentAuthRepositoryPort
 from dependencies import get_student_repo
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
-def get_auth_service(repo: StudentRepository = Depends(get_student_repo)):
+def get_auth_service(repo: StudentAuthRepositoryPort = Depends(get_student_repo)):
     return AuthService(repo)
 
 def _student_to_response(student) -> dict:

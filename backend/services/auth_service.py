@@ -1,5 +1,5 @@
 from security import get_password_hash, verify_password
-from services.ports import StudentRepositoryPort
+from services.ports import StudentAuthRepositoryPort
 
 
 class AuthServiceError(Exception):
@@ -9,7 +9,7 @@ class AuthServiceError(Exception):
 
 
 class AuthService:
-    def __init__(self, repo: StudentRepositoryPort):
+    def __init__(self, repo: StudentAuthRepositoryPort):
         self.repo = repo
 
     def register(self, name: str, password: str):

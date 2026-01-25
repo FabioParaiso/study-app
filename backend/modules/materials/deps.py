@@ -3,12 +3,19 @@ from sqlalchemy.orm import Session
 import os
 from database import get_db
 from modules.materials.ai_service import TopicAIService
+from modules.materials.deletion import MaterialDeletionPolicy
 from modules.materials.document_service import DocumentService
+from modules.materials.upsert import MaterialUpserter
 from modules.materials.repository import MaterialRepository
 from modules.materials.service import MaterialService
 from modules.materials.topic_service import TopicService
 from modules.quizzes.repository import QuizRepository
 from repositories.student_repository import StudentRepository
+from services.ports import (
+    MaterialReaderRepositoryPort,
+    QuizResultCleanupPort,
+    StudentXpRepositoryPort,
+)
 
 
 def get_material_repo(db: Session = Depends(get_db)):
@@ -37,10 +44,12 @@ def get_topic_service():
 
 
 def get_material_service(
-    repo: MaterialRepository = Depends(get_material_repo),
+    repo: MaterialReaderRepositoryPort = Depends(get_material_repo),
     doc_service: DocumentService = Depends(get_document_service),
     topic_service: TopicService = Depends(get_topic_service),
-    student_repo: StudentRepository = Depends(get_student_repo),
-    quiz_repo: QuizRepository = Depends(get_quiz_repo)
+    student_repo: StudentXpRepositoryPort = Depends(get_student_repo),
+    quiz_repo: QuizResultCleanupPort = Depends(get_quiz_repo)
 ):
-    return MaterialService(repo, doc_service, topic_service, student_repo, quiz_repo)
+    upserter = MaterialUpserter(repo)
+    deletion_policy = MaterialDeletionPolicy(repo, student_repo, quiz_repo)
+    return MaterialService(repo, doc_service, topic_service, upserter, deletion_policy)

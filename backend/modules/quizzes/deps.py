@@ -6,10 +6,13 @@ from modules.analytics.repository import AnalyticsRepository
 from modules.analytics.service import AnalyticsService
 from modules.materials.repository import MaterialRepository
 from modules.quizzes.ai_service import QuizAIService
+from modules.materials.stats import MaterialStatsUpdater
+from modules.quizzes.concept_resolver import ConceptIdResolver
 from modules.quizzes.policies import AdaptiveTopicSelector
 from modules.quizzes.recorder import QuizResultRecorder
 from modules.quizzes.repository import QuizRepository
 from modules.quizzes.service import QuizService
+from services.ports import QuizResultWriterPort
 
 
 def get_material_repo(db: Session = Depends(get_db)):
@@ -31,17 +34,16 @@ def get_ai_service(api_key: str | None = None):
 
 def get_quiz_service(
     material_repo: MaterialRepository = Depends(get_material_repo),
-    quiz_repo: QuizRepository = Depends(get_quiz_repo),
+    quiz_repo: QuizResultWriterPort = Depends(get_quiz_repo),
     analytics_repo: AnalyticsRepository = Depends(get_analytics_repo)
 ):
     analytics_service = AnalyticsService(analytics_repo, material_repo)
     topic_selector = AdaptiveTopicSelector(analytics_service)
-    recorder = QuizResultRecorder(quiz_repo, material_repo)
+    resolver = ConceptIdResolver(material_repo)
+    stats_updater = MaterialStatsUpdater(material_repo)
+    recorder = QuizResultRecorder(quiz_repo, resolver, stats_updater)
     return QuizService(
         material_repo,
-        quiz_repo,
-        analytics_repo,
-        analytics_service=analytics_service,
         topic_selector=topic_selector,
         recorder=recorder
     )

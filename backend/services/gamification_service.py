@@ -1,4 +1,4 @@
-from services.ports import StudentRepositoryPort
+from services.ports import StudentGamificationRepositoryPort
 
 
 class GamificationServiceError(Exception):
@@ -8,7 +8,7 @@ class GamificationServiceError(Exception):
 
 
 class GamificationService:
-    def __init__(self, repo: StudentRepositoryPort):
+    def __init__(self, repo: StudentGamificationRepositoryPort):
         self.repo = repo
 
     def add_xp(self, student_id: int, amount: int):

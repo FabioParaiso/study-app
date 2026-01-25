@@ -1,8 +1,8 @@
-from services.ports import MaterialRepositoryPort
+from services.ports import MaterialConceptIdRepositoryPort
 
 
 class ConceptIdResolver:
-    def __init__(self, material_repo: MaterialRepositoryPort):
+    def __init__(self, material_repo: MaterialConceptIdRepositoryPort):
         self.material_repo = material_repo
 
     def apply(self, material_id: int | None, analytics_data: list[dict]) -> list[dict]:

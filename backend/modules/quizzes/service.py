@@ -1,5 +1,4 @@
 from schemas.study import QuizRequest, EvaluationRequest, QuizResultCreate
-from modules.analytics.service import AnalyticsService
 from modules.materials.mapper import MaterialMapper
 from modules.quizzes.recorder import QuizRecordError, QuizResultRecorder
 from modules.quizzes.policies import (
@@ -9,7 +8,7 @@ from modules.quizzes.policies import (
     QuizPolicyError,
     QuizUnlockPolicy,
 )
-from services.ports import AnalyticsRepositoryPort, MaterialRepositoryPort, QuizRepositoryPort, QuizAIServicePort
+from services.ports import MaterialLoaderPort, QuizAIServicePort
 
 
 class QuizServiceError(Exception):
@@ -21,19 +20,13 @@ class QuizServiceError(Exception):
 class QuizService:
     def __init__(
         self,
-        material_repo: MaterialRepositoryPort,
-        quiz_repo: QuizRepositoryPort,
-        analytics_repo: AnalyticsRepositoryPort,
-        analytics_service: AnalyticsService | None = None,
-        topic_selector: AdaptiveTopicSelector | None = None,
-        recorder: QuizResultRecorder | None = None
+        material_repo: MaterialLoaderPort,
+        topic_selector: AdaptiveTopicSelector,
+        recorder: QuizResultRecorder
     ):
         self.material_repo = material_repo
-        self.quiz_repo = quiz_repo
-        self.analytics_repo = analytics_repo
-        self.analytics_service = analytics_service or AnalyticsService(analytics_repo, material_repo)
-        self.topic_selector = topic_selector or AdaptiveTopicSelector(self.analytics_service)
-        self.recorder = recorder or QuizResultRecorder(quiz_repo, material_repo)
+        self.topic_selector = topic_selector
+        self.recorder = recorder
 
     def generate_quiz(self, user_id: int, request: QuizRequest, ai_service: QuizAIServicePort) -> list[dict]:
         material = self.material_repo.load(user_id)

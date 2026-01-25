@@ -1,8 +1,8 @@
-from services.ports import MaterialRepositoryPort
+from services.ports import MaterialStatsRepositoryPort
 
 
 class MaterialStatsUpdater:
-    def __init__(self, repo: MaterialRepositoryPort):
+    def __init__(self, repo: MaterialStatsRepositoryPort):
         self.repo = repo
 
     def apply(self, material_id: int, score: int, total_questions: int, xp_earned: int) -> bool:

@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from database import get_db
 from security import decode_access_token
 from repositories.student_repository import StudentRepository
+from services.ports import StudentLookupRepositoryPort
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -11,7 +12,7 @@ def get_student_repo(db = Depends(get_db)):
     return StudentRepository(db)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), repo: StudentRepository = Depends(get_student_repo)):
+def get_current_user(token: str = Depends(oauth2_scheme), repo: StudentLookupRepositoryPort = Depends(get_student_repo)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
