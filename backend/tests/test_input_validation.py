@@ -26,7 +26,7 @@ def test_topic_validation(mock_load, mock_generate, client, auth_headers):
         "text": "dummy",
         "use_saved": True,
         "topics": ["A" * 101],
-        "quiz_type": "multiple",
+        "quiz_type": "multiple-choice",
         "api_key": "sk-dummy"
         # student_id removed
     }

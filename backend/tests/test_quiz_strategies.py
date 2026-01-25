@@ -10,7 +10,7 @@ class TestQuizStrategies:
     @pytest.fixture
     def strategies(self):
         return {
-            "multiple": MultipleChoiceStrategy(),
+            "multiple-choice": MultipleChoiceStrategy(),
             "short": ShortAnswerStrategy(),
             "open": OpenEndedStrategy()
         }
@@ -37,7 +37,7 @@ class TestQuizStrategies:
 
     def test_multiple_choice_prompt_structure(self, strategies):
         """Test that multiple choice prompt contains key instructions."""
-        strat = strategies["multiple"]
+        strat = strategies["multiple-choice"]
         prompt = strat.generate_prompt(
             text="Dummy text content about biology.",
             topics=["Cells"],
@@ -75,7 +75,7 @@ class TestQuizStrategies:
 
     def test_parse_response_valid_json(self, strategies):
         """Test JSON parsing logic."""
-        strat = strategies["multiple"]
+        strat = strategies["multiple-choice"]
         valid_json = json.dumps({
             "questions": [{"q": 1}]
         })
@@ -85,7 +85,7 @@ class TestQuizStrategies:
 
     def test_parse_response_invalid_json(self, strategies):
         """Test resilience to bad JSON."""
-        strat = strategies["multiple"]
+        strat = strategies["multiple-choice"]
         result = strat.parse_response("Invalid JSON")
         assert result == []
 

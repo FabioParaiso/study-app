@@ -12,7 +12,7 @@ class QuizResult(Base):
     
     score = Column(Integer)
     total_questions = Column(Integer)
-    quiz_type = Column(String) # 'multiple' or 'open-ended'
+    quiz_type = Column(String) # 'multiple-choice', 'short_answer', or 'open-ended'
     created_at = Column(DateTime, default=datetime.utcnow)
 
     student = relationship("Student", back_populates="quiz_results")

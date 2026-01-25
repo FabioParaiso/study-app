@@ -20,7 +20,7 @@ export const QuestionFactory = ({
     showFeedback
 }) => {
     switch (type) {
-        case 'multiple':
+        case 'multiple-choice':
             return (
                 <QuestionCard
                     key={index}
@@ -70,4 +70,3 @@ export const QuestionFactory = ({
             return <div className="p-4 text-red-500">Unknown Question Type: {type}</div>;
     }
 };
-

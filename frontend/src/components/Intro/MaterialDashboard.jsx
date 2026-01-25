@@ -71,7 +71,7 @@ const MaterialDashboard = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Beginner Level - Always Unlocked */}
                 <button
-                    onClick={() => startQuiz('multiple')}
+                    onClick={() => startQuiz('multiple-choice')}
                     disabled={loading}
                     className="group relative bg-white rounded-2xl border-2 border-gray-200 border-b-4 hover:border-green-500 hover:bg-green-50 active:border-b-2 active:translate-y-1 transition-all p-6 flex flex-col items-center gap-4 h-full"
                 >

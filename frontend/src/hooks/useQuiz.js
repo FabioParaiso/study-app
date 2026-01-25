@@ -126,7 +126,7 @@ export function useQuiz(student, materialId) {
             }
 
             // Optimistic Completion: Update UI immediately, send data in background.
-            if (quizType === 'multiple' && updateHighScoreCallback) {
+            if (quizType === 'multiple-choice' && updateHighScoreCallback) {
                 updateHighScoreCallback(score);
             }
 

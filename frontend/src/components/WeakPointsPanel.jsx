@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAnalytics } from '../hooks/useAnalytics';
-import { TrendingUp, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, BookOpen, Trophy, PenTool } from 'lucide-react';
 
 const WeakPointsPanel = ({ studentId, materialId }) => {
     const { points, loading } = useAnalytics(studentId, materialId);
@@ -63,25 +63,27 @@ const WeakPointsPanel = ({ studentId, materialId }) => {
                             {isExpanded && (
                                 <div className="p-4 bg-white space-y-4">
                                     {concepts.map((p, i) => {
-                                        const isWeak = p.success_rate < 50;
-                                        const isGreat = p.success_rate >= 80;
-                                        const colorClass = isWeak ? 'bg-duo-red' : isGreat ? 'bg-duo-green' : 'bg-duo-blue';
-                                        const textColorClass = isWeak ? 'text-duo-red-dark' : isGreat ? 'text-duo-green-dark' : 'text-duo-blue-dark';
-
                                         return (
-                                            <div key={i} className="space-y-1.5">
-                                                <div className="flex justify-between items-end">
-                                                    <span className="font-medium text-gray-600 text-xs pl-1">{p.concept}</span>
-                                                    <span className={`text-xs font-black ${textColorClass}`}>
-                                                        {p.success_rate}%
-                                                    </span>
-                                                </div>
-                                                <div className="h-2 w-full bg-gray-100 rounded-full border-b border-white shadow-inner relative overflow-hidden">
-                                                    <div
-                                                        className={`h-full ${colorClass} transition-all duration-500 rounded-full`}
-                                                        style={{ width: `${p.success_rate}%` }}
-                                                    >
-                                                        <div className="absolute top-0 left-0 right-0 h-1/3 bg-white/20"></div>
+                                            <div key={i} className="py-3 border-b border-gray-50 last:border-0 flex justify-between items-center gap-4">
+                                                <span className="font-semibold text-gray-700 text-sm truncate" title={p.concept}>{p.concept}</span>
+
+                                                <div className="flex items-center gap-2 text-xs font-bold shrink-0">
+                                                    {/* MCQ Badge (Iniciante) */}
+                                                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-100" title="Iniciante">
+                                                        <Trophy size={13} strokeWidth={3} />
+                                                        <span>{p.effective_mcq}%</span>
+                                                    </div>
+
+                                                    {/* Short Badge (Intermédio) */}
+                                                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-yellow-50 text-yellow-700 border border-yellow-100" title="Intermédio">
+                                                        <BookOpen size={13} strokeWidth={3} />
+                                                        <span>{p.effective_short}%</span>
+                                                    </div>
+
+                                                    {/* Bloom Badge (Avançado) */}
+                                                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-100" title="Avançado">
+                                                        <PenTool size={13} strokeWidth={3} />
+                                                        <span>{p.effective_bloom}%</span>
                                                     </div>
                                                 </div>
                                             </div>

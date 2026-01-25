@@ -26,7 +26,7 @@ describe('buildDetailedResults', () => {
             questions,
             userAnswers,
             openEndedEvaluations: {},
-            quizType: 'multiple'
+            quizType: 'multiple-choice'
         });
 
         expect(errors).toEqual([]);
@@ -72,7 +72,7 @@ describe('buildDetailedResults', () => {
             questions,
             userAnswers: { 0: 0, 1: 0, 2: 0 },
             openEndedEvaluations: {},
-            quizType: 'multiple'
+            quizType: 'multiple-choice'
         });
 
         expect(detailedResults).toEqual([]);

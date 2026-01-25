@@ -64,12 +64,5 @@ def build_default_quiz_registry() -> QuizTypeRegistry:
             evaluation_factory=MultipleChoiceEvaluationStrategy
         ),
     )
-    registry.register(
-        "multiple",
-        QuizTypeDefinition(
-            min_xp=0,
-            strategy_factory=MultipleChoiceStrategy,
-            evaluation_factory=MultipleChoiceEvaluationStrategy
-        ),
-    )
+
     return registry

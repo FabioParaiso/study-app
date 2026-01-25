@@ -1,13 +1,16 @@
 from pydantic import BaseModel, field_validator
-from typing import List, Optional
+from typing import List, Optional, Literal
 import re
+
+QuizType = Literal["multiple-choice", "short_answer", "open-ended"]
+EvaluationQuizType = Literal["short_answer", "open-ended"]
 
 class QuizRequest(BaseModel):
     text: Optional[str] = None
     use_saved: bool = False
     topics: list[str] = []
     api_key: Optional[str] = None
-    quiz_type: str = "multiple"
+    quiz_type: QuizType = "multiple-choice"
 
     @field_validator('topics')
     @classmethod
@@ -30,7 +33,7 @@ class AnalyticsItem(BaseModel):
 class QuizResultCreate(BaseModel):
     score: int
     total_questions: int
-    quiz_type: str
+    quiz_type: QuizType
     detailed_results: List[AnalyticsItem]
     # student_id removed
     study_material_id: Optional[int] = None # NEW: Explicit link
@@ -45,5 +48,5 @@ class AnalyzeRequest(BaseModel):
 class EvaluationRequest(BaseModel):
     question: str
     user_answer: str
-    quiz_type: str = "open-ended" # "open-ended" or "short_answer"
+    quiz_type: EvaluationQuizType = "open-ended" # "open-ended" or "short_answer"
     api_key: Optional[str] = None

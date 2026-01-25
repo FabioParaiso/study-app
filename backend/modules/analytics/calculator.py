@@ -4,6 +4,22 @@ from datetime import datetime
 
 class AnalyticsCalculator:
     @staticmethod
+    def _calculate_effective_score(items: list[dict], window_size: int = 10) -> float:
+        if not items:
+            return 0.0
+        
+        # Items are expected to be sorted by recency (newest first)
+        window = items[:window_size]
+        count = len(window)
+        
+        correct_count = sum(1 for i in window if i.get("is_correct"))
+        mastery = correct_count / count
+        
+        confidence = min(1.0, count / float(window_size))
+        
+        return (mastery * confidence) + (0.5 * (1 - confidence))
+
+    @staticmethod
     def build_results(
         concept_pairs: Iterable[tuple[str, str]],
         analytics_items: Iterable[dict]
@@ -11,9 +27,9 @@ class AnalyticsCalculator:
         """
         Build per-concept success rates using Effective Mastery logic.
         Effective = Mastery (last 10) * Confidence + 0.5 * (1 - Confidence)
+        Now split by mode: MCQ, Short, Bloom.
         """
         # 1. Initialize Skeleton (Group by Concept)
-        # key = (topic_name, concept_name) normalized
         concept_groups: dict[tuple[str, str], list[dict]] = {}
         concept_lookup: dict[str, tuple[str, str]] = {}
 
@@ -67,57 +83,63 @@ class AnalyticsCalculator:
 
         for (t_name, c_name), items in concept_groups.items():
             # Sort by created_at descending (newest first)
-            # Handle potential None created_at (though schema should enforce it, be safe)
             sorted_items = sorted(
                 items,
                 key=_created_at_key,
                 reverse=True
             )
 
-            # Slice Window
+            # --- Overall Metric (Legacy Support) ---
+            # We still calculate this for backward compatibility and general overview
+            effective_overall = AnalyticsCalculator._calculate_effective_score(sorted_items, WINDOW_SIZE)
+            
+            # Raw Mastery for display (all time? or window? stored logic used window)
+            # Replicating original logic for mastery_raw:
             window = sorted_items[:WINDOW_SIZE]
-            count = len(window)
+            if window:
+                mastery_raw = sum(1 for i in window if i.get("is_correct")) / len(window)
+            else:
+                mastery_raw = 0.0
 
-            if count == 0:
-                results.append({
-                    "topic": t_name,
-                    "concept": c_name,
-                    "success_rate": 0,
-                    "total_questions": 0,
-                    "mastery_raw": 0,
-                    "status": "Não visto"
-                })
-                continue
+            # --- Split Metrics ---
+            # Filter preserves the sort order (recency)
+            mcq_items = [i for i in sorted_items if i.get("quiz_type") == "multiple-choice"]
+            short_items = [i for i in sorted_items if i.get("quiz_type") == "short_answer"]
+            bloom_items = [i for i in sorted_items if i.get("quiz_type") == "open-ended"]
 
-            # Calculate Metrics
-            correct_count = sum(1 for i in window if i.get("is_correct"))
-            mastery = correct_count / count
-            
-            confidence = min(1.0, count / float(WINDOW_SIZE))
-            
-            effective_score = (mastery * confidence) + (0.5 * (1 - confidence))
-            
+            effective_mcq = AnalyticsCalculator._calculate_effective_score(mcq_items, WINDOW_SIZE)
+            effective_short = AnalyticsCalculator._calculate_effective_score(short_items, WINDOW_SIZE)
+            effective_bloom = AnalyticsCalculator._calculate_effective_score(bloom_items, WINDOW_SIZE)
+
             # Map to Percentage (0-100)
-            final_percentage = round(effective_score * 100)
+            final_percentage = round(effective_overall * 100)
 
-            # Determine Status
+            # Determine Status (based on Overall for now, or maybe highest?)
+            # Keeping original logic based on overall effective score
             status = "Em aprendizagem"
-            if count >= 3: # Reasonable threshold to start giving labels
-                 if effective_score >= 0.8:
+            count = len(sorted_items)
+            
+            if count >= 3:
+                 if effective_overall >= 0.8:
                      status = "Forte"
-                 elif effective_score >= 0.65:
+                 elif effective_overall >= 0.65:
                      status = "Ok"
                  else:
                      status = "Fraco"
             elif count > 0:
                 status = "Em aprendizagem"
+            else:
+                status = "Não visto"
 
             results.append({
                 "topic": t_name,
                 "concept": c_name,
                 "success_rate": final_percentage,
-                "total_questions": len(items), # Total history count
-                "mastery_raw": round(mastery * 100),
+                "effective_mcq": round(effective_mcq * 100),
+                "effective_short": round(effective_short * 100),
+                "effective_bloom": round(effective_bloom * 100),
+                "total_questions": count,
+                "mastery_raw": round(mastery_raw * 100),
                 "status": status
             })
 

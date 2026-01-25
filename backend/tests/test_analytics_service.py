@@ -28,13 +28,15 @@ class TestAnalyticsService:
                 "topic_name": "Biology",
                 "concept_name": "Cell",
                 "raw_concept": "Cell",
-                "is_correct": True
+                "is_correct": True,
+                "quiz_type": "multiple-choice"
             },
             {
                 "topic_name": "Biology",
                 "concept_name": "Cell",
                 "raw_concept": "Cell",
-                "is_correct": False
+                "is_correct": False,
+                "quiz_type": "multiple-choice"
             }
         ]
         
@@ -48,6 +50,9 @@ class TestAnalyticsService:
                 "total_questions": 2,
                 "mastery_raw": 50,
                 "status": "Em aprendizagem",
+                "effective_mcq": 50,
+                "effective_short": 0,
+                "effective_bloom": 0,
             }
         ]
         material_repo.get_concept_pairs.assert_called_once_with(2)
@@ -229,3 +234,36 @@ class TestAnalyticsService:
         assert result["boost"] == ["Average", "Good", "VeryWeak", "Weak"]
         # Mastered: >= 90
         assert result["mastered"] == []
+
+    def test_get_weak_points_calculates_split_metrics(self, service, analytics_repo, material_repo):
+        """Test effective metrics are calculated separately by quiz_type."""
+        material_repo.get_concept_pairs.return_value = [("Math", "Algebra")]
+        analytics_repo.fetch_question_analytics.return_value = [
+            # MCQ: 2 Correct, 2 Incorrect (Total 4) -> 50% Mastery
+            {"topic_name": "Math", "concept_name": "Algebra", "is_correct": True, "quiz_type": "multiple-choice"},
+            {"topic_name": "Math", "concept_name": "Algebra", "is_correct": True, "quiz_type": "multiple-choice"},
+            {"topic_name": "Math", "concept_name": "Algebra", "is_correct": False, "quiz_type": "multiple-choice"},
+            {"topic_name": "Math", "concept_name": "Algebra", "is_correct": False, "quiz_type": "multiple-choice"},
+            
+            # Short: 3 Correct (Total 3) -> 100% Mastery
+            {"topic_name": "Math", "concept_name": "Algebra", "is_correct": True, "quiz_type": "short_answer"},
+            {"topic_name": "Math", "concept_name": "Algebra", "is_correct": True, "quiz_type": "short_answer"},
+            {"topic_name": "Math", "concept_name": "Algebra", "is_correct": True, "quiz_type": "short_answer"},
+
+            # Bloom: 1 Incorrect (Total 1) -> 0% Mastery
+            {"topic_name": "Math", "concept_name": "Algebra", "is_correct": False, "quiz_type": "open-ended"},
+        ]
+        
+        result = service.get_weak_points(student_id=1, material_id=2)
+        
+        stat = result[0]
+        
+        # Calculations:
+        # MCQ (4 items): Conf=0.4. Eff = 0.5*0.4 + 0.5*0.6 = 0.2 + 0.3 = 0.5 -> 50%
+        assert stat["effective_mcq"] == 50
+        
+        # Short (3 items): Conf=0.3. Eff = 1.0*0.3 + 0.5*0.7 = 0.3 + 0.35 = 0.65 -> 65%
+        assert stat["effective_short"] == 65
+        
+        # Bloom (1 item): Conf=0.1. Eff = 0.0*0.1 + 0.5*0.9 = 0.0 + 0.45 = 0.45 -> 45%
+        assert stat["effective_bloom"] == 45

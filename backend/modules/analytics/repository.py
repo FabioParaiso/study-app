@@ -16,6 +16,7 @@ class AnalyticsRepository:
                     Concept.name.label("concept_name"),
                     Topic.name.label("topic_name"),
                     QuizResult.created_at, # Added timestamp
+                    QuizResult.quiz_type,
                 )
                 .join(QuizResult, QuestionAnalytics.quiz_result_id == QuizResult.id)
                 .outerjoin(Concept, QuestionAnalytics.concept_id == Concept.id)
@@ -33,6 +34,7 @@ class AnalyticsRepository:
                     "concept_name": row.concept_name,
                     "topic_name": row.topic_name,
                     "created_at": row.created_at, # Added timestamp
+                    "quiz_type": row.quiz_type,
                 }
                 for row in rows
             ]

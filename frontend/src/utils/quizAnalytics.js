@@ -35,7 +35,7 @@ export const buildDetailedResults = ({
     questions.forEach((q, idx) => {
         let correct = false;
 
-        if (quizType === 'multiple') {
+        if (quizType === 'multiple-choice') {
             const ua = userAnswers?.[idx];
             correct = ua !== undefined && ua === q.correctIndex;
         } else {

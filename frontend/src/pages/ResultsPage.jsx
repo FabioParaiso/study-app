@@ -6,7 +6,7 @@ const ResultsScreen = ({
     score, totalQuestions, xpEarned, streak, quizType,
     getOpenEndedAverage, exitQuiz, numMissed, onReview, onRestart
 }) => {
-    const isMultiple = quizType === 'multiple';
+    const isMultiple = quizType === 'multiple-choice';
     const finalScore = isMultiple ? Math.round((score / totalQuestions) * 100) : getOpenEndedAverage();
 
     // Determine status color and message
