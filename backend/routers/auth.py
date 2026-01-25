@@ -3,7 +3,7 @@ from schemas.student import StudentCreate, StudentLogin
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from services.auth_service import AuthService, AuthServiceError
-from services.ports import StudentAuthRepositoryPort
+from services.ports import AuthServicePort, StudentAuthRepositoryPort
 from services.ports import TokenServicePort
 from dependencies import get_student_repo, get_token_service
 
@@ -28,7 +28,7 @@ def _student_to_response(student) -> dict:
 def register_student(
     request: Request,
     student_data: StudentCreate,
-    auth_service: AuthService = Depends(get_auth_service),
+    auth_service: AuthServicePort = Depends(get_auth_service),
     token_service: TokenServicePort = Depends(get_token_service)
 ):
     try:
@@ -49,7 +49,7 @@ def register_student(
 def login_student(
     request: Request,
     student_data: StudentLogin,
-    auth_service: AuthService = Depends(get_auth_service),
+    auth_service: AuthServicePort = Depends(get_auth_service),
     token_service: TokenServicePort = Depends(get_token_service)
 ):
     try:
