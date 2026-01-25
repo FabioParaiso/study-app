@@ -19,9 +19,12 @@ def test_upload_and_generate_quiz_flow(client):
     files = {"file": ("test.txt", BytesIO(file_content), "text/plain")}
     
     # Mock AI service for topic extraction
-    with patch("routers.study.get_ai_service") as mock_ai:
+    with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
-        mock_service.extract_topics.return_value = ["Photosynthesis", "Biology"]
+        mock_service.extract_topics.return_value = {
+            "Photosynthesis": ["Photosynthesis"],
+            "Biology": ["Biology"]
+        }
         mock_ai.return_value = mock_service
         
         upload_response = client.post("/upload", files=files, headers=headers)
@@ -39,7 +42,7 @@ def test_upload_and_generate_quiz_flow(client):
     assert "test.txt" in material_data["source"]
     
     # 4. Generate Quiz (mock AI quiz generation)
-    with patch("routers.study.get_ai_service") as mock_ai:
+    with patch("modules.quizzes.router.get_ai_service") as mock_ai:
         mock_service = Mock()
         mock_service.client = True  # Has API key
         mock_service.generate_quiz.return_value = [
@@ -80,19 +83,21 @@ def test_generate_open_ended_quiz(client):
     # Upload material (fake content)
     files = {"file": ("test.txt", BytesIO(b"Data about History."), "text/plain")}
     # Mock upload AI to avoid failure
-    with patch("routers.study.get_ai_service") as mock_ai:
+    with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
-        mock_service.extract_topics.return_value = ["History"]
+        mock_service.extract_topics.return_value = {
+            "History": ["History"]
+        }
         mock_ai.return_value = mock_service
         client.post("/upload", files=files, headers=headers)
 
     # Force material XP to 1000 by mocking the repository load
     # Cheat: Use gamification endpoint (assuming shared XP model for now, or mock repo)
-    # The routers/study.py uses data.get("total_xp", 0) from material_repo.load
+    # The quizzes router uses data.get("total_xp", 0) from material_repo.load
     # So we need to make sure material has XP.
     # Easiest way: Mock repo.load in the generate endpoint
     
-    with patch("routers.study.get_material_repo") as mock_repo_dep:
+    with patch("modules.quizzes.router.get_material_repo") as mock_repo_dep:
          mock_repo = Mock()
          # Mock material data with high XP
          mock_repo.load.return_value = {
@@ -104,7 +109,7 @@ def test_generate_open_ended_quiz(client):
          mock_repo_dep.return_value = mock_repo
          
          # Generate Quiz
-         with patch("routers.study.get_ai_service") as mock_ai:
+         with patch("modules.quizzes.router.get_ai_service") as mock_ai:
             mock_service = Mock()
             mock_service.client = True
             mock_service.generate_quiz.return_value = [
@@ -136,7 +141,7 @@ def test_generate_open_ended_quiz(client):
     # NO, user wants to know if WE COVERED THE QUIZ TYPES.
     
     # Let's mock the 'load' inside the router function using patch on the module
-    with patch("routers.study.MaterialRepository") as mock_repo_cls:
+    with patch("modules.quizzes.router.MaterialRepository") as mock_repo_cls:
         mock_repo_instance = mock_repo_cls.return_value
         mock_repo_instance.load.return_value = {
              "id": 1, 
@@ -166,9 +171,11 @@ def test_generate_short_answer_quiz_locked(client):
     
     # Upload material
     files = {"file": ("test.txt", BytesIO(b"Data."), "text/plain")}
-    with patch("routers.study.get_ai_service") as mock_ai:
+    with patch("modules.materials.router.get_ai_service") as mock_ai:
          mock_service = Mock()
-         mock_service.extract_topics.return_value = ["Topic"]
+         mock_service.extract_topics.return_value = {
+             "Topic": ["Topic"]
+         }
          mock_ai.return_value = mock_service
          client.post("/upload", files=files, headers=headers)
          

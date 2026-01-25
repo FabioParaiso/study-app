@@ -6,12 +6,16 @@ from database import get_db
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from security import create_access_token
+from services.auth_service import AuthService, AuthServiceError
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 def get_student_repo(db: Session = Depends(get_db)):
     return StudentRepository(db)
+
+def get_auth_service(repo: StudentRepository = Depends(get_student_repo)):
+    return AuthService(repo)
 
 def _student_to_response(student) -> dict:
     """Helper to convert Student model to API response dict (DRY)."""
@@ -25,13 +29,11 @@ def _student_to_response(student) -> dict:
 
 @router.post("/register")
 @limiter.limit("5/minute")
-def register_student(request: Request, student_data: StudentCreate, repo: StudentRepository = Depends(get_student_repo)):
-    student = repo.create_student(student_data.name, student_data.password)
-    if not student:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="Esse nome já existe. Tenta fazer Login ou escolhe outro nome."
-        )
+def register_student(request: Request, student_data: StudentCreate, auth_service: AuthService = Depends(get_auth_service)):
+    try:
+        student = auth_service.register(student_data.name, student_data.password)
+    except AuthServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
     
     # Auto-login after register
     access_token = create_access_token(data={"sub": str(student.id)})
@@ -43,13 +45,11 @@ def register_student(request: Request, student_data: StudentCreate, repo: Studen
 
 @router.post("/login")
 @limiter.limit("5/minute")
-def login_student(request: Request, student_data: StudentLogin, repo: StudentRepository = Depends(get_student_repo)):
-    student = repo.authenticate_student(student_data.name, student_data.password)
-    if not student:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Credenciais inválidas. Verifica o nome e a password."
-        )
+def login_student(request: Request, student_data: StudentLogin, auth_service: AuthService = Depends(get_auth_service)):
+    try:
+        student = auth_service.login(student_data.name, student_data.password)
+    except AuthServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
     
     access_token = create_access_token(data={"sub": str(student.id)})
     return {
@@ -57,4 +57,3 @@ def login_student(request: Request, student_data: StudentLogin, repo: StudentRep
         "token_type": "bearer",
         "user": _student_to_response(student)
     }
-

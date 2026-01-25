@@ -1,7 +1,7 @@
-from services.ai_service import AIService
+from services.ports import TopicAIServicePort
 
 class TopicService:
-    def extract_topics(self, text: str, ai_service: AIService) -> dict[str, list[str]]:
+    def extract_topics(self, text: str, ai_service: TopicAIServicePort) -> dict[str, list[str]]:
         """
         Extracts high-level topics and concepts using AI.
         Returns: { "Topic Name": ["Concept 1", "Concept 2"] }

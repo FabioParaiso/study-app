@@ -14,9 +14,12 @@ def test_submit_quiz_and_get_analytics(client):
     file_content = b"Test content about Math and Science topics."
     files = {"file": ("test.txt", BytesIO(file_content), "text/plain")}
     
-    with patch("routers.study.get_ai_service") as mock_ai:
+    with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
-        mock_service.extract_topics.return_value = ["Math", "Science"]
+        mock_service.extract_topics.return_value = {
+            "Math": ["Math"],
+            "Science": ["Science"]
+        }
         mock_ai.return_value = mock_service
         client.post("/upload", files=files, headers=headers)
     
@@ -78,9 +81,13 @@ def test_adaptive_topics_from_analytics(client):
     file_content = b"Content about Physics, Chemistry, and Biology."
     files = {"file": ("science.txt", BytesIO(file_content), "text/plain")}
     
-    with patch("routers.study.get_ai_service") as mock_ai:
+    with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
-        mock_service.extract_topics.return_value = ["Physics", "Chemistry", "Biology"]
+        mock_service.extract_topics.return_value = {
+            "Physics": ["Physics"],
+            "Chemistry": ["Chemistry"],
+            "Biology": ["Biology"]
+        }
         mock_ai.return_value = mock_service
         client.post("/upload", files=files, headers=headers)
     
@@ -132,9 +139,11 @@ def test_quiz_result_without_material_id_uses_active(client):
     
     # Upload material
     files = {"file": ("test.txt", BytesIO(b"Content"), "text/plain")}
-    with patch("routers.study.get_ai_service") as mock_ai:
+    with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
-        mock_service.extract_topics.return_value = ["Topic1"]
+        mock_service.extract_topics.return_value = {
+            "Topic1": ["Topic1"]
+        }
         mock_ai.return_value = mock_service
         client.post("/upload", files=files, headers=headers)
     

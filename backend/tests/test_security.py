@@ -29,7 +29,7 @@ def test_upload_too_large_file(client, auth_headers):
     assert response.status_code == 413
     assert "File too large" in response.json()["detail"]
 
-@patch("services.document_service.PdfReader")
+@patch("modules.materials.document_service.PdfReader")
 def test_upload_exception_handling(mock_pdf_reader, client, auth_headers):
     """Test that exceptions are masked and return 500 without leaking details."""
     # Simulate a sensitive error

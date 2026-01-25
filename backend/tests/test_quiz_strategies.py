@@ -1,6 +1,7 @@
 import pytest
-from services.quiz_strategies import MultipleChoiceStrategy, OpenEndedStrategy, ShortAnswerStrategy
 import json
+from modules.quizzes import engine as quiz_engine
+from modules.quizzes.engine import MultipleChoiceStrategy, OpenEndedStrategy, ShortAnswerStrategy
 
 class TestQuizStrategies:
     
@@ -14,23 +15,21 @@ class TestQuizStrategies:
 
     def test_topic_instruction_empty(self, strategies):
         """Test strict logic: empty topics return empty instruction."""
-        strat = strategies["multiple"]
-        assert strat._build_topic_instruction([]) == ""
+        instr = quiz_engine._build_topic_instruction([], ["Alpha"])
+        assert "GLOBAL - MODO REVISÃO" in instr
 
     def test_topic_instruction_valid(self, strategies):
         """Test strict logic: valid topics generate instruction."""
-        strat = strategies["multiple"]
-        instr = strat._build_topic_instruction(["Photosynthesis"])
+        instr = quiz_engine._build_topic_instruction(["Photosynthesis"], ["Cells"])
         assert "Photosynthesis" in instr
-        assert "FILTRAGEM DE TÓPICO" in instr
+        assert "ESCOPO DE CONTEÚDO (FILTRADO)" in instr
 
     def test_priority_instruction(self, strategies):
         """Test priority topics instruction generation."""
-        strat = strategies["multiple"]
         # Empty
-        assert strat._build_priority_instruction([]) == ""
+        assert quiz_engine._build_priority_instruction([]) == ""
         # Valid
-        instr = strat._build_priority_instruction(["Math"])
+        instr = quiz_engine._build_priority_instruction(["Math"])
         assert "DIFICULDADE" in instr
         assert "Math" in instr
 
@@ -40,7 +39,8 @@ class TestQuizStrategies:
         prompt = strat.generate_prompt(
             text="Dummy text content about biology.",
             topics=["Cells"],
-            priority_topics=["Nucleus"]
+            priority_topics=["Nucleus"],
+            material_concepts=["Cells", "Nucleus"]
         )
         
         # Check integrity of the prompt
@@ -54,7 +54,7 @@ class TestQuizStrategies:
     def test_open_ended_prompt_structure(self, strategies):
         """Test that open ended prompt contains bloom taxonomy references."""
         strat = strategies["open"]
-        prompt = strat.generate_prompt("Text", ["History"])
+        prompt = strat.generate_prompt("Text", ["History"], material_concepts=["History"])
         
         assert "TAXONOMIA DE BLOOM" in prompt
         assert "COMPREENDER" in prompt
@@ -65,7 +65,7 @@ class TestQuizStrategies:
     def test_short_answer_prompt_structure(self, strategies):
         """Test short answer specific constraints."""
         strat = strategies["short"]
-        prompt = strat.generate_prompt("Text", ["Grammar"])
+        prompt = strat.generate_prompt("Text", ["Grammar"], material_concepts=["Grammar"])
         
         assert "RESPOSTA CURTA" in prompt
         assert "SUJEITO e VERBO" in prompt

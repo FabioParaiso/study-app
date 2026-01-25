@@ -1,4 +1,4 @@
-from prompts import topics as topic_prompts
+from modules.materials import prompts as topic_prompts
 
 class TopicExtractor:
     @staticmethod

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from services.document_service import DocumentService
+from modules.materials.document_service import DocumentService
 
 class MockUploadedFile:
     def __init__(self, content, file_type):
@@ -10,7 +10,7 @@ class MockUploadedFile:
     def getvalue(self):
         return self.content
 
-@patch('services.document_service.PdfReader')
+@patch("modules.materials.document_service.PdfReader")
 def test_extract_text_pdf_optimized(mock_pdf_reader):
     """
     Verify that PDF text extraction correctly joins text from multiple pages.

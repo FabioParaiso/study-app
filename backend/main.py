@@ -8,7 +8,10 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import models
 from database import engine
-from routers import auth, study, gamification
+from routers import auth, gamification
+from modules.materials import router as materials_router
+from modules.quizzes import router as quizzes_router
+from modules.analytics import router as analytics_router
 
 # Load env variables
 load_dotenv()
@@ -51,7 +54,9 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(auth.router)
-app.include_router(study.router)
+app.include_router(materials_router.router)
+app.include_router(quizzes_router.router)
+app.include_router(analytics_router.router)
 app.include_router(gamification.router)
 
 @app.get("/health")

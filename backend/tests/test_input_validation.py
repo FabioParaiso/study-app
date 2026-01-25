@@ -4,8 +4,8 @@ from unittest.mock import patch, MagicMock
 # client comes from conftest
 
 
-@patch("services.ai_service.AIService.generate_quiz")
-@patch("repositories.material_repository.MaterialRepository.load")
+@patch("modules.quizzes.ai_service.QuizAIService.generate_quiz")
+@patch("modules.materials.repository.MaterialRepository.load")
 def test_topic_validation(mock_load, mock_generate, client, auth_headers):
     """Test the topic validation logic specifically."""
     

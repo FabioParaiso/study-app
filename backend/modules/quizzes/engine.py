@@ -1,24 +1,51 @@
-"""
-Prompts for Quiz Generation and Evaluation.
-"""
-from .base import COMMON_LANGUAGE_RULES, PERSONA_TEACHER
+from abc import ABC, abstractmethod
+import json
+from modules.quizzes.prompts_base import COMMON_LANGUAGE_RULES, PERSONA_TEACHER
 
-# --- Helper Builders ---
-def _build_topic_instruction(topics: list[str]) -> str:
-    if not topics: return ""
-    topic_str = ", ".join(topics)
-    return f"""FILTRAGEM DE TÓPICO: O utilizador selecionou [{topic_str}]. 
-    Gera perguntas APENAS sobre este tópico. Ignora o resto do texto."""
+# --- Prompt Builders (single source of truth) ---
+def _build_topic_instruction(topics: list[str], material_concepts: list[str]) -> str:
+    topic_str = ", ".join(topics) if topics else "TODOS"
+    vocab_str = ", ".join(material_concepts) if material_concepts else "Nenhum conceito detetado (Erro)"
+
+    if topics:
+        return f"""ESCOPO DE CONTEÚDO (FILTRADO):
+        O utilizador quer estudar APENAS os tópicos macro: [{topic_str}].
+
+        BASE DE CONCEITOS (WHITELIST):
+        [{vocab_str}]
+
+        INSTRUÇÃO DE SELEÇÃO:
+        1. Olha para a BASE DE CONCEITOS acima.
+        2. Seleciona APENAS os conceitos dessa lista que pertencem logicamente aos tópicos [{topic_str}].
+        3. Ignora tudo o resto.
+        4. Cria perguntas DIVERSIFICADAS sobre esses conceitos filtrados."""
+    else:
+        return f"""ESCOPO DE CONTEÚDO (GLOBAL - MODO REVISÃO):
+        O utilizador quer um teste abrangente.
+
+        BASE DE CONCEITOS (WHITELIST):
+        [{vocab_str}]
+
+        INSTRUÇÃO DE COBERTURA:
+        1. Usa a lista acima como o teu ÚNICO menu.
+        2. Seleciona conceitos variados (início, meio, fim da lista).
+        3. Garante que perguntas sobre conceitos de diferentes áreas temáticas."""
 
 def _build_priority_instruction(priority_topics: list[str], min_questions: int = 2) -> str:
-    if not priority_topics: return ""
+    if not priority_topics:
+        return ""
     p_str = ", ".join(priority_topics)
     return f"\nATENÇÃO: O aluno tem DIFICULDADE nos seguintes tópicos: {p_str}. Cria pelo menos {min_questions} perguntas focadas neles para reforço."
 
-def _build_vocab_instruction(material_topics: list[str]) -> str:
-    if not material_topics: return ""
-    v_str = ", ".join(material_topics)
-    return f"\nCONSISTÊNCIA DE TÓPICOS: Ao categorizar cada pergunta no campo JSON 'topic', NUNCA inventes novos nomes. Usa APENAS um dos seguintes: [{v_str}]. Escolhe o que melhor se adapta."
+def _build_vocab_instruction(material_concepts: list[str]) -> str:
+    if not material_concepts:
+        return ""
+    v_str = ", ".join(material_concepts)
+    return f"""BASE DE CONCEITOS ACEITES (WHITELIST):
+    Ao criar perguntas, tens de escolher o 'alvo' DA LISTA ABAIXO.
+    [{v_str}]
+    - NÃO inventes conceitos novos. Usa apenas estes termos aprovados.
+    - Se o utilizador pediu um Tópico Específico, escolhe desta lista os conceitos que pertencem a esse tópico."""
 
 def _get_model_answer_criteria() -> str:
     return """- RESPOSTA MODELO (model_answer): 
@@ -48,13 +75,11 @@ def _build_evaluation_context(text: str, question: str, user_answer: str) -> str
         PERGUNTA: "{question}"
         RESPOSTA DO ALUNO: "{user_answer}\""""
 
-# --- Public Prompt Generators ---
-
-def get_multiple_choice_prompt(text: str, topics: list[str], priority_topics: list[str], material_topics: list[str]) -> str:
-    topic_instr = _build_topic_instruction(topics)
+def get_multiple_choice_prompt(text: str, topics: list[str], priority_topics: list[str], material_concepts: list[str]) -> str:
+    topic_instr = _build_topic_instruction(topics, material_concepts)
     priority_instr = _build_priority_instruction(priority_topics, min_questions=4)
-    vocab_instr = _build_vocab_instruction(material_topics)
-    
+    vocab_instr = _build_vocab_instruction(material_concepts)
+
     return f"""
         {topic_instr}
 
@@ -106,10 +131,10 @@ def get_multiple_choice_prompt(text: str, topics: list[str], priority_topics: li
         {text[:50000]}
         """
 
-def get_open_ended_prompt(text: str, topics: list[str], priority_topics: list[str], material_topics: list[str]) -> str:
-    topic_instr = _build_topic_instruction(topics)
+def get_open_ended_prompt(text: str, topics: list[str], priority_topics: list[str], material_concepts: list[str]) -> str:
+    topic_instr = _build_topic_instruction(topics, material_concepts)
     priority_instr = _build_priority_instruction(priority_topics, min_questions=1)
-    vocab_instr = _build_vocab_instruction(material_topics)
+    vocab_instr = _build_vocab_instruction(material_concepts)
 
     return f"""
         {topic_instr}
@@ -144,11 +169,11 @@ def get_open_ended_prompt(text: str, topics: list[str], priority_topics: list[st
         {text[:50000]}
         """
 
-def get_short_answer_prompt(text: str, topics: list[str], priority_topics: list[str], material_topics: list[str]) -> str:
-    topic_instr = _build_topic_instruction(topics)
+def get_short_answer_prompt(text: str, topics: list[str], priority_topics: list[str], material_concepts: list[str]) -> str:
+    topic_instr = _build_topic_instruction(topics, material_concepts)
     priority_instr = _build_priority_instruction(priority_topics, min_questions=2)
-    vocab_instr = _build_vocab_instruction(material_topics)
-    
+    vocab_instr = _build_vocab_instruction(material_concepts)
+
     return f"""
         {topic_instr}
 
@@ -191,11 +216,10 @@ def get_short_answer_prompt(text: str, topics: list[str], priority_topics: list[
         """
 
 def get_evaluation_prompt(text: str, question: str, user_answer: str, quiz_type: str = "open-ended") -> str:
-    # We can customize per quiz_type if needed, but the base logic is similar
     context = _build_evaluation_context(text, question, user_answer)
     model_criteria = _get_model_answer_criteria()
     json_format = _get_evaluation_json_format()
-    
+
     extra_instructions = ""
     if quiz_type == "short_answer":
         extra_instructions = """
@@ -231,3 +255,59 @@ def get_evaluation_prompt(text: str, question: str, user_answer: str, quiz_type:
 
         {json_format}
         """
+
+class QuizGenerationStrategy(ABC):
+    """
+    Classe base abstrata para estratégias de geração de quizzes.
+    Contém métodos auxiliares partilhados para construir instruções dinâmicas.
+    """
+    # Helper methods removed in favor of centralized prompt module
+
+    @abstractmethod
+    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_concepts: list[str] = None) -> str:
+        pass
+
+    def parse_response(self, response_content: str) -> list[dict]:
+        """Implementação padrão de parsing JSON."""
+        try:
+            data = json.loads(response_content)
+            return data.get("questions", [])
+        except json.JSONDecodeError:
+            return []
+
+
+class MultipleChoiceStrategy(QuizGenerationStrategy):
+    """
+    Modo Iniciante: Perguntas de escolha múltipla.
+    Foco na compreensão de conceitos com feedback explicativo.
+    """
+
+    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_concepts: list[str] = None) -> str:
+        return get_multiple_choice_prompt(text, topics, priority_topics, material_concepts)
+
+
+class OpenEndedStrategy(QuizGenerationStrategy):
+    """
+    Modo Avançado: Perguntas de resposta aberta.
+    Exige pensamento crítico seguindo a Taxonomia de Bloom.
+    """
+
+    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_concepts: list[str] = None) -> str:
+        return get_open_ended_prompt(text, topics, priority_topics, material_concepts)
+
+    def generate_evaluation_prompt(self, text: str, question: str, user_answer: str) -> str:
+        return get_evaluation_prompt(text, question, user_answer, quiz_type="open-ended")
+
+
+class ShortAnswerStrategy(QuizGenerationStrategy):
+    """
+    Modo Intermédio: Perguntas de resposta curta (Frase simples).
+    Exige construção de frase, mas sem a complexidade de um texto longo.
+    """
+
+    def generate_prompt(self, text: str, topics: list[str], priority_topics: list[str] = None, material_concepts: list[str] = None) -> str:
+        return get_short_answer_prompt(text, topics, priority_topics, material_concepts)
+
+    def generate_evaluation_prompt(self, text: str, question: str, user_answer: str) -> str:
+        # Reusing the unified evaluation prompt with type hint
+        return get_evaluation_prompt(text, question, user_answer, quiz_type="short_answer")
