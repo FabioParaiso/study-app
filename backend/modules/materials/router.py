@@ -1,43 +1,11 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from sqlalchemy.orm import Session
-import os
-from database import get_db
-from modules.materials.repository import MaterialRepository
-from modules.materials.document_service import DocumentService
+from modules.materials.deps import get_ai_service, get_material_service
 from modules.materials.service import MaterialService, MaterialServiceError
-from modules.materials.topic_service import TopicService
-from repositories.student_repository import StudentRepository
-from modules.materials.ai_service import TopicAIService
 from schemas.study import AnalyzeRequest
 from dependencies import get_current_user
 from models import Student
 
 router = APIRouter()
-
-# --- Dependencies ---
-def get_material_repo(db: Session = Depends(get_db)):
-    return MaterialRepository(db)
-
-def get_student_repo(db: Session = Depends(get_db)):
-    return StudentRepository(db)
-
-def get_ai_service(api_key: str | None = None):
-    key = api_key or os.getenv("OPENAI_API_KEY")
-    return TopicAIService(key)
-
-def get_document_service():
-    return DocumentService()
-
-def get_topic_service():
-    return TopicService()
-
-def get_material_service(
-    repo: MaterialRepository = Depends(get_material_repo),
-    doc_service: DocumentService = Depends(get_document_service),
-    topic_service: TopicService = Depends(get_topic_service),
-    student_repo: StudentRepository = Depends(get_student_repo)
-):
-    return MaterialService(repo, doc_service, topic_service, student_repo)
 
 # --- Endpoints ---
 @router.get("/current-material")

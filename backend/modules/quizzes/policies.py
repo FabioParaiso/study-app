@@ -9,20 +9,26 @@ class QuizPolicyError(Exception):
         self.status_code = status_code
 
 
+QUIZ_TYPE_CONFIG = {
+    "open-ended": {"min_xp": 900, "strategy": OpenEndedStrategy},
+    "short_answer": {"min_xp": 300, "strategy": ShortAnswerStrategy},
+    "multiple-choice": {"min_xp": 0, "strategy": MultipleChoiceStrategy},
+    "multiple": {"min_xp": 0, "strategy": MultipleChoiceStrategy},
+}
+
+
 class QuizUnlockPolicy:
     def __init__(self, material_xp: int):
         self.material_xp = material_xp
 
     def select_strategy(self, quiz_type: str):
-        if quiz_type == "open-ended":
-            if self.material_xp < 900:
-                raise QuizPolicyError("Level Locked. Requires 900 XP.", status_code=403)
-            return OpenEndedStrategy()
-        if quiz_type == "short_answer":
-            if self.material_xp < 300:
-                raise QuizPolicyError("Level Locked. Requires 300 XP.", status_code=403)
-            return ShortAnswerStrategy()
-        return MultipleChoiceStrategy()
+        config = QUIZ_TYPE_CONFIG.get(quiz_type) or QUIZ_TYPE_CONFIG["multiple"]
+        if self.material_xp < config["min_xp"]:
+            raise QuizPolicyError(
+                f"Level Locked. Requires {config['min_xp']} XP.",
+                status_code=403
+            )
+        return config["strategy"]()
 
 
 class AdaptiveTopicSelector:

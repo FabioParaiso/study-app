@@ -2,9 +2,10 @@ import asyncio
 from fastapi import UploadFile
 from modules.materials.document_service import DocumentService
 from modules.materials.deletion import MaterialDeletionPolicy
+from modules.materials.mapper import MaterialMapper
 from modules.materials.topic_service import TopicService
 from modules.materials.upsert import MaterialUpserter
-from services.ports import MaterialRepositoryPort, StudentRepositoryPort, TopicAIServicePort
+from services.ports import MaterialRepositoryPort, QuizRepositoryPort, StudentRepositoryPort, TopicAIServicePort
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
 
@@ -22,6 +23,7 @@ class MaterialService:
         doc_service: DocumentService,
         topic_service: TopicService,
         student_repo: StudentRepositoryPort,
+        quiz_repo: QuizRepositoryPort,
         upserter: MaterialUpserter | None = None,
         deletion_policy: MaterialDeletionPolicy | None = None
     ):
@@ -30,7 +32,7 @@ class MaterialService:
         self.topic_service = topic_service
         self.student_repo = student_repo
         self.upserter = upserter or MaterialUpserter(repo)
-        self.deletion_policy = deletion_policy or MaterialDeletionPolicy(repo, student_repo)
+        self.deletion_policy = deletion_policy or MaterialDeletionPolicy(repo, student_repo, quiz_repo)
 
     async def upload_material(self, user_id: int, file: UploadFile, ai_service: TopicAIServicePort) -> dict:
         if not ai_service or not ai_service.client:
@@ -70,12 +72,12 @@ class MaterialService:
         if not ai_service or not ai_service.client:
             raise MaterialServiceError("API Key is required for topic extraction.")
 
-        data = self.repo.load(user_id)
-        if not data or not data.get("text"):
+        material = self.repo.load(user_id)
+        if not material or not material.text:
             raise MaterialServiceError("No material found to analyze")
 
-        text = data.get("text")
-        source = data.get("source")
+        text = material.text
+        source = material.source
 
         topics = self.topic_service.extract_topics(text, ai_service)
         self.upserter.upsert(user_id, text, source, topics)
@@ -83,13 +85,17 @@ class MaterialService:
         return {"topics": topics}
 
     def get_current_material(self, user_id: int) -> dict | None:
-        return self.repo.load(user_id)
+        material = self.repo.load(user_id)
+        if not material:
+            return None
+        return MaterialMapper.to_dict(material)
 
     def clear_material(self, user_id: int) -> bool:
         return self.repo.clear(user_id)
 
     def list_materials(self, user_id: int) -> list[dict]:
-        return self.repo.list_all(user_id)
+        materials = self.repo.list_all(user_id)
+        return [MaterialMapper.to_list_item(material) for material in materials]
 
     def activate_material(self, user_id: int, material_id: int) -> bool:
         return self.repo.activate(user_id, material_id)

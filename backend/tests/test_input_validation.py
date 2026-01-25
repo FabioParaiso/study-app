@@ -10,7 +10,13 @@ def test_topic_validation(mock_load, mock_generate, client, auth_headers):
     """Test the topic validation logic specifically."""
     
     # Mock loaded material
-    mock_load.return_value = {"text": "dummy text", "source": "dummy.pdf"}
+    mock_material = MagicMock()
+    mock_material.text = "dummy text"
+    mock_material.source = "dummy.pdf"
+    mock_material.id = 1
+    mock_material.total_xp = 0
+    mock_material.topics = []
+    mock_load.return_value = mock_material
 
     # Mock generate to return a dummy list (success)
     mock_generate.return_value = [{"question": "q", "options": ["o"], "correctIndex": 0, "explanation": "e"}]

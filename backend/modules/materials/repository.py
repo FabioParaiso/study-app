@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
-from models import StudyMaterial, QuizResult
+from models import StudyMaterial
 
 class MaterialRepository:
     def __init__(self, db: Session):
@@ -41,34 +41,13 @@ class MaterialRepository:
             self.db.rollback()
             return None
 
-    def load(self, student_id: int) -> dict:
+    def load(self, student_id: int) -> StudyMaterial | None:
         """Loads the ACTIVE study material for a specific student."""
         try:
-            item = self.db.query(StudyMaterial).filter(
+            return self.db.query(StudyMaterial).filter(
                 StudyMaterial.student_id == student_id,
                 StudyMaterial.is_active == True
             ).first()
-            
-            if item:
-                # Reconstruct dict from relations
-                topics_dict = {}
-                if item.topics:
-                    for topic in item.topics:
-                        topics_dict[topic.name] = [c.name for c in topic.concepts]
-
-                return {
-                    "id": item.id,
-                    "text": item.text,
-                    "source": item.source,
-                    "topics": topics_dict, # Now returning dict structure
-                    # Gamification stats for this material
-                    "total_xp": item.total_xp,
-                    "high_score": item.high_score,
-                    "total_questions_answered": item.total_questions_answered,
-                    "correct_answers_count": item.correct_answers_count
-                }
-            return None
-            return None
         except Exception as e:
             print(f"Error loading material: {e}")
             return None
@@ -192,21 +171,10 @@ class MaterialRepository:
             self.db.rollback()
             return False
 
-    def list_all(self, student_id: int) -> list[dict]:
+    def list_all(self, student_id: int) -> list[StudyMaterial]:
         """Lists all study materials for a specific student."""
         try:
-            items = self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).all()
-            return [
-                {
-                    "id": item.id,
-                    "source": item.source,
-                    "created_at": item.created_at,
-                    "is_active": item.is_active,
-                    "preview": item.text[:100] if item.text else "",
-                    "total_xp": item.total_xp
-                }
-                for item in items
-            ]
+            return self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).all()
         except Exception as e:
             print(f"Error listing materials: {e}")
             return []
@@ -245,11 +213,6 @@ class MaterialRepository:
             
             if not material:
                 return False
-            
-            # Delete associated QuizResults (no cascade configured)
-            self.db.query(QuizResult).filter(
-                QuizResult.study_material_id == material_id
-            ).delete()
 
             # Delete Material (Cascades to Topics -> Concepts)
             self.db.delete(material)
