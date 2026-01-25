@@ -21,7 +21,16 @@ class AnalyticsService:
         if not analytics:
             return {"boost": [], "mastered": []}
 
-        boost = [item["topic"] for item in analytics if item["success_rate"] < 70]
-        mastered = [item["topic"] for item in analytics if item["success_rate"] >= 90]
+        def _unique_topics(items: list[str]) -> list[str]:
+            seen: set[str] = set()
+            unique: list[str] = []
+            for topic in items:
+                if topic not in seen:
+                    seen.add(topic)
+                    unique.append(topic)
+            return unique
+
+        boost = _unique_topics([item["topic"] for item in analytics if item["success_rate"] < 70])
+        mastered = _unique_topics([item["topic"] for item in analytics if item["success_rate"] >= 90])
         
         return {"boost": boost, "mastered": mastered}

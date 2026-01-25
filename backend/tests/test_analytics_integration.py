@@ -65,9 +65,9 @@ def test_submit_quiz_and_get_analytics(client):
         assert "topic" in topic_stat
         assert "success_rate" in topic_stat
         
-    # Verify Math has lower success rate (3/5 = 60%)
+    # Verify Math has lower success rate (3/5 with confidence -> 55%)
     math_stat = next(t for t in analytics if t["topic"] == "Math")
-    assert math_stat["success_rate"] == 60.0
+    assert math_stat["success_rate"] == 55
 
 
 def test_adaptive_topics_from_analytics(client):

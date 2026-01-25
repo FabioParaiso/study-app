@@ -32,9 +32,11 @@ const QuestionHeader = ({
     return (
         <div className="flex items-start gap-4 mb-8">
             <div className="flex-1">
-                <span className="inline-block bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1 rounded-lg mb-3 tracking-widest uppercase">
-                    {topic}
-                </span>
+                <div className="flex flex-wrap gap-2 mb-3">
+                    <span className="inline-block bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1 rounded-lg tracking-widest uppercase">
+                        {topic}
+                    </span>
+                </div>
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-700 leading-tight">
                     {question}
                 </h2>

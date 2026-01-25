@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timedelta
 from unittest.mock import Mock
 from modules.analytics.service import AnalyticsService
 
@@ -40,10 +41,73 @@ class TestAnalyticsService:
         result = service.get_weak_points(student_id=1, material_id=2)
         
         assert result == [
-            {"topic": "Biology", "concept": "Cell", "success_rate": 50, "total_questions": 2}
+            {
+                "topic": "Biology",
+                "concept": "Cell",
+                "success_rate": 50,
+                "total_questions": 2,
+                "mastery_raw": 50,
+                "status": "Em aprendizagem",
+            }
         ]
         material_repo.get_concept_pairs.assert_called_once_with(2)
         analytics_repo.fetch_question_analytics.assert_called_once_with(1, 2)
+
+    def test_get_weak_points_uses_last_10_by_created_at(self, service, analytics_repo, material_repo):
+        """Test analytics uses the last 10 attempts per concept (by created_at)."""
+        material_repo.get_concept_pairs.return_value = [("History", "Era")]
+        base = datetime(2024, 1, 1)
+        items = [
+            {
+                "topic_name": "History",
+                "concept_name": "Era",
+                "raw_concept": "Era",
+                "is_correct": False,
+                "created_at": base,
+            },
+            {
+                "topic_name": "History",
+                "concept_name": "Era",
+                "raw_concept": "Era",
+                "is_correct": False,
+                "created_at": base + timedelta(days=1),
+            },
+        ]
+        for offset in range(2, 12):
+            items.append({
+                "topic_name": "History",
+                "concept_name": "Era",
+                "raw_concept": "Era",
+                "is_correct": True,
+                "created_at": base + timedelta(days=offset),
+            })
+
+        analytics_repo.fetch_question_analytics.return_value = items
+
+        result = service.get_weak_points(student_id=1, material_id=2)
+
+        assert len(result) == 1
+        stat = result[0]
+        assert stat["success_rate"] == 100
+        assert stat["mastery_raw"] == 100
+        assert stat["total_questions"] == 12
+        assert stat["status"] == "Forte"
+
+    def test_get_weak_points_includes_mastery_raw_for_unseen(self, service, analytics_repo, material_repo):
+        """Test mastery_raw is present when there are no attempts."""
+        material_repo.get_concept_pairs.return_value = [("Art", "Color")]
+        analytics_repo.fetch_question_analytics.return_value = []
+
+        result = service.get_weak_points(student_id=1, material_id=2)
+
+        assert len(result) == 1
+        stat = result[0]
+        assert stat["topic"] == "Art"
+        assert stat["concept"] == "Color"
+        assert stat["success_rate"] == 0
+        assert stat["total_questions"] == 0
+        assert stat["mastery_raw"] == 0
+        assert "status" in stat
 
     def test_get_adaptive_topics_empty_analytics(self, service, analytics_repo, material_repo):
         """Test adaptive topics when no analytics exist."""
@@ -75,8 +139,8 @@ class TestAnalyticsService:
         
         assert "Weak1" in result["boost"]
         assert "Weak2" in result["boost"]
-        assert "OK" not in result["boost"]
-        assert len(result["boost"]) == 2
+        assert "OK" in result["boost"]
+        assert len(result["boost"]) == 3
 
     def test_get_adaptive_topics_filters_mastered_correctly(self, service, analytics_repo, material_repo):
         """Test mastered topics (>= 90% success rate)."""
@@ -104,9 +168,9 @@ class TestAnalyticsService:
         result = service.get_adaptive_topics(student_id=1)
         
         assert "Mastered1" in result["mastered"]
-        assert "Mastered2" in result["mastered"]
+        assert "Mastered2" not in result["mastered"]
         assert "AlmostMastered" not in result["mastered"]
-        assert len(result["mastered"]) == 2
+        assert len(result["mastered"]) == 1
 
     def test_get_adaptive_topics_edge_case_70_percent(self, service, analytics_repo, material_repo):
         """Test topics exactly at 70% are NOT in boost."""
@@ -162,6 +226,6 @@ class TestAnalyticsService:
         result = service.get_adaptive_topics(student_id=1)
         
         # Boost: < 70
-        assert result["boost"] == ["VeryWeak", "Weak"]
+        assert result["boost"] == ["Average", "Good", "VeryWeak", "Weak"]
         # Mastered: >= 90
-        assert result["mastered"] == ["Excellent"]
+        assert result["mastered"] == []

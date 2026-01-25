@@ -17,6 +17,7 @@ REGRAS DE OURO PARA AS PERGUNTAS (FEW-SHOT):
    ✅ BOM: "Porque é que a independência foi importante para o povo?" (Compreensão)
 2. Usa situações práticas sempre que possível.
    ✅ BOM: "Se deixares uma planta no escuro, o que lhe acontece?"
+3. **FOCA-TE NUM ÚNICO CONCEITO POR PERGUNTA.**
 
 REGRAS PARA AS OPÇÕES (DISTRATORES):
 1. As opções erradas devem ser ERROS COMUNS de raciocínio.
@@ -38,7 +39,8 @@ Retorna APENAS um objeto JSON com a chave "questions".
 {{
     "questions": [
         {{
-            "topic": "Tópico Específico",
+            "topic": "Nome do Tópico Principal",
+            "concepts": ["Nome Exato do Conceito Avaliado (Apenas 1)"],
             "question": "Pergunta interessante?",
             "options": ["Opção Plausível A", "Opção Plausível B", "Opção Correta", "Opção Plausível C"],
             "correctIndex": 2,
@@ -66,6 +68,10 @@ Distribui as 5 perguntas assim:
 - 1 de AVALIAR/CRIAR: "Na tua opinião...", "Como resolverias...?"
 Evita perguntas de "sim/não". Cada resposta deve ser explicativa (1-2 frases).
 
+INTEGRAÇÃO DE CONCEITOS (Avançado):
+- Tenta criar perguntas que liguem 2 ou mais conceitos, se fizer sentido.
+- Exemplo: "Como é que a [Fotossíntese] ajuda na [Respiração Celular]?"
+
 EXEMPLOS DE PERGUNTAS (CALIBRAÇÃO):
 ❌ MAU (Vago): "Fala-me sobre a fotossíntese." (O aluno não sabe por onde começar)
 ❌ MAU (Fechado): "A fotossíntese usa luz?" (Responde-se com Sim/Não)
@@ -76,7 +82,11 @@ EXEMPLOS DE PERGUNTAS (CALIBRAÇÃO):
 FORMATO DE SAÍDA (JSON):
 {{ 
     "questions": [
-        {{ "topic": "Tema", "question": "Questão..." }}
+        {{ 
+            "topic": "Tema Principal", 
+            "concepts": ["Conceito A", "Conceito B (Opcional)"],
+            "question": "Questão..." 
+        }}
     ] 
 }}
 
@@ -102,6 +112,7 @@ REGRAS DE CRIAÇÃO (SINTAXE vs CONTEÚDO):
    ❌ MAU: "Qual o nome do processo?" (Resposta: "Fotossíntese" -> 1 palavra, Errado para este nível)
    ✅ BOM: "O que fazem as plantas na fotossíntese?" (Resposta: "As plantas produzem o seu alimento.")
 3. Tamanho da resposta esperada: 5 a 15 palavras.
+4. **FOCA-TE NUM ÚNICO CONCEITO POR PERGUNTA.**
 
 ⚠️ ATENÇÃO CRÍTICA - FORMATO DA PERGUNTA:
 - O campo 'question' deve conter uma FRASE INTERROGATIVA (termina com ?).
@@ -116,6 +127,7 @@ FORMATO DE SAÍDA (JSON):
     "questions": [
         {{ 
             "topic": "Tema",
+            "concepts": ["Conceito Único"],
             "question": "Pergunta que exige frase simples? (DEVE TERMINAR COM ?)"
         }}
     ] 

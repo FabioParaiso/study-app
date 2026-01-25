@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { studyService } from '../services/studyService';
 import { useQuizEngine } from './useQuizEngine';
 import { calculateXPFromScore } from '../utils/xpCalculator';
+import { buildDetailedResults } from '../utils/quizAnalytics';
 
 export function useQuiz(student, materialId) {
     const {
@@ -111,23 +112,18 @@ export function useQuiz(student, materialId) {
         const finished = advanceQuestion();
 
         if (finished) {
-            // Calculate Detailed Results
-            const detailedResults = questions.map((q, idx) => {
-                const ua = userAnswers[idx];
-                let correct = false;
-
-                if (quizType === 'multiple') {
-                    correct = (ua !== undefined && ua === q.correctIndex);
-                } else {
-                    const evalData = openEndedEvaluations[idx];
-                    correct = evalData && evalData.score >= 50;
-                }
-
-                return {
-                    topic: q.topic || "Geral",
-                    is_correct: correct
-                };
+            const { detailedResults, errors } = buildDetailedResults({
+                questions,
+                userAnswers,
+                openEndedEvaluations,
+                quizType
             });
+
+            if (errors.length > 0) {
+                console.error('CRITICAL: Questions missing valid concepts.', errors);
+                alert("Ocorreu um erro ao registar os conceitos das perguntas. Tenta gerar um novo teste.");
+                return;
+            }
 
             // Optimistic Completion: Update UI immediately, send data in background.
             if (quizType === 'multiple' && updateHighScoreCallback) {
