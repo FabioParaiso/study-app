@@ -37,10 +37,6 @@ class QuizResultPersistencePort(Protocol):
     ) -> bool: ...
 
 
-class QuizResultCleanupPort(Protocol):
-    def delete_results_for_material(self, material_id: int) -> int: ...
-
-
 class LLMServicePort(Protocol):
     def is_available(self) -> bool: ...
 

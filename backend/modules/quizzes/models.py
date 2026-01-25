@@ -16,7 +16,7 @@ class QuizResult(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     student = relationship("Student", back_populates="quiz_results")
-    analytics = relationship("QuestionAnalytics", back_populates="quiz_result")
+    analytics = relationship("QuestionAnalytics", back_populates="quiz_result", cascade="all, delete-orphan")
 
 class QuestionAnalytics(Base):
     __tablename__ = "question_analytics"

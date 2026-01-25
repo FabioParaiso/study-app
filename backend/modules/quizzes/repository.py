@@ -56,18 +56,3 @@ class QuizResultPersistenceRepository(QuizRepositoryBase):
             self.db.rollback()
             return False
 
-
-class QuizResultCleanupRepository(QuizRepositoryBase):
-    def delete_results_for_material(self, material_id: int) -> int:
-        try:
-            count = (
-                self.db.query(QuizResult)
-                .filter(QuizResult.study_material_id == material_id)
-                .delete()
-            )
-            self.db.commit()
-            return count or 0
-        except Exception as e:
-            print(f"Error deleting quiz results: {e}")
-            self.db.rollback()
-            return 0
