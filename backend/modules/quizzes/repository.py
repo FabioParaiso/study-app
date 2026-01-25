@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import QuizResult, QuestionAnalytics
+from models import QuizResult, QuestionAnalytics, StudyMaterial
 
 
 class QuizRepositoryBase:
@@ -7,15 +7,16 @@ class QuizRepositoryBase:
         self.db = db
 
 
-class QuizResultWriterRepository(QuizRepositoryBase):
-    def save_quiz_result(
+class QuizResultPersistenceRepository(QuizRepositoryBase):
+    def record_quiz_result(
         self,
         student_id: int,
         score: int,
         total: int,
         quiz_type: str,
         analytics_data: list[dict],
-        material_id: int | None = None
+        material_id: int | None,
+        xp_earned: int
     ) -> bool:
         try:
             result = QuizResult(
@@ -26,8 +27,7 @@ class QuizResultWriterRepository(QuizRepositoryBase):
                 quiz_type=quiz_type
             )
             self.db.add(result)
-            self.db.commit()
-            self.db.refresh(result)
+            self.db.flush()
 
             for item in analytics_data:
                 concept_name = item.get("topic") or "Geral"
@@ -40,6 +40,14 @@ class QuizResultWriterRepository(QuizRepositoryBase):
                     is_correct=item.get("is_correct")
                 )
                 self.db.add(analytic)
+
+            if material_id:
+                material = self.db.query(StudyMaterial).filter(StudyMaterial.id == material_id).first()
+                if material:
+                    material.total_questions_answered += total
+                    material.correct_answers_count += score
+                    material.total_xp += xp_earned
+                    material.high_score = max(material.high_score, score)
 
             self.db.commit()
             return True

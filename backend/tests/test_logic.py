@@ -1,8 +1,9 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from modules.materials.document_service import DocumentService
 from modules.quizzes.ai_service import QuizAIService
 from modules.quizzes.engine import MultipleChoiceStrategy
+from services.openai_caller import OpenAICaller
 
 class MockUploadedFile:
     def __init__(self, content, file_type):
@@ -22,8 +23,7 @@ def test_extract_text_txt():
     text = service.extract_text(content, "text/plain")
     assert text == "Ola mundo"
 
-@patch("modules.quizzes.ai_service.OpenAIClientAdapter")
-def test_generate_quiz_success(mock_adapter):
+def test_generate_quiz_success():
     # Mock the API response
     mock_client = MagicMock()
     mock_response = MagicMock()
@@ -42,9 +42,9 @@ def test_generate_quiz_success(mock_adapter):
     }
     '''
     mock_client.chat_completions_create.return_value = mock_response
-    mock_adapter.return_value = mock_client
 
-    service = QuizAIService("fake_key")
+    caller = OpenAICaller(mock_client)
+    service = QuizAIService(caller)
     strategy = MultipleChoiceStrategy()
     quiz = service.generate_quiz(strategy, "Texto de teste")
 

@@ -1,27 +1,19 @@
 import json
-from modules.quizzes.engine import QuizGenerationStrategy, ShortAnswerStrategy, OpenEndedStrategy
+from typing import Any
+from modules.common.ports import LLMCallerPort
+from modules.quizzes.engine import QuizGenerationStrategy
 from modules.quizzes.answer_evaluator import AnswerEvaluator
-from services.openai_client import OpenAIClientAdapter
-from services.openai_caller import OpenAICaller
-from modules.common.ports import OpenAIClientPort
 
 
 class QuizAIService:
     MODEL_QUIZ_GENERATION = "gpt-4o-mini"
     MODEL_ANSWER_EVALUATION = "gpt-4o-mini"
 
-    def __init__(self, api_key: str, client: OpenAIClientPort | None = None, caller: OpenAICaller | None = None):
-        if caller:
-            self.client = caller.client
-            self.caller = caller
-        else:
-            if client:
-                self.client = client
-            elif api_key:
-                self.client = OpenAIClientAdapter(api_key=api_key)
-            else:
-                self.client = None
-            self.caller = OpenAICaller(self.client)
+    def __init__(self, caller: LLMCallerPort | None):
+        self.caller = caller
+
+    def is_available(self) -> bool:
+        return bool(self.caller and self.caller.is_available())
 
     def generate_quiz(
         self,
@@ -31,6 +23,8 @@ class QuizAIService:
         priority_topics: list[str] | None = None,
         material_concepts: list[str] | None = None
     ) -> list[dict] | None:
+        if not self.is_available():
+            return None
         prompt = strategy.generate_prompt(text, topics, priority_topics, material_concepts)
 
         content = self.caller.call(
@@ -44,6 +38,8 @@ class QuizAIService:
         return strategy.parse_response(content)
 
     def evaluate_answer(self, strategy: Any, text: str, question: str, user_answer: str) -> dict:
+        if not self.is_available():
+            return {"score": 0, "feedback": "Erro ao avaliar. Tenta novamente."}
         prompt = AnswerEvaluator.generate_prompt(strategy, text, question, user_answer)
 
         content = self.caller.call(

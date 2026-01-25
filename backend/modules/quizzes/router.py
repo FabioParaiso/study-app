@@ -1,10 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
-from modules.quizzes.deps import get_ai_service, get_quiz_service
-from modules.quizzes.service import QuizServiceError
+from modules.quizzes.deps import (
+    get_ai_service,
+    get_generate_quiz_use_case,
+    get_evaluate_answer_use_case,
+    get_save_quiz_result_use_case,
+)
+from modules.quizzes.errors import QuizServiceError
 from schemas.study import QuizRequest, EvaluationRequest, QuizResultCreate
 from dependencies import get_current_user
 from models import Student
-from modules.quizzes.ports import QuizAIServicePort, QuizServicePort
+from modules.quizzes.ports import (
+    QuizAIServicePort,
+    GenerateQuizUseCasePort,
+    EvaluateAnswerUseCasePort,
+    SaveQuizResultUseCasePort,
+)
 
 router = APIRouter()
 
@@ -21,11 +31,11 @@ def get_eval_ai_service(request: EvaluationRequest) -> QuizAIServicePort:
 def generate_quiz_endpoint(
     request: QuizRequest,
     current_user: Student = Depends(get_current_user),
-    quiz_service: QuizServicePort = Depends(get_quiz_service),
+    use_case: GenerateQuizUseCasePort = Depends(get_generate_quiz_use_case),
     ai_service: QuizAIServicePort = Depends(get_quiz_ai_service)
 ):
     try:
-        questions = quiz_service.generate_quiz(current_user.id, request, ai_service)
+        questions = use_case.execute(current_user.id, request, ai_service)
     except QuizServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
     return {"questions": questions}
@@ -34,11 +44,11 @@ def generate_quiz_endpoint(
 def evaluate_answer_endpoint(
     request: EvaluationRequest,
     current_user: Student = Depends(get_current_user),
-    quiz_service: QuizServicePort = Depends(get_quiz_service),
+    use_case: EvaluateAnswerUseCasePort = Depends(get_evaluate_answer_use_case),
     ai_service: QuizAIServicePort = Depends(get_eval_ai_service)
 ):
     try:
-        return quiz_service.evaluate_answer(current_user.id, request, ai_service)
+        return use_case.execute(current_user.id, request, ai_service)
     except QuizServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
@@ -46,10 +56,10 @@ def evaluate_answer_endpoint(
 def save_quiz_result(
     result: QuizResultCreate,
     current_user: Student = Depends(get_current_user),
-    quiz_service: QuizServicePort = Depends(get_quiz_service)
+    use_case: SaveQuizResultUseCasePort = Depends(get_save_quiz_result_use_case)
 ):
     try:
-        quiz_service.save_quiz_result(current_user.id, result)
+        use_case.execute(current_user.id, result)
     except QuizServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
     return {"status": "saved"}

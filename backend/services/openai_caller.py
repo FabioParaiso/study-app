@@ -1,7 +1,7 @@
-from modules.common.ports import OpenAIClientPort
+from modules.common.ports import OpenAIClientPort, LLMCallerPort
 
 
-class OpenAICaller:
+class OpenAICaller(LLMCallerPort):
     def __init__(self, client: OpenAIClientPort | None):
         self.client = client
 
@@ -60,3 +60,6 @@ class OpenAICaller:
             # In a real system, use a logger, not print
             print(f"OpenAI API Error ({model}): {e}")
             return None
+
+    def is_available(self) -> bool:
+        return self.client is not None

@@ -1,27 +1,20 @@
 import json
+from modules.common.ports import LLMCallerPort
 from modules.materials.topic_extractor import TopicExtractor
-from services.openai_client import OpenAIClientAdapter
-from services.openai_caller import OpenAICaller
-from modules.common.ports import OpenAIClientPort
 
 
 class TopicAIService:
     MODEL_TOPIC_EXTRACTION = "gpt-4o-mini"
 
-    def __init__(self, api_key: str, client: OpenAIClientPort | None = None, caller: OpenAICaller | None = None):
-        if caller:
-            self.client = caller.client
-            self.caller = caller
-        else:
-            if client:
-                self.client = client
-            elif api_key:
-                self.client = OpenAIClientAdapter(api_key=api_key)
-            else:
-                self.client = None
-            self.caller = OpenAICaller(self.client)
+    def __init__(self, caller: LLMCallerPort | None):
+        self.caller = caller
+
+    def is_available(self) -> bool:
+        return bool(self.caller and self.caller.is_available())
 
     def extract_topics(self, text: str) -> dict[str, list[str]]:
+        if not self.is_available():
+            return {"Tópicos Gerais": []}
         prompt_topics = TopicExtractor.generate_prompt(text, [])
 
         content_topics = self.caller.call(

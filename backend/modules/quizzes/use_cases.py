@@ -1,5 +1,4 @@
 from schemas.study import QuizRequest, EvaluationRequest, QuizResultCreate
-from modules.quizzes.errors import QuizServiceError
 from modules.materials.mapper import MaterialMapper
 from modules.quizzes.recorder import QuizRecordError
 from modules.quizzes.policies import (
@@ -14,22 +13,21 @@ from modules.quizzes.ports import (
     QuizResultRecorderPort,
     QuizStrategyFactoryPort,
 )
+from modules.quizzes.errors import QuizServiceError
 
 
-class QuizService:
+class GenerateQuizUseCase:
     def __init__(
         self,
         material_repo: MaterialLoaderPort,
         topic_selector: TopicSelectorPort,
-        strategy_factory: QuizStrategyFactoryPort,
-        recorder: QuizResultRecorderPort
+        strategy_factory: QuizStrategyFactoryPort
     ):
         self.material_repo = material_repo
         self.topic_selector = topic_selector
         self.strategy_factory = strategy_factory
-        self.recorder = recorder
 
-    def generate_quiz(self, user_id: int, request: QuizRequest, ai_service: QuizGeneratorPort) -> list[dict]:
+    def execute(self, user_id: int, request: QuizRequest, ai_service: QuizGeneratorPort) -> list[dict]:
         material = self.material_repo.load(user_id)
         if not material or not material.text:
             raise QuizServiceError("No material found. Upload a file first.")
@@ -38,7 +36,6 @@ class QuizService:
             raise QuizServiceError("API Key is required for quiz generation.")
 
         text = material.text
-
         material_id = material.id
 
         target_topics, priority_topics = self.topic_selector.select(user_id, material_id, request.topics)
@@ -59,7 +56,17 @@ class QuizService:
         post_processor = QuestionPostProcessor(request.quiz_type)
         return post_processor.apply(questions)
 
-    def evaluate_answer(self, user_id: int, request: EvaluationRequest, ai_service: AnswerEvaluatorPort) -> dict:
+
+class EvaluateAnswerUseCase:
+    def __init__(
+        self,
+        material_repo: MaterialLoaderPort,
+        strategy_factory: QuizStrategyFactoryPort
+    ):
+        self.material_repo = material_repo
+        self.strategy_factory = strategy_factory
+
+    def execute(self, user_id: int, request: EvaluationRequest, ai_service: AnswerEvaluatorPort) -> dict:
         material = self.material_repo.load(user_id)
         if not material or not material.text:
             raise QuizServiceError("No material found.")
@@ -68,13 +75,20 @@ class QuizService:
             raise QuizServiceError("API Key is required for evaluation.")
 
         text = material.text
-
-        # Using factory to select evaluation strategy
         strategy = self.strategy_factory.select_evaluation_strategy(request.quiz_type)
-
         return ai_service.evaluate_answer(strategy, text, request.question, request.user_answer)
 
-    def save_quiz_result(self, user_id: int, result: QuizResultCreate) -> None:
+
+class SaveQuizResultUseCase:
+    def __init__(
+        self,
+        material_repo: MaterialLoaderPort,
+        recorder: QuizResultRecorderPort
+    ):
+        self.material_repo = material_repo
+        self.recorder = recorder
+
+    def execute(self, user_id: int, result: QuizResultCreate) -> None:
         material_id = result.study_material_id
         if not material_id:
             current = self.material_repo.load(user_id)

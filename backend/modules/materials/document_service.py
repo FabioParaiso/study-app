@@ -1,11 +1,6 @@
 from io import BytesIO
-from typing import Protocol
 from pypdf import PdfReader
-
-
-class DocumentExtractor(Protocol):
-    def extract(self, file_content: bytes) -> str:
-        ...
+from modules.materials.document_registry import DocumentTypeRegistry
 
 
 class PdfTextExtractor:
@@ -24,17 +19,18 @@ class PlainTextExtractor:
         return file_content.decode("utf-8")
 
 class DocumentService:
-    def __init__(self, extractors: dict[str, DocumentExtractor] | None = None):
-        self.extractors = extractors or {
-            "application/pdf": PdfTextExtractor(),
-            "text/plain": PlainTextExtractor(),
-        }
-        self.default_extractor = self.extractors.get("text/plain", PlainTextExtractor())
+    def __init__(self, registry: DocumentTypeRegistry | None = None):
+        self.registry = registry or DocumentTypeRegistry(
+            {
+                "application/pdf": PdfTextExtractor(),
+                "text/plain": PlainTextExtractor(),
+            }
+        )
 
-    def extract_text(self, file_content: bytes, file_type: str) -> str:
+    def extract_text(self, file_content: bytes, file_type: str) -> str | None:
         """Extracts text from PDF or TXT content."""
         try:
-            extractor = self.extractors.get(file_type, self.default_extractor)
+            extractor = self.registry.get(file_type)
             return extractor.extract(file_content)
         except Exception as e:
             print(f"Error reading file: {e}")

@@ -1,4 +1,4 @@
-from typing import Protocol, TYPE_CHECKING, List, Dict, Any, Optional
+from typing import Protocol, TYPE_CHECKING, List, Dict, Any
 
 if TYPE_CHECKING:
     from schemas.study import EvaluationRequest, QuizRequest, QuizResultCreate
@@ -20,22 +20,35 @@ class QuizResultRecorderPort(Protocol):
 class QuizStrategyFactoryPort(Protocol):
     def select_strategy(self, quiz_type: str, material_xp: int) -> Any:
         ...
+    def select_evaluation_strategy(self, quiz_type: str) -> Any:
+        ...
 
 
-class QuizResultWriterPort(Protocol):
-    def save_quiz_result(self, student_id: int, score: int, total: int, quiz_type: str, analytics_data: List[Dict], material_id: int | None = None) -> bool: ...
+class QuizResultPersistencePort(Protocol):
+    def record_quiz_result(
+        self,
+        student_id: int,
+        score: int,
+        total: int,
+        quiz_type: str,
+        analytics_data: List[Dict],
+        material_id: int | None,
+        xp_earned: int
+    ) -> bool: ...
 
 
 class QuizResultCleanupPort(Protocol):
     def delete_results_for_material(self, material_id: int) -> int: ...
 
 
-class QuizGeneratorPort(Protocol):
-    client: Any | None
+class LLMServicePort(Protocol):
+    def is_available(self) -> bool: ...
+
+
+class QuizGeneratorPort(LLMServicePort, Protocol):
     def generate_quiz(self, strategy: Any, text: str, topics: List[str] | None = None, priority_topics: List[str] | None = None, material_concepts: List[str] | None = None) -> List[Dict] | None: ...
 
-class AnswerEvaluatorPort(Protocol):
-    client: Any | None
+class AnswerEvaluatorPort(LLMServicePort, Protocol):
     def evaluate_answer(self, strategy: Any, text: str, question: str, user_answer: str) -> Dict: ...
 
 class QuizAIServicePort(QuizGeneratorPort, AnswerEvaluatorPort, Protocol):
@@ -43,7 +56,13 @@ class QuizAIServicePort(QuizGeneratorPort, AnswerEvaluatorPort, Protocol):
     pass
 
 
-class QuizServicePort(Protocol):
-    def generate_quiz(self, user_id: int, request: "QuizRequest", ai_service: "QuizGeneratorPort") -> List[Dict]: ...
-    def evaluate_answer(self, user_id: int, request: "EvaluationRequest", ai_service: "AnswerEvaluatorPort") -> Dict: ...
-    def save_quiz_result(self, user_id: int, result: "QuizResultCreate") -> None: ...
+class GenerateQuizUseCasePort(Protocol):
+    def execute(self, user_id: int, request: "QuizRequest", ai_service: "QuizGeneratorPort") -> List[Dict]: ...
+
+
+class EvaluateAnswerUseCasePort(Protocol):
+    def execute(self, user_id: int, request: "EvaluationRequest", ai_service: "AnswerEvaluatorPort") -> Dict: ...
+
+
+class SaveQuizResultUseCasePort(Protocol):
+    def execute(self, user_id: int, result: "QuizResultCreate") -> None: ...

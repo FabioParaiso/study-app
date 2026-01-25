@@ -1,4 +1,4 @@
-from typing import Protocol, TYPE_CHECKING
+from typing import Protocol, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass

@@ -21,6 +21,7 @@ def test_upload_and_generate_quiz_flow(client):
     # Mock AI service for topic extraction
     with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
+        mock_service.is_available.return_value = True
         mock_service.extract_topics.return_value = {
             "Photosynthesis": ["Photosynthesis"],
             "Biology": ["Biology"]
@@ -44,7 +45,7 @@ def test_upload_and_generate_quiz_flow(client):
     # 4. Generate Quiz (mock AI quiz generation)
     with patch("modules.quizzes.router.get_ai_service") as mock_ai:
         mock_service = Mock()
-        mock_service.client = True  # Has API key
+        mock_service.is_available.return_value = True
         mock_service.generate_quiz.return_value = [
             {
                 "topic": "Photosynthesis",
@@ -85,6 +86,7 @@ def test_generate_open_ended_quiz(client):
     # Mock upload AI to avoid failure
     with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
+        mock_service.is_available.return_value = True
         mock_service.extract_topics.return_value = {
             "History": ["History"]
         }
@@ -111,7 +113,7 @@ def test_generate_open_ended_quiz(client):
          # Generate Quiz
          with patch("modules.quizzes.router.get_ai_service") as mock_ai:
             mock_service = Mock()
-            mock_service.client = True
+            mock_service.is_available.return_value = True
             mock_service.generate_quiz.return_value = [
                 {"question": "Explain the causes of WWII.", "topic": "History"}
             ]
@@ -173,6 +175,7 @@ def test_generate_short_answer_quiz_locked(client):
     files = {"file": ("test.txt", BytesIO(b"Data."), "text/plain")}
     with patch("modules.materials.router.get_ai_service") as mock_ai:
          mock_service = Mock()
+         mock_service.is_available.return_value = True
          mock_service.extract_topics.return_value = {
              "Topic": ["Topic"]
          }

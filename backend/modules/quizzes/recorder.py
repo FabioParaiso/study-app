@@ -1,6 +1,5 @@
-from modules.materials.stats import MaterialStatsUpdater
 from modules.quizzes.concept_resolver import ConceptIdResolver
-from modules.quizzes.ports import QuizResultWriterPort
+from modules.quizzes.ports import QuizResultPersistencePort
 
 
 class QuizRecordError(Exception):
@@ -12,13 +11,11 @@ class QuizRecordError(Exception):
 class QuizResultRecorder:
     def __init__(
         self,
-        quiz_repo: QuizResultWriterPort,
-        resolver: ConceptIdResolver,
-        stats_updater: MaterialStatsUpdater
+        quiz_repo: QuizResultPersistencePort,
+        resolver: ConceptIdResolver
     ):
         self.quiz_repo = quiz_repo
         self.resolver = resolver
-        self.stats_updater = stats_updater
 
     def record(
         self,
@@ -31,23 +28,14 @@ class QuizResultRecorder:
         xp_earned: int
     ) -> None:
         analytics_data = self.resolver.apply(material_id, analytics_data)
-        success = self.quiz_repo.save_quiz_result(
+        success = self.quiz_repo.record_quiz_result(
             student_id=user_id,
             score=score,
             total=total_questions,
             quiz_type=quiz_type,
             analytics_data=analytics_data,
-            material_id=material_id
+            material_id=material_id,
+            xp_earned=xp_earned
         )
         if not success:
             raise QuizRecordError("Failed to save results", status_code=500)
-
-        if material_id:
-            updated = self.stats_updater.apply(
-                material_id=material_id,
-                score=score,
-                total_questions=total_questions,
-                xp_earned=xp_earned
-            )
-            if not updated:
-                raise QuizRecordError("Failed to update material stats", status_code=500)

@@ -16,6 +16,7 @@ def test_submit_quiz_and_get_analytics(client):
     
     with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
+        mock_service.is_available.return_value = True
         mock_service.extract_topics.return_value = {
             "Math": ["Math"],
             "Science": ["Science"]
@@ -83,6 +84,7 @@ def test_adaptive_topics_from_analytics(client):
     
     with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
+        mock_service.is_available.return_value = True
         mock_service.extract_topics.return_value = {
             "Physics": ["Physics"],
             "Chemistry": ["Chemistry"],
@@ -141,6 +143,7 @@ def test_quiz_result_without_material_id_uses_active(client):
     files = {"file": ("test.txt", BytesIO(b"Content"), "text/plain")}
     with patch("modules.materials.router.get_ai_service") as mock_ai:
         mock_service = Mock()
+        mock_service.is_available.return_value = True
         mock_service.extract_topics.return_value = {
             "Topic1": ["Topic1"]
         }

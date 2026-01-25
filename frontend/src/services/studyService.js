@@ -55,16 +55,8 @@ export const studyService = {
         const res = await api.get(url);
         return res.data;
     },
-    updateXP: async (amount) => {
-        const res = await api.post('/gamification/xp', { amount });
-        return res.data;
-    },
     updateAvatar: async (avatar) => {
         const res = await api.post('/gamification/avatar', { avatar });
-        return res.data;
-    },
-    updateHighScore: async (score) => {
-        const res = await api.post('/gamification/highscore', { score });
         return res.data;
     },
     getMaterials: async () => {

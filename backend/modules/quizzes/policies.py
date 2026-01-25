@@ -1,13 +1,6 @@
 import random
 from modules.analytics.ports import AnalyticsServicePort
-from modules.quizzes.engine import (
-    MultipleChoiceStrategy,
-    OpenEndedStrategy,
-    ShortAnswerStrategy,
-    OpenEndedEvaluationStrategy,
-    ShortAnswerEvaluationStrategy,
-    MultipleChoiceEvaluationStrategy
-)
+from modules.quizzes.registry import QuizTypeRegistry
 
 
 class QuizPolicyError(Exception):
@@ -16,56 +9,34 @@ class QuizPolicyError(Exception):
         self.status_code = status_code
 
 
-QUIZ_TYPE_CONFIG = {
-    "open-ended": {
-        "min_xp": 900,
-        "strategy": OpenEndedStrategy,
-        "eval_strategy": OpenEndedEvaluationStrategy
-    },
-    "short_answer": {
-        "min_xp": 300,
-        "strategy": ShortAnswerStrategy,
-        "eval_strategy": ShortAnswerEvaluationStrategy
-    },
-    "multiple-choice": {
-        "min_xp": 0,
-        "strategy": MultipleChoiceStrategy,
-        "eval_strategy": MultipleChoiceEvaluationStrategy
-    },
-    "multiple": {
-        "min_xp": 0,
-        "strategy": MultipleChoiceStrategy,
-        "eval_strategy": MultipleChoiceEvaluationStrategy
-    },
-}
-
-
 class QuizUnlockPolicy:
-    def __init__(self, material_xp: int):
+    def __init__(self, material_xp: int, registry: QuizTypeRegistry):
         self.material_xp = material_xp
+        self.registry = registry
 
     def select_strategy(self, quiz_type: str):
-        config = QUIZ_TYPE_CONFIG.get(quiz_type) or QUIZ_TYPE_CONFIG["multiple"]
-        if self.material_xp < config["min_xp"]:
+        config = self.registry.get_for_generation(quiz_type)
+        if self.material_xp < config.min_xp:
             raise QuizPolicyError(
-                f"Level Locked. Requires {config['min_xp']} XP.",
+                f"Level Locked. Requires {config.min_xp} XP.",
                 status_code=403
             )
-        return config["strategy"]()
+        return config.strategy_factory()
 
     def select_evaluation_strategy(self, quiz_type: str):
         # Evaluation usually doesn't need XP check, but we keep it centralized or separate if needed.
         # For now, we just return the strategy based on type.
-        config = QUIZ_TYPE_CONFIG.get(quiz_type) or QUIZ_TYPE_CONFIG["open-ended"]
-        return config["eval_strategy"]()
+        config = self.registry.get_for_evaluation(quiz_type)
+        return config.evaluation_factory()
 
 
 class QuizStrategyFactory:
-    def __init__(self, policy_cls: type[QuizUnlockPolicy] = QuizUnlockPolicy):
+    def __init__(self, registry: QuizTypeRegistry, policy_cls: type[QuizUnlockPolicy] = QuizUnlockPolicy):
         self.policy_cls = policy_cls
+        self.registry = registry
 
     def select_strategy(self, quiz_type: str, material_xp: int):
-        policy = self.policy_cls(material_xp)
+        policy = self.policy_cls(material_xp, self.registry)
         return policy.select_strategy(quiz_type)
 
     def select_evaluation_strategy(self, quiz_type: str):
@@ -73,7 +44,7 @@ class QuizStrategyFactory:
         # or we might want to enforce it. For now, we bypass XP check for evaluation selection
         # or we can refactor Policy to separate unlock logic from mapping.
         # Re-using Policy for mapping simplicity effectively.
-        policy = self.policy_cls(0)
+        policy = self.policy_cls(0, self.registry)
         return policy.select_evaluation_strategy(quiz_type)
 
 

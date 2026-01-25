@@ -1,10 +1,28 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from modules.materials.deps import get_ai_service, get_material_service
-from modules.materials.service import MaterialServiceError
+from modules.materials.deps import (
+    get_ai_service,
+    get_upload_material_use_case,
+    get_analyze_topics_use_case,
+    get_get_current_material_use_case,
+    get_clear_material_use_case,
+    get_list_materials_use_case,
+    get_activate_material_use_case,
+    get_delete_material_use_case,
+)
+from modules.materials.errors import MaterialServiceError
 from schemas.study import AnalyzeRequest
 from dependencies import get_current_user
 from models import Student
-from modules.materials.ports import MaterialServicePort, TopicAIServicePort
+from modules.materials.ports import (
+    UploadMaterialUseCasePort,
+    AnalyzeTopicsUseCasePort,
+    GetCurrentMaterialUseCasePort,
+    ClearMaterialUseCasePort,
+    ListMaterialsUseCasePort,
+    ActivateMaterialUseCasePort,
+    DeleteMaterialUseCasePort,
+    TopicAIServicePort,
+)
 
 router = APIRouter()
 
@@ -12,9 +30,9 @@ router = APIRouter()
 @router.get("/current-material")
 def get_current_material(
     current_user: Student = Depends(get_current_user),
-    material_service: MaterialServicePort = Depends(get_material_service)
+    use_case: GetCurrentMaterialUseCasePort = Depends(get_get_current_material_use_case)
 ):
-    data = material_service.get_current_material(current_user.id)
+    data = use_case.execute(current_user.id)
     if data:
         return {
             "has_material": True,
@@ -30,18 +48,18 @@ def get_current_material(
 @router.post("/clear-material")
 def clear_material(
     current_user: Student = Depends(get_current_user),
-    material_service: MaterialServicePort = Depends(get_material_service)
+    use_case: ClearMaterialUseCasePort = Depends(get_clear_material_use_case)
 ):
-    material_service.clear_material(current_user.id)
+    use_case.execute(current_user.id)
     return {"status": "cleared"}
 
 @router.delete("/delete-material/{material_id}")
 def delete_material(
     material_id: int,
     current_user: Student = Depends(get_current_user),
-    material_service: MaterialServicePort = Depends(get_material_service)
+    use_case: DeleteMaterialUseCasePort = Depends(get_delete_material_use_case)
 ):
-    success = material_service.delete_material(current_user.id, material_id)
+    success = use_case.execute(current_user.id, material_id)
     if not success:
         return {"status": "error", "message": "Material not found or could not be deleted"}
     return {"status": "deleted"}
@@ -49,17 +67,17 @@ def delete_material(
 @router.get("/materials")
 def list_materials(
     current_user: Student = Depends(get_current_user),
-    material_service: MaterialServicePort = Depends(get_material_service)
+    use_case: ListMaterialsUseCasePort = Depends(get_list_materials_use_case)
 ):
-    return material_service.list_materials(current_user.id)
+    return use_case.execute(current_user.id)
 
 @router.post("/materials/{material_id}/activate")
 def activate_material(
     material_id: int,
     current_user: Student = Depends(get_current_user),
-    material_service: MaterialServicePort = Depends(get_material_service)
+    use_case: ActivateMaterialUseCasePort = Depends(get_activate_material_use_case)
 ):
-    success = material_service.activate_material(current_user.id, material_id)
+    success = use_case.execute(current_user.id, material_id)
     if not success:
         raise HTTPException(status_code=404, detail="Material not found")
     return {"status": "activated"}
@@ -68,12 +86,12 @@ def activate_material(
 async def upload_file(
     current_user: Student = Depends(get_current_user),
     file: UploadFile = File(...),
-    material_service: MaterialServicePort = Depends(get_material_service),
+    use_case: UploadMaterialUseCasePort = Depends(get_upload_material_use_case),
     ai_service: TopicAIServicePort = Depends(get_ai_service)
 ):
     try:
         content = await file.read()
-        return await material_service.upload_material(
+        return await use_case.execute(
             user_id=current_user.id,
             file_content=content,
             filename=file.filename,
@@ -90,10 +108,10 @@ async def upload_file(
 def analyze_topics_endpoint(
     request: AnalyzeRequest,
     current_user: Student = Depends(get_current_user),
-    material_service: MaterialServicePort = Depends(get_material_service),
+    use_case: AnalyzeTopicsUseCasePort = Depends(get_analyze_topics_use_case),
     ai_service: TopicAIServicePort = Depends(get_ai_service)
 ):
     try:
-        return material_service.analyze_topics(current_user.id, ai_service)
+        return use_case.execute(current_user.id, ai_service)
     except MaterialServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))

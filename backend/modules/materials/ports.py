@@ -1,4 +1,4 @@
-from typing import Protocol, TYPE_CHECKING, Dict, List, Optional, Tuple, Any
+from typing import Protocol, TYPE_CHECKING, Dict, List, Tuple, Any
 
 if TYPE_CHECKING:
     from models import StudyMaterial
@@ -41,19 +41,23 @@ class MaterialConceptPairsRepositoryPort(Protocol):
 
 
 class DocumentServicePort(Protocol):
-    def extract_text(self, file_content: bytes, file_type: str) -> str: ...
+    def extract_text(self, file_content: bytes, file_type: str) -> str | None: ...
+
+
+class FileTypeResolverPort(Protocol):
+    def resolve(self, filename: str, explicit_type: str | None) -> str: ...
 
 
 class MaterialUpserterPort(Protocol):
     def upsert(self, student_id: int, text: str, source_name: str, topics: Dict[str, List[str]] | None) -> Any: ...
 
 
-class MaterialDeletionPolicyPort(Protocol):
-    def delete(self, user_id: int, material_id: int) -> bool: ...
+class MaterialDeletionTransactionPort(Protocol):
+    def delete_with_cleanup(self, user_id: int, material_id: int) -> bool: ...
 
 
 class TopicAIServicePort(Protocol):
-    client: Any | None
+    def is_available(self) -> bool: ...
     def extract_topics(self, text: str) -> Dict[str, List[str]]: ...
 
 
@@ -61,8 +65,8 @@ class TopicServicePort(Protocol):
     def extract_topics(self, text: str, ai_service: "TopicAIServicePort") -> Dict[str, List[str]]: ...
 
 
-class MaterialServicePort(Protocol):
-    async def upload_material(
+class UploadMaterialUseCasePort(Protocol):
+    async def execute(
         self,
         user_id: int,
         file_content: bytes,
@@ -70,12 +74,30 @@ class MaterialServicePort(Protocol):
         file_type: str | None,
         ai_service: "TopicAIServicePort"
     ) -> Dict: ...
-    def analyze_topics(self, user_id: int, ai_service: "TopicAIServicePort") -> Dict: ...
-    def get_current_material(self, user_id: int) -> Dict | None: ...
-    def clear_material(self, user_id: int) -> bool: ...
-    def list_materials(self, user_id: int) -> List[Dict]: ...
-    def activate_material(self, user_id: int, material_id: int) -> bool: ...
-    def delete_material(self, user_id: int, material_id: int) -> bool: ...
+
+
+class AnalyzeTopicsUseCasePort(Protocol):
+    def execute(self, user_id: int, ai_service: "TopicAIServicePort") -> Dict: ...
+
+
+class GetCurrentMaterialUseCasePort(Protocol):
+    def execute(self, user_id: int) -> Dict | None: ...
+
+
+class ClearMaterialUseCasePort(Protocol):
+    def execute(self, user_id: int) -> bool: ...
+
+
+class ListMaterialsUseCasePort(Protocol):
+    def execute(self, user_id: int) -> List[Dict]: ...
+
+
+class ActivateMaterialUseCasePort(Protocol):
+    def execute(self, user_id: int, material_id: int) -> bool: ...
+
+
+class DeleteMaterialUseCasePort(Protocol):
+    def execute(self, user_id: int, material_id: int) -> bool: ...
 
 
 class TopicSelectorPort(Protocol):
