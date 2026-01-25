@@ -4,23 +4,35 @@ import os
 from database import get_db
 from modules.analytics.repository import AnalyticsRepository
 from modules.analytics.service import AnalyticsService
-from modules.materials.repository import MaterialRepository
+from modules.materials.repository import (
+    MaterialConceptRepository,
+    MaterialReadRepository,
+    MaterialStatsRepository,
+)
 from modules.quizzes.ai_service import QuizAIService
 from modules.materials.stats import MaterialStatsUpdater
 from modules.quizzes.concept_resolver import ConceptIdResolver
-from modules.quizzes.policies import AdaptiveTopicSelector
+from modules.quizzes.policies import AdaptiveTopicSelector, QuizStrategyFactory
 from modules.quizzes.recorder import QuizResultRecorder
-from modules.quizzes.repository import QuizRepository
+from modules.quizzes.repository import QuizResultWriterRepository
 from modules.quizzes.service import QuizService
 from services.ports import QuizResultWriterPort
 
 
-def get_material_repo(db: Session = Depends(get_db)):
-    return MaterialRepository(db)
+def get_material_read_repo(db: Session = Depends(get_db)):
+    return MaterialReadRepository(db)
+
+
+def get_material_concept_repo(db: Session = Depends(get_db)):
+    return MaterialConceptRepository(db)
+
+
+def get_material_stats_repo(db: Session = Depends(get_db)):
+    return MaterialStatsRepository(db)
 
 
 def get_quiz_repo(db: Session = Depends(get_db)):
-    return QuizRepository(db)
+    return QuizResultWriterRepository(db)
 
 
 def get_analytics_repo(db: Session = Depends(get_db)):
@@ -33,17 +45,21 @@ def get_ai_service(api_key: str | None = None):
 
 
 def get_quiz_service(
-    material_repo: MaterialRepository = Depends(get_material_repo),
+    material_repo: MaterialReadRepository = Depends(get_material_read_repo),
+    concept_repo: MaterialConceptRepository = Depends(get_material_concept_repo),
+    stats_repo: MaterialStatsRepository = Depends(get_material_stats_repo),
     quiz_repo: QuizResultWriterPort = Depends(get_quiz_repo),
     analytics_repo: AnalyticsRepository = Depends(get_analytics_repo)
 ):
-    analytics_service = AnalyticsService(analytics_repo, material_repo)
+    analytics_service = AnalyticsService(analytics_repo, concept_repo)
     topic_selector = AdaptiveTopicSelector(analytics_service)
-    resolver = ConceptIdResolver(material_repo)
-    stats_updater = MaterialStatsUpdater(material_repo)
+    strategy_factory = QuizStrategyFactory()
+    resolver = ConceptIdResolver(concept_repo)
+    stats_updater = MaterialStatsUpdater(stats_repo)
     recorder = QuizResultRecorder(quiz_repo, resolver, stats_updater)
     return QuizService(
         material_repo,
         topic_selector=topic_selector,
+        strategy_factory=strategy_factory,
         recorder=recorder
     )

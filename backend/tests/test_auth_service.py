@@ -1,12 +1,12 @@
 import pytest
-from repositories.student_repository import StudentRepository
+from repositories.student_repository import StudentAuthRepository
 from services.auth_service import AuthService, AuthServiceError
 
 
 class TestAuthService:
     @pytest.fixture
     def auth_service(self, db_session):
-        repo = StudentRepository(db_session)
+        repo = StudentAuthRepository(db_session)
         return AuthService(repo)
 
     def test_register_creates_student(self, auth_service):

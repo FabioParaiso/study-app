@@ -1,15 +1,27 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from database import get_db
-from repositories.student_repository import StudentRepository
+from repositories.student_repository import (
+    StudentAuthRepository,
+    StudentGamificationRepository,
+    StudentLookupRepository,
+)
 from services.ports import StudentLookupRepositoryPort, TokenServicePort
 from services.token_service import TokenService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-def get_student_repo(db = Depends(get_db)):
-    return StudentRepository(db)
+def get_student_auth_repo(db=Depends(get_db)):
+    return StudentAuthRepository(db)
+
+
+def get_student_lookup_repo(db=Depends(get_db)):
+    return StudentLookupRepository(db)
+
+
+def get_student_gamification_repo(db=Depends(get_db)):
+    return StudentGamificationRepository(db)
 
 
 def get_token_service():
@@ -18,7 +30,7 @@ def get_token_service():
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),
-    repo: StudentLookupRepositoryPort = Depends(get_student_repo),
+    repo: StudentLookupRepositoryPort = Depends(get_student_lookup_repo),
     token_service: TokenServicePort = Depends(get_token_service)
 ):
     credentials_exception = HTTPException(

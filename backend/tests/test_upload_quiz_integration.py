@@ -97,7 +97,7 @@ def test_generate_open_ended_quiz(client):
     # So we need to make sure material has XP.
     # Easiest way: Mock repo.load in the generate endpoint
     
-    with patch("modules.quizzes.deps.get_material_repo") as mock_repo_dep:
+    with patch("modules.quizzes.deps.get_material_read_repo") as mock_repo_dep:
          mock_repo = Mock()
          # Mock material data with high XP
          mock_material = Mock()
@@ -141,7 +141,7 @@ def test_generate_open_ended_quiz(client):
     # NO, user wants to know if WE COVERED THE QUIZ TYPES.
     
     # Let's mock the 'load' inside the router function using patch on the module
-    with patch("modules.quizzes.deps.MaterialRepository") as mock_repo_cls:
+    with patch("modules.quizzes.deps.MaterialReadRepository") as mock_repo_cls:
         mock_repo_instance = mock_repo_cls.return_value
         mock_material = Mock()
         mock_material.id = 1
@@ -150,7 +150,7 @@ def test_generate_open_ended_quiz(client):
         mock_material.topics = []
         mock_repo_instance.load.return_value = mock_material
         
-        # This patch MIGHT fail if MaterialRepository is imported directly in dependency.
+        # This patch MIGHT fail if MaterialReadRepository is imported directly in dependency.
         # Let's rely on standard flow: 
         # 1. New user = 0 XP = Locked.
         pass

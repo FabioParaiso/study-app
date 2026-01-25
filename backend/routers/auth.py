@@ -5,12 +5,12 @@ from slowapi.util import get_remote_address
 from services.auth_service import AuthService, AuthServiceError
 from services.ports import AuthServicePort, StudentAuthRepositoryPort
 from services.ports import TokenServicePort
-from dependencies import get_student_repo, get_token_service
+from dependencies import get_student_auth_repo, get_token_service
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
-def get_auth_service(repo: StudentAuthRepositoryPort = Depends(get_student_repo)):
+def get_auth_service(repo: StudentAuthRepositoryPort = Depends(get_student_auth_repo)):
     return AuthService(repo)
 
 def _student_to_response(student) -> dict:

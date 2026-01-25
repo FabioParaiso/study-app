@@ -75,6 +75,11 @@ class QuizResultRecorderPort(Protocol):
     ) -> None: ...
 
 
+class QuizStrategyFactoryPort(Protocol):
+    def select_strategy(self, quiz_type: str, material_xp: int):
+        ...
+
+
 class QuizResultWriterPort(Protocol):
     def save_quiz_result(self, student_id: int, score: int, total: int, quiz_type: str, analytics_data: list[dict], material_id: int | None = None) -> bool: ...
 

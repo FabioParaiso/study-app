@@ -1,5 +1,5 @@
 import random
-from modules.analytics.service import AnalyticsService
+from services.ports import AnalyticsServicePort
 from modules.quizzes.engine import MultipleChoiceStrategy, OpenEndedStrategy, ShortAnswerStrategy
 
 
@@ -31,8 +31,17 @@ class QuizUnlockPolicy:
         return config["strategy"]()
 
 
+class QuizStrategyFactory:
+    def __init__(self, policy_cls: type[QuizUnlockPolicy] = QuizUnlockPolicy):
+        self.policy_cls = policy_cls
+
+    def select_strategy(self, quiz_type: str, material_xp: int):
+        policy = self.policy_cls(material_xp)
+        return policy.select_strategy(quiz_type)
+
+
 class AdaptiveTopicSelector:
-    def __init__(self, analytics_service: AnalyticsService):
+    def __init__(self, analytics_service: AnalyticsServicePort):
         self.analytics_service = analytics_service
 
     def select(self, user_id: int, material_id: int | None, requested_topics: list[str] | None):

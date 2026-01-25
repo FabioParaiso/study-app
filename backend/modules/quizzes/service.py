@@ -5,9 +5,14 @@ from modules.quizzes.policies import (
     ConceptWhitelistBuilder,
     QuestionPostProcessor,
     QuizPolicyError,
-    QuizUnlockPolicy,
 )
-from services.ports import MaterialLoaderPort, QuizAIServicePort, QuizResultRecorderPort, TopicSelectorPort
+from services.ports import (
+    MaterialLoaderPort,
+    QuizAIServicePort,
+    QuizResultRecorderPort,
+    QuizStrategyFactoryPort,
+    TopicSelectorPort,
+)
 
 
 class QuizServiceError(Exception):
@@ -21,10 +26,12 @@ class QuizService:
         self,
         material_repo: MaterialLoaderPort,
         topic_selector: TopicSelectorPort,
+        strategy_factory: QuizStrategyFactoryPort,
         recorder: QuizResultRecorderPort
     ):
         self.material_repo = material_repo
         self.topic_selector = topic_selector
+        self.strategy_factory = strategy_factory
         self.recorder = recorder
 
     def generate_quiz(self, user_id: int, request: QuizRequest, ai_service: QuizAIServicePort) -> list[dict]:
@@ -42,9 +49,8 @@ class QuizService:
         target_topics, priority_topics = self.topic_selector.select(user_id, material_id, request.topics)
 
         material_xp = material.total_xp
-        unlock_policy = QuizUnlockPolicy(material_xp)
         try:
-            strategy = unlock_policy.select_strategy(request.quiz_type)
+            strategy = self.strategy_factory.select_strategy(request.quiz_type, material_xp)
         except QuizPolicyError as e:
             raise QuizServiceError(str(e), status_code=e.status_code)
 
