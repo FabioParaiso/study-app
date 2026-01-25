@@ -28,9 +28,13 @@ def configure_middlewares(app: FastAPI) -> None:
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         return response
 
+    # Secure CORS configuration: explicit allowlist from env or default to frontend dev server
+    # prevent wildcard '*' usage which is insecure with allow_credentials=True
+    allowed_origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",") if origin.strip()]
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
