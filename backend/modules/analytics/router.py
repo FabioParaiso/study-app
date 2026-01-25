@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
-from modules.analytics.deps import get_quiz_service
-from modules.quizzes.service import QuizService
+from modules.analytics.deps import get_analytics_service
+from modules.analytics.service import AnalyticsService
 from dependencies import get_current_user
 from models import Student
 
@@ -11,6 +11,6 @@ router = APIRouter()
 def get_weak_points(
     current_user: Student = Depends(get_current_user),
     material_id: int | None = None,
-    quiz_service: QuizService = Depends(get_quiz_service)
+    analytics_service: AnalyticsService = Depends(get_analytics_service)
 ):
-    return quiz_service.get_weak_points(current_user.id, material_id)
+    return analytics_service.get_weak_points(current_user.id, material_id)

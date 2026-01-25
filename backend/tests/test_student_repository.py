@@ -1,6 +1,7 @@
 import pytest
 from repositories.student_repository import StudentRepository
 from models import Student
+from security import get_password_hash
 
 class TestStudentRepository:
     
@@ -12,7 +13,8 @@ class TestStudentRepository:
 
     def test_create_student_new_user(self, repo):
         """Test creating a completely new student."""
-        student = repo.create_student("NewUser", "StrongPass1!")
+        hashed_password = get_password_hash("StrongPass1!")
+        student = repo.create_student("NewUser", hashed_password)
         
         assert student is not None
         assert student.name == "NewUser"
@@ -22,41 +24,32 @@ class TestStudentRepository:
 
     def test_create_student_duplicate_returns_none(self, repo):
         """Test that duplicate registration returns None."""
-        repo.create_student("DupeUser", "StrongPass1!")
-        duplicate = repo.create_student("DupeUser", "AnotherPass1!")
+        repo.create_student("DupeUser", get_password_hash("StrongPass1!"))
+        duplicate = repo.create_student("DupeUser", get_password_hash("AnotherPass1!"))
         
         assert duplicate is None
 
 
 
-    def test_authenticate_valid_credentials(self, repo):
-        """Test authentication with correct password."""
-        repo.create_student("AuthUser", "ValidPass1!")
+    def test_get_by_name_returns_student(self, repo):
+        """Test loading by name."""
+        repo.create_student("AuthUser", get_password_hash("ValidPass1!"))
+        loaded = repo.get_by_name("AuthUser")
         
-        authenticated = repo.authenticate_student("AuthUser", "ValidPass1!")
-        
-        assert authenticated is not None
-        assert authenticated.name == "AuthUser"
+        assert loaded is not None
+        assert loaded.name == "AuthUser"
 
-    def test_authenticate_wrong_password(self, repo):
-        """Test authentication fails with wrong password."""
-        repo.create_student("AuthUser2", "ValidPass1!")
+    def test_get_by_name_returns_none_for_missing(self, repo):
+        """Test loading by name for non-existent user."""
+        loaded = repo.get_by_name("Ghost")
         
-        authenticated = repo.authenticate_student("AuthUser2", "WrongPass1!")
-        
-        assert authenticated is None
-
-    def test_authenticate_nonexistent_user(self, repo):
-        """Test authentication fails for non-existent user."""
-        authenticated = repo.authenticate_student("Ghost", "AnyPass1!")
-        
-        assert authenticated is None
+        assert loaded is None
 
 
 
     def test_update_xp(self, repo):
         """Test XP update increments correctly."""
-        student = repo.create_student("XPUser", "Pass1!")
+        student = repo.create_student("XPUser", get_password_hash("Pass1!"))
         original_id = student.id
         
         updated = repo.update_xp(original_id, 100)
@@ -68,7 +61,7 @@ class TestStudentRepository:
 
     def test_update_avatar(self, repo):
         """Test avatar update."""
-        student = repo.create_student("AvatarUser", "Pass1!")
+        student = repo.create_student("AvatarUser", get_password_hash("Pass1!"))
         
         updated = repo.update_avatar(student.id, "🚀")
         
@@ -76,7 +69,7 @@ class TestStudentRepository:
 
     def test_update_high_score_increases(self, repo):
         """Test high score updates when new score is higher."""
-        student = repo.create_student("ScoreUser", "Pass1!")
+        student = repo.create_student("ScoreUser", get_password_hash("Pass1!"))
         
         updated = repo.update_high_score(student.id, 100)
         assert updated.high_score == 100
@@ -86,7 +79,7 @@ class TestStudentRepository:
 
     def test_update_high_score_does_not_decrease(self, repo):
         """Test high score does not decrease if new score is lower."""
-        student = repo.create_student("ScoreUser2", "Pass1!")
+        student = repo.create_student("ScoreUser2", get_password_hash("Pass1!"))
         repo.update_high_score(student.id, 200)
         
         updated = repo.update_high_score(student.id, 100)

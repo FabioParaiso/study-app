@@ -1,3 +1,4 @@
+from security import get_password_hash, verify_password
 from services.ports import StudentRepositoryPort
 
 
@@ -12,13 +13,14 @@ class AuthService:
         self.repo = repo
 
     def register(self, name: str, password: str):
-        student = self.repo.create_student(name, password)
+        hashed_password = get_password_hash(password)
+        student = self.repo.create_student(name, hashed_password)
         if not student:
             raise AuthServiceError("Esse nome já existe. Tenta fazer Login ou escolhe outro nome.", status_code=400)
         return student
 
     def login(self, name: str, password: str):
-        student = self.repo.authenticate_student(name, password)
-        if not student:
+        student = self.repo.get_by_name(name)
+        if not student or not verify_password(password, student.hashed_password):
             raise AuthServiceError("Credenciais inválidas. Verifica o nome e a password.", status_code=401)
         return student

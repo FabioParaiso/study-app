@@ -19,10 +19,21 @@ class QuizServiceError(Exception):
 
 
 class QuizService:
-    def __init__(self, material_repo: MaterialRepositoryPort, quiz_repo: QuizRepositoryPort, analytics_repo: AnalyticsRepositoryPort):
+    def __init__(
+        self,
+        material_repo: MaterialRepositoryPort,
+        quiz_repo: QuizRepositoryPort,
+        analytics_repo: AnalyticsRepositoryPort,
+        analytics_service: AnalyticsService | None = None,
+        topic_selector: AdaptiveTopicSelector | None = None,
+        recorder: QuizResultRecorder | None = None
+    ):
         self.material_repo = material_repo
         self.quiz_repo = quiz_repo
         self.analytics_repo = analytics_repo
+        self.analytics_service = analytics_service or AnalyticsService(analytics_repo, material_repo)
+        self.topic_selector = topic_selector or AdaptiveTopicSelector(self.analytics_service)
+        self.recorder = recorder or QuizResultRecorder(quiz_repo, material_repo)
 
     def generate_quiz(self, user_id: int, request: QuizRequest, ai_service: QuizAIServicePort) -> list[dict]:
         material = self.material_repo.load(user_id)
@@ -34,11 +45,9 @@ class QuizService:
 
         text = material.text
 
-        analytics_service = AnalyticsService(self.analytics_repo, self.material_repo)
         material_id = material.id
 
-        selector = AdaptiveTopicSelector(analytics_service)
-        target_topics, priority_topics = selector.select(user_id, material_id, request.topics)
+        target_topics, priority_topics = self.topic_selector.select(user_id, material_id, request.topics)
 
         material_xp = material.total_xp
         unlock_policy = QuizUnlockPolicy(material_xp)
@@ -75,9 +84,8 @@ class QuizService:
             material_id = current.id if current else None
 
         analytics_data = [item.dict() for item in result.detailed_results]
-        recorder = QuizResultRecorder(self.quiz_repo, self.material_repo)
         try:
-            recorder.record(
+            self.recorder.record(
                 user_id=user_id,
                 score=result.score,
                 total_questions=result.total_questions,
@@ -88,13 +96,3 @@ class QuizService:
             )
         except QuizRecordError as e:
             raise QuizServiceError(str(e), status_code=e.status_code)
-
-    def get_weak_points(self, user_id: int, material_id: int | None = None) -> list[dict]:
-        if not material_id:
-            current = self.material_repo.load(user_id)
-            if not current:
-                return []
-            material_id = current.id
-
-        analytics = AnalyticsService(self.analytics_repo, self.material_repo)
-        return analytics.get_weak_points(user_id, material_id)
