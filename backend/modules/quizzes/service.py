@@ -8,7 +8,8 @@ from modules.quizzes.policies import (
 )
 from modules.materials.ports import MaterialLoaderPort, TopicSelectorPort
 from modules.quizzes.ports import (
-    QuizAIServicePort,
+    QuizGeneratorPort,
+    AnswerEvaluatorPort,
     QuizResultRecorderPort,
     QuizStrategyFactoryPort,
 )
@@ -33,7 +34,7 @@ class QuizService:
         self.strategy_factory = strategy_factory
         self.recorder = recorder
 
-    def generate_quiz(self, user_id: int, request: QuizRequest, ai_service: QuizAIServicePort) -> list[dict]:
+    def generate_quiz(self, user_id: int, request: QuizRequest, ai_service: QuizGeneratorPort) -> list[dict]:
         material = self.material_repo.load(user_id)
         if not material or not material.text:
             raise QuizServiceError("No material found. Upload a file first.")
@@ -63,7 +64,7 @@ class QuizService:
         post_processor = QuestionPostProcessor(request.quiz_type)
         return post_processor.apply(questions)
 
-    def evaluate_answer(self, user_id: int, request: EvaluationRequest, ai_service: QuizAIServicePort) -> dict:
+    def evaluate_answer(self, user_id: int, request: EvaluationRequest, ai_service: AnswerEvaluatorPort) -> dict:
         material = self.material_repo.load(user_id)
         if not material or not material.text:
             raise QuizServiceError("No material found.")
@@ -72,7 +73,11 @@ class QuizService:
             raise QuizServiceError("API Key is required for evaluation.")
 
         text = material.text
-        return ai_service.evaluate_answer(text, request.question, request.user_answer, request.quiz_type)
+
+        # Using factory to select evaluation strategy
+        strategy = self.strategy_factory.select_evaluation_strategy(request.quiz_type)
+
+        return ai_service.evaluate_answer(strategy, text, request.question, request.user_answer)
 
     def save_quiz_result(self, user_id: int, result: QuizResultCreate) -> None:
         material_id = result.study_material_id

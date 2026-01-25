@@ -1,6 +1,13 @@
 import random
 from modules.analytics.ports import AnalyticsServicePort
-from modules.quizzes.engine import MultipleChoiceStrategy, OpenEndedStrategy, ShortAnswerStrategy
+from modules.quizzes.engine import (
+    MultipleChoiceStrategy,
+    OpenEndedStrategy,
+    ShortAnswerStrategy,
+    OpenEndedEvaluationStrategy,
+    ShortAnswerEvaluationStrategy,
+    MultipleChoiceEvaluationStrategy
+)
 
 
 class QuizPolicyError(Exception):
@@ -10,10 +17,26 @@ class QuizPolicyError(Exception):
 
 
 QUIZ_TYPE_CONFIG = {
-    "open-ended": {"min_xp": 900, "strategy": OpenEndedStrategy},
-    "short_answer": {"min_xp": 300, "strategy": ShortAnswerStrategy},
-    "multiple-choice": {"min_xp": 0, "strategy": MultipleChoiceStrategy},
-    "multiple": {"min_xp": 0, "strategy": MultipleChoiceStrategy},
+    "open-ended": {
+        "min_xp": 900,
+        "strategy": OpenEndedStrategy,
+        "eval_strategy": OpenEndedEvaluationStrategy
+    },
+    "short_answer": {
+        "min_xp": 300,
+        "strategy": ShortAnswerStrategy,
+        "eval_strategy": ShortAnswerEvaluationStrategy
+    },
+    "multiple-choice": {
+        "min_xp": 0,
+        "strategy": MultipleChoiceStrategy,
+        "eval_strategy": MultipleChoiceEvaluationStrategy
+    },
+    "multiple": {
+        "min_xp": 0,
+        "strategy": MultipleChoiceStrategy,
+        "eval_strategy": MultipleChoiceEvaluationStrategy
+    },
 }
 
 
@@ -30,6 +53,12 @@ class QuizUnlockPolicy:
             )
         return config["strategy"]()
 
+    def select_evaluation_strategy(self, quiz_type: str):
+        # Evaluation usually doesn't need XP check, but we keep it centralized or separate if needed.
+        # For now, we just return the strategy based on type.
+        config = QUIZ_TYPE_CONFIG.get(quiz_type) or QUIZ_TYPE_CONFIG["open-ended"]
+        return config["eval_strategy"]()
+
 
 class QuizStrategyFactory:
     def __init__(self, policy_cls: type[QuizUnlockPolicy] = QuizUnlockPolicy):
@@ -38,6 +67,14 @@ class QuizStrategyFactory:
     def select_strategy(self, quiz_type: str, material_xp: int):
         policy = self.policy_cls(material_xp)
         return policy.select_strategy(quiz_type)
+
+    def select_evaluation_strategy(self, quiz_type: str):
+        # Using 0 XP as evaluation shouldn't trigger unlock checks generally,
+        # or we might want to enforce it. For now, we bypass XP check for evaluation selection
+        # or we can refactor Policy to separate unlock logic from mapping.
+        # Re-using Policy for mapping simplicity effectively.
+        policy = self.policy_cls(0)
+        return policy.select_evaluation_strategy(quiz_type)
 
 
 class AdaptiveTopicSelector:

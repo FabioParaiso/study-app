@@ -38,16 +38,17 @@ def configure_middlewares(app: FastAPI) -> None:
 
 
 def register_routes(app: FastAPI) -> None:
-    from routers import auth, gamification
+    from modules.auth import router as auth_router
+    from modules.gamification import router as gamification_router
     from modules.materials import router as materials_router
     from modules.quizzes import router as quizzes_router
     from modules.analytics import router as analytics_router
 
-    app.include_router(auth.router)
+    app.include_router(auth_router.router)
     app.include_router(materials_router.router)
     app.include_router(quizzes_router.router)
     app.include_router(analytics_router.router)
-    app.include_router(gamification.router)
+    app.include_router(gamification_router.router)
 
     @app.get("/health")
     def health_check():

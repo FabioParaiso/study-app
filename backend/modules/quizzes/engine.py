@@ -53,9 +53,6 @@ class OpenEndedStrategy(QuizGenerationStrategy):
             material_concepts=material_concepts
         )
 
-    def generate_evaluation_prompt(self, text: str, question: str, user_answer: str) -> str:
-        return EvaluationPromptBuilder.build(text, question, user_answer, quiz_type="open-ended")
-
 
 class ShortAnswerStrategy(QuizGenerationStrategy):
     """
@@ -72,5 +69,30 @@ class ShortAnswerStrategy(QuizGenerationStrategy):
             material_concepts=material_concepts
         )
 
+
+class EvaluationStrategy(ABC):
+    """
+    Classe base abstrata para estratégias de avaliação de respostas.
+    """
+    @abstractmethod
+    def generate_evaluation_prompt(self, text: str, question: str, user_answer: str) -> str:
+        pass
+
+
+class OpenEndedEvaluationStrategy(EvaluationStrategy):
+    def generate_evaluation_prompt(self, text: str, question: str, user_answer: str) -> str:
+        return EvaluationPromptBuilder.build(text, question, user_answer, quiz_type="open-ended")
+
+
+class ShortAnswerEvaluationStrategy(EvaluationStrategy):
     def generate_evaluation_prompt(self, text: str, question: str, user_answer: str) -> str:
         return EvaluationPromptBuilder.build(text, question, user_answer, quiz_type="short_answer")
+
+
+class MultipleChoiceEvaluationStrategy(EvaluationStrategy):
+    """
+    Placeholder caso venhamos a precisar de lógica de avaliação LLM para escolha múltipla.
+    Atualmente é feita por comparação direta no frontend/backend sem LLM.
+    """
+    def generate_evaluation_prompt(self, text: str, question: str, user_answer: str) -> str:
+        raise NotImplementedError("Multiple choice evaluation does not require LLM prompt generation yet.")

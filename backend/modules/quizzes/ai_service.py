@@ -43,8 +43,7 @@ class QuizAIService:
             return None
         return strategy.parse_response(content)
 
-    def evaluate_answer(self, text: str, question: str, user_answer: str, quiz_type: str = "open-ended") -> dict:
-        strategy = ShortAnswerStrategy() if quiz_type == "short_answer" else OpenEndedStrategy()
+    def evaluate_answer(self, strategy: Any, text: str, question: str, user_answer: str) -> dict:
         prompt = AnswerEvaluator.generate_prompt(strategy, text, question, user_answer)
 
         content = self.caller.call(

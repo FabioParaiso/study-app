@@ -1,6 +1,6 @@
 import pytest
 from repositories.student_repository import StudentAuthRepository
-from services.auth_service import AuthService, AuthServiceError
+from modules.auth.service import AuthService, AuthServiceError
 
 
 class TestAuthService:

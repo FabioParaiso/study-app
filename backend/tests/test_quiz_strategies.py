@@ -91,7 +91,9 @@ class TestQuizStrategies:
 
     def test_evaluation_prompt_generation(self, strategies):
         """Test evaluation prompt generation for open ended."""
-        strat = strategies["open"]
+        # Now using dedicated evaluation strategy
+        from modules.quizzes.engine import OpenEndedEvaluationStrategy
+        strat = OpenEndedEvaluationStrategy()
         prompt = strat.generate_evaluation_prompt("Context", "Question?", "Answer")
         
         assert "Context" in prompt
@@ -99,3 +101,9 @@ class TestQuizStrategies:
         assert "Answer" in prompt
         assert "missing_points" in prompt
         assert "model_answer" in prompt
+    
+    def test_short_answer_evaluation_prompt(self):
+        from modules.quizzes.engine import ShortAnswerEvaluationStrategy
+        strat = ShortAnswerEvaluationStrategy()
+        prompt = strat.generate_evaluation_prompt("Context", "Question?", "Answer")
+        assert "Short Answer" in prompt

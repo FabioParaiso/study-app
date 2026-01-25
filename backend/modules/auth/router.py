@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from schemas.student import StudentCreate, StudentLogin
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from services.auth_service import AuthService, AuthServiceError
+from modules.auth.service import AuthService, AuthServiceError
 from modules.auth.ports import AuthServicePort, StudentAuthRepositoryPort
 from modules.common.ports import TokenServicePort
 from dependencies import get_student_auth_repo, get_token_service

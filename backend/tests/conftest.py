@@ -69,10 +69,10 @@ def client():
     import sys
     import main
     from importlib import reload
-    import routers.auth
+    import modules.auth.router
     
     # Force reload main and routers where limiter is used
-    reload(routers.auth)
+    reload(modules.auth.router)
     reload(main)
     
     yield TestClient(main.app)

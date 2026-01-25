@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from schemas.gamification import XPUpdate, AvatarUpdate, HighScoreUpdate
 from dependencies import get_current_user, get_student_gamification_repo
 from models import Student
-from services.gamification_service import GamificationService, GamificationServiceError
+from modules.gamification.service import GamificationService, GamificationServiceError
 from modules.gamification.ports import GamificationServicePort, StudentGamificationRepositoryPort
 
 router = APIRouter()
