@@ -6,7 +6,8 @@ from repositories.student_repository import (
     StudentGamificationRepository,
     StudentLookupRepository,
 )
-from services.ports import StudentLookupRepositoryPort, TokenServicePort
+from modules.auth.ports import StudentLookupRepositoryPort
+from modules.common.ports import TokenServicePort
 from services.token_service import TokenService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

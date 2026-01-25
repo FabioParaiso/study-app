@@ -2,7 +2,7 @@ import json
 from modules.materials.topic_extractor import TopicExtractor
 from services.openai_client import OpenAIClientAdapter
 from services.openai_caller import OpenAICaller
-from services.ports import OpenAIClientPort
+from modules.common.ports import OpenAIClientPort
 
 
 class TopicAIService:

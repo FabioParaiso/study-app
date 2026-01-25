@@ -1,5 +1,5 @@
 import random
-from services.ports import AnalyticsServicePort
+from modules.analytics.ports import AnalyticsServicePort
 from modules.quizzes.engine import MultipleChoiceStrategy, OpenEndedStrategy, ShortAnswerStrategy
 
 

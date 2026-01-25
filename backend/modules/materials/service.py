@@ -1,6 +1,6 @@
 import asyncio
 from modules.materials.mapper import MaterialMapper
-from services.ports import (
+from modules.materials.ports import (
     DocumentServicePort,
     MaterialDeletionPolicyPort,
     MaterialReaderRepositoryPort,

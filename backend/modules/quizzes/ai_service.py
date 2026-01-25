@@ -3,7 +3,7 @@ from modules.quizzes.engine import QuizGenerationStrategy, ShortAnswerStrategy, 
 from modules.quizzes.answer_evaluator import AnswerEvaluator
 from services.openai_client import OpenAIClientAdapter
 from services.openai_caller import OpenAICaller
-from services.ports import OpenAIClientPort
+from modules.common.ports import OpenAIClientPort
 
 
 class QuizAIService:

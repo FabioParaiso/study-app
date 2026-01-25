@@ -1,4 +1,4 @@
-from services.ports import MaterialConceptIdRepositoryPort
+from modules.materials.ports import MaterialConceptIdRepositoryPort
 
 
 class ConceptIdResolver:

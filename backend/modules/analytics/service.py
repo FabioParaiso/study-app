@@ -1,5 +1,6 @@
 from modules.analytics.calculator import AnalyticsCalculator
-from services.ports import AnalyticsRepositoryPort, MaterialConceptPairsRepositoryPort
+from modules.analytics.ports import AnalyticsRepositoryPort
+from modules.materials.ports import MaterialConceptPairsRepositoryPort
 
 class AnalyticsService:
     def __init__(self, analytics_repo: AnalyticsRepositoryPort, material_repo: MaterialConceptPairsRepositoryPort):

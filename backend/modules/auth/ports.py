@@ -1,0 +1,23 @@
+from typing import Protocol, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    pass
+
+
+class StudentAuthRepositoryPort(Protocol):
+    def create_student(self, name: str, hashed_password: str) -> Any: ...
+    def get_by_name(self, name: str) -> Any: ...
+
+
+class StudentLookupRepositoryPort(Protocol):
+    def get_student(self, student_id: int) -> Any: ...
+
+
+class StudentXpRepositoryPort(Protocol):
+    def get_student(self, student_id: int) -> Any: ...
+    def update_xp(self, student_id: int, amount: int) -> Any: ...
+
+
+class AuthServicePort(Protocol):
+    def register(self, name: str, password: str) -> Any: ...
+    def login(self, name: str, password: str) -> Any: ...

@@ -6,7 +6,7 @@ def test_submit_quiz_and_get_analytics(client):
     """Integration test: Submit quiz → Get analytics with weak points."""
     
     # 1. Setup: Register user, upload material
-    register_response = client.post("/register", json={"name": "AnalyticsUser", "password": "StrongPass1!"})
+    register_response = client.post("/register", json={"name": "AnalyticsUserInt", "password": "StrongPass1!"})
     token = register_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -73,7 +73,7 @@ def test_adaptive_topics_from_analytics(client):
     """Integration test: Submit multiple quizzes → Get adaptive boost/mastered topics."""
     
     # Setup
-    register_response = client.post("/register", json={"name": "AdaptiveUser", "password": "StrongPass1!"})
+    register_response = client.post("/register", json={"name": "AdaptiveUserInt", "password": "StrongPass1!"})
     token = register_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -133,7 +133,7 @@ def test_adaptive_topics_from_analytics(client):
 def test_quiz_result_without_material_id_uses_active(client):
     """Integration test: Submit quiz without material_id should use active material."""
     
-    register_response = client.post("/register", json={"name": "DefaultMatUser", "password": "StrongPass1!"})
+    register_response = client.post("/register", json={"name": "DefaultMatUserInt", "password": "StrongPass1!"})
     token = register_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     

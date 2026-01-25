@@ -1,4 +1,4 @@
-from services.ports import TopicAIServicePort
+from modules.materials.ports import TopicAIServicePort
 
 class TopicService:
     def extract_topics(self, text: str, ai_service: TopicAIServicePort) -> dict[str, list[str]]:

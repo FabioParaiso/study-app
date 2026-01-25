@@ -16,7 +16,7 @@ from modules.quizzes.policies import AdaptiveTopicSelector, QuizStrategyFactory
 from modules.quizzes.recorder import QuizResultRecorder
 from modules.quizzes.repository import QuizResultWriterRepository
 from modules.quizzes.service import QuizService
-from services.ports import QuizResultWriterPort
+from modules.quizzes.ports import QuizResultWriterPort
 
 
 def get_material_read_repo(db: Session = Depends(get_db)):

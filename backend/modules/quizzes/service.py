@@ -6,12 +6,11 @@ from modules.quizzes.policies import (
     QuestionPostProcessor,
     QuizPolicyError,
 )
-from services.ports import (
-    MaterialLoaderPort,
+from modules.materials.ports import MaterialLoaderPort, TopicSelectorPort
+from modules.quizzes.ports import (
     QuizAIServicePort,
     QuizResultRecorderPort,
     QuizStrategyFactoryPort,
-    TopicSelectorPort,
 )
 
 

@@ -12,13 +12,13 @@ class QuizRequest(BaseModel):
     @field_validator('topics')
     @classmethod
     def validate_topics(cls, v):
-        # We might not even need this validation if topics are extracted by AI on the backend
-        # But if the frontend sends topics (e.g. edit mode), we should validate structure.
-        # However, for now, the `topics` field in QuizRequest is likely used for filtering?
-        # Let's check usage. 
-        # Actually, QuizRequest.topics seems to be used for GENERATION hints or filtering.
-        # If we are changing to concepts, we might need 'concept_ids' or similar.
-        # For now, let's keep it as string list for backward compatibility or simple filtering.
+        for topic in v:
+            if len(topic) > 100:
+                raise ValueError("Topic too long (max 100 chars)")
+            if re.search(r"[\n\r]", topic):
+                raise ValueError("Topic contains control characters") 
+            if re.search(r"[{}]", topic):
+                raise ValueError("Topic contains special brackets")
         return v
 
 

@@ -1,4 +1,6 @@
-from services.ports import MaterialDeletionRepositoryPort, QuizResultCleanupPort, StudentXpRepositoryPort
+from modules.materials.ports import MaterialDeletionRepositoryPort
+from modules.quizzes.ports import QuizResultCleanupPort
+from modules.auth.ports import StudentXpRepositoryPort
 
 
 class MaterialDeletionPolicy:

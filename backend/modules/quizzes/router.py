@@ -4,7 +4,7 @@ from modules.quizzes.service import QuizServiceError
 from schemas.study import QuizRequest, EvaluationRequest, QuizResultCreate
 from dependencies import get_current_user
 from models import Student
-from services.ports import QuizAIServicePort, QuizServicePort
+from modules.quizzes.ports import QuizAIServicePort, QuizServicePort
 
 router = APIRouter()
 

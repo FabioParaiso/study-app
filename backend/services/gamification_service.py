@@ -1,4 +1,4 @@
-from services.ports import StudentGamificationRepositoryPort
+from modules.gamification.ports import StudentGamificationRepositoryPort
 
 
 class GamificationServiceError(Exception):

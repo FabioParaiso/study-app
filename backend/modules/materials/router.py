@@ -4,7 +4,7 @@ from modules.materials.service import MaterialServiceError
 from schemas.study import AnalyzeRequest
 from dependencies import get_current_user
 from models import Student
-from services.ports import MaterialServicePort, TopicAIServicePort
+from modules.materials.ports import MaterialServicePort, TopicAIServicePort
 
 router = APIRouter()
 

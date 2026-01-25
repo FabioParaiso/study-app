@@ -15,7 +15,8 @@ from modules.materials.service import MaterialService
 from modules.materials.topic_service import TopicService
 from modules.quizzes.repository import QuizResultCleanupRepository
 from repositories.student_repository import StudentXpRepository
-from services.ports import QuizResultCleanupPort, StudentXpRepositoryPort
+from modules.quizzes.ports import QuizResultCleanupPort
+from modules.auth.ports import StudentXpRepositoryPort
 
 
 def get_material_read_repo(db: Session = Depends(get_db)):

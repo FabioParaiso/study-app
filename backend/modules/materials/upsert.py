@@ -1,6 +1,6 @@
 from datetime import datetime
 from models import StudyMaterial, Topic, Concept
-from services.ports import MaterialUpsertRepositoryPort
+from modules.materials.ports import MaterialUpsertRepositoryPort
 
 
 class MaterialUpserter:

@@ -1,4 +1,4 @@
-from services.ports import MaterialStatsRepositoryPort
+from modules.materials.ports import MaterialStatsRepositoryPort
 
 
 class MaterialStatsUpdater:

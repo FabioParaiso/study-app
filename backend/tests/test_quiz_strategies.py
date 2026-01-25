@@ -1,7 +1,9 @@
 import pytest
 import json
-from modules.quizzes import engine as quiz_engine
+from modules.quizzes.prompts.builders import PromptBuilder, EvaluationPromptBuilder
 from modules.quizzes.engine import MultipleChoiceStrategy, OpenEndedStrategy, ShortAnswerStrategy
+
+NUM_QUESTIONS_MULTIPLE = 10
 
 class TestQuizStrategies:
     
@@ -15,21 +17,21 @@ class TestQuizStrategies:
 
     def test_topic_instruction_empty(self, strategies):
         """Test strict logic: empty topics return empty instruction."""
-        instr = quiz_engine._build_topic_instruction([], ["Alpha"])
+        instr = PromptBuilder._build_topic_instruction([], ["Alpha"])
         assert "GLOBAL - MODO REVISÃO" in instr
 
     def test_topic_instruction_valid(self, strategies):
         """Test strict logic: valid topics generate instruction."""
-        instr = quiz_engine._build_topic_instruction(["Photosynthesis"], ["Cells"])
+        instr = PromptBuilder._build_topic_instruction(["Photosynthesis"], ["Cells"])
         assert "Photosynthesis" in instr
         assert "ESCOPO DE CONTEÚDO (FILTRADO)" in instr
 
     def test_priority_instruction(self, strategies):
         """Test priority topics instruction generation."""
         # Empty
-        assert quiz_engine._build_priority_instruction([]) == ""
+        assert PromptBuilder._build_priority_instruction([]) == ""
         # Valid
-        instr = quiz_engine._build_priority_instruction(["Math"])
+        instr = PromptBuilder._build_priority_instruction(["Math"])
         assert "DIFICULDADE" in instr
         assert "Math" in instr
 

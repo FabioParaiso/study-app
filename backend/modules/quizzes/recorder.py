@@ -1,6 +1,6 @@
 from modules.materials.stats import MaterialStatsUpdater
 from modules.quizzes.concept_resolver import ConceptIdResolver
-from services.ports import QuizResultWriterPort
+from modules.quizzes.ports import QuizResultWriterPort
 
 
 class QuizRecordError(Exception):

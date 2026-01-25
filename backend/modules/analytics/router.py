@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from modules.analytics.deps import get_analytics_service
 from dependencies import get_current_user
 from models import Student
-from services.ports import AnalyticsServicePort
+from modules.analytics.ports import AnalyticsServicePort
 
 router = APIRouter()
 

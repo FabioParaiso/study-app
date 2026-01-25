@@ -9,11 +9,11 @@ def test_student_lifecycle(client):
     
     # 1. Login (Create) -> Now /register
     # Note: /register returns {access_token, user: {...}}
-    response = client.post("/register", json={"name": "TestUser", "password": "StrongPass1!"})
+    response = client.post("/register", json={"name": "TestUserNew", "password": "StrongPass1!"})
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
-    assert data["user"]["name"] == "TestUser"
+    assert data["user"]["name"] == "TestUserNew"
     assert "id" in data["user"]
     student_id = data["user"]["id"]
     token = data["access_token"]
@@ -26,6 +26,6 @@ def test_student_lifecycle(client):
     assert response.json()["has_material"] is False
     
     # 3. Login again (Retrieve same user)
-    response = client.post("/login", json={"name": "TestUser", "password": "StrongPass1!"})
+    response = client.post("/login", json={"name": "TestUserNew", "password": "StrongPass1!"})
     assert response.status_code == 200
     assert response.json()["user"]["id"] == student_id

@@ -1,5 +1,5 @@
 from openai import OpenAI
-from services.ports import OpenAIClientPort
+from modules.common.ports import OpenAIClientPort
 
 
 class OpenAIClientAdapter(OpenAIClientPort):
