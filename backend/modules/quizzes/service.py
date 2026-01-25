@@ -1,14 +1,13 @@
 from schemas.study import QuizRequest, EvaluationRequest, QuizResultCreate
 from modules.materials.mapper import MaterialMapper
-from modules.quizzes.recorder import QuizRecordError, QuizResultRecorder
+from modules.quizzes.recorder import QuizRecordError
 from modules.quizzes.policies import (
-    AdaptiveTopicSelector,
     ConceptWhitelistBuilder,
     QuestionPostProcessor,
     QuizPolicyError,
     QuizUnlockPolicy,
 )
-from services.ports import MaterialLoaderPort, QuizAIServicePort
+from services.ports import MaterialLoaderPort, QuizAIServicePort, QuizResultRecorderPort, TopicSelectorPort
 
 
 class QuizServiceError(Exception):
@@ -21,8 +20,8 @@ class QuizService:
     def __init__(
         self,
         material_repo: MaterialLoaderPort,
-        topic_selector: AdaptiveTopicSelector,
-        recorder: QuizResultRecorder
+        topic_selector: TopicSelectorPort,
+        recorder: QuizResultRecorderPort
     ):
         self.material_repo = material_repo
         self.topic_selector = topic_selector

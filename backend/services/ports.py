@@ -40,6 +40,40 @@ class MaterialConceptPairsRepositoryPort(Protocol):
     def get_concept_pairs_for_student(self, student_id: int) -> list[tuple[str, str]]: ...
 
 
+class DocumentServicePort(Protocol):
+    def extract_text(self, file_content: bytes, file_type: str) -> str: ...
+
+
+class MaterialUpserterPort(Protocol):
+    def upsert(self, student_id: int, text: str, source_name: str, topics: dict[str, list[str]] | None): ...
+
+
+class MaterialDeletionPolicyPort(Protocol):
+    def delete(self, user_id: int, material_id: int) -> bool: ...
+
+
+class TopicSelectorPort(Protocol):
+    def select(
+        self,
+        user_id: int,
+        material_id: int | None,
+        requested_topics: list[str] | None
+    ) -> tuple[list[str], list[str]]: ...
+
+
+class QuizResultRecorderPort(Protocol):
+    def record(
+        self,
+        user_id: int,
+        score: int,
+        total_questions: int,
+        quiz_type: str,
+        analytics_data: list[dict],
+        material_id: int | None,
+        xp_earned: int
+    ) -> None: ...
+
+
 class QuizResultWriterPort(Protocol):
     def save_quiz_result(self, student_id: int, score: int, total: int, quiz_type: str, analytics_data: list[dict], material_id: int | None = None) -> bool: ...
 
@@ -77,6 +111,15 @@ class QuizAIServicePort(Protocol):
 class TopicAIServicePort(Protocol):
     client: object | None
     def extract_topics(self, text: str) -> dict[str, list[str]]: ...
+
+
+class TopicServicePort(Protocol):
+    def extract_topics(self, text: str, ai_service: "TopicAIServicePort") -> dict[str, list[str]]: ...
+
+
+class TokenServicePort(Protocol):
+    def create_access_token(self, data: dict) -> str: ...
+    def decode_access_token(self, token: str) -> dict | None: ...
 
 
 class AnalyticsRepositoryPort(Protocol):

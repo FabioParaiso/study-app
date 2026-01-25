@@ -1,10 +1,13 @@
 import asyncio
-from modules.materials.document_service import DocumentService
-from modules.materials.deletion import MaterialDeletionPolicy
 from modules.materials.mapper import MaterialMapper
-from modules.materials.topic_service import TopicService
-from modules.materials.upsert import MaterialUpserter
-from services.ports import MaterialReaderRepositoryPort, TopicAIServicePort
+from services.ports import (
+    DocumentServicePort,
+    MaterialDeletionPolicyPort,
+    MaterialReaderRepositoryPort,
+    MaterialUpserterPort,
+    TopicAIServicePort,
+    TopicServicePort,
+)
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
 
@@ -19,10 +22,10 @@ class MaterialService:
     def __init__(
         self,
         repo: MaterialReaderRepositoryPort,
-        doc_service: DocumentService,
-        topic_service: TopicService,
-        upserter: MaterialUpserter,
-        deletion_policy: MaterialDeletionPolicy
+        doc_service: DocumentServicePort,
+        topic_service: TopicServicePort,
+        upserter: MaterialUpserterPort,
+        deletion_policy: MaterialDeletionPolicyPort
     ):
         self.repo = repo
         self.doc_service = doc_service
