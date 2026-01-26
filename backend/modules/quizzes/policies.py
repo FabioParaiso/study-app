@@ -91,8 +91,13 @@ class ConceptWhitelistBuilder:
                 return concepts_subset
 
             material_concepts: list[str] = []
+            seen: set[str] = set()
             for t_concepts in material_topics_data.values():
-                material_concepts.extend(t_concepts)
+                for concept in t_concepts:
+                    norm = concept.lower()
+                    if norm not in seen:
+                        seen.add(norm)
+                        material_concepts.append(concept)
             return material_concepts
 
         return material_topics_data or []
