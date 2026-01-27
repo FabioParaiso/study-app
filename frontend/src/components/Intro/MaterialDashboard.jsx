@@ -25,7 +25,12 @@ const MaterialDashboard = ({
                         <p className="text-xs uppercase font-bold text-duo-green tracking-wider">Matéria Atual</p>
                     </div>
                 </div>
-                <button onClick={clearMaterial} className="text-gray-400 hover:text-duo-red-dark transition-colors">
+                <button
+                    onClick={clearMaterial}
+                    className="text-gray-400 hover:text-duo-red-dark transition-colors"
+                    aria-label="Remover matéria"
+                    title="Remover matéria"
+                >
                     <XCircle size={28} />
                 </button>
             </div>
