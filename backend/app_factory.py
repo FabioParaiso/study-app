@@ -28,9 +28,13 @@ def configure_middlewares(app: FastAPI) -> None:
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         return response
 
+    # Parse allowed origins from environment variable
+    allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:8000")
+    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
