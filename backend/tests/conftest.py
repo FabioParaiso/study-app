@@ -9,6 +9,7 @@ from pathlib import Path
 
 # Set TEST_MODE to disable rate limiting
 os.environ["TEST_MODE"] = "true"
+os.environ["SECRET_KEY"] = "test_super_secret_key"
 
 # Fix path to import backend modules
 sys.path.append(str(Path(__file__).parent.parent))
