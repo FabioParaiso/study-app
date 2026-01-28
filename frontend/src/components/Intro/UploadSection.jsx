@@ -1,8 +1,9 @@
 import React from 'react';
 import { Upload, RefreshCw } from 'lucide-react';
 import LoadingTips from '../UI/LoadingTips';
+import DuoButton from '../UI/DuoButton';
 
-const UploadSection = ({ file, handleFileChange, analyzeFile, isAnalyzing, DuoButton }) => {
+const UploadSection = ({ file, handleFileChange, analyzeFile, isAnalyzing }) => {
     return (
         <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 text-center">
             <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center text-gray-400">
