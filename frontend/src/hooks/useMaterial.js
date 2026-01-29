@@ -40,7 +40,7 @@ export const useMaterial = (studentId) => {
 
     const handleFileChange = (e) => setFile(e.target.files[0]);
 
-    const analyzeFile = async () => {
+    const analyzeFile = useCallback(async () => {
         if (!file || !studentId) return;
         setIsAnalyzing(true);
         setErrorMsg('');
@@ -54,9 +54,9 @@ export const useMaterial = (studentId) => {
         } finally {
             setIsAnalyzing(false);
         }
-    };
+    }, [file, studentId, checkSavedMaterial]);
 
-    const detectTopics = async () => {
+    const detectTopics = useCallback(async () => {
         if (!studentId) return;
         setIsAnalyzing(true);
         setErrorMsg('');
@@ -75,9 +75,9 @@ export const useMaterial = (studentId) => {
         } finally {
             setIsAnalyzing(false);
         }
-    };
+    }, [studentId, checkSavedMaterial]);
 
-    const clearMaterial = async () => {
+    const clearMaterial = useCallback(async () => {
         if (!studentId) return;
         try {
             await studyService.clearMaterial();
@@ -86,9 +86,9 @@ export const useMaterial = (studentId) => {
         } catch (err) {
             console.error(err);
         }
-    };
+    }, [studentId]);
 
-    const activateMaterial = async (materialId) => {
+    const activateMaterial = useCallback(async (materialId) => {
         if (!studentId) return;
         try {
             await studyService.activateMaterial(materialId);
@@ -96,9 +96,9 @@ export const useMaterial = (studentId) => {
         } catch (err) {
             console.error("Failed to activate material", err);
         }
-    };
+    }, [studentId, checkSavedMaterial]);
 
-    const deleteMaterial = async (materialId) => {
+    const deleteMaterial = useCallback(async (materialId) => {
         if (!studentId) return;
         try {
             await studyService.deleteMaterial(materialId);
@@ -109,7 +109,7 @@ export const useMaterial = (studentId) => {
             console.error("Failed to delete material", err);
             setErrorMsg("Falha ao apagar material.");
         }
-    };
+    }, [studentId, checkSavedMaterial]);
 
     // Auto-check on mount or studentId change
     useEffect(() => {
