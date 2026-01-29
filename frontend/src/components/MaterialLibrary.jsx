@@ -28,7 +28,17 @@ const MaterialLibrary = ({ materials, onActivate, onDelete, currentId }) => {
                                 }
                             `}
                         >
-                            <div className="flex-1 min-w-0 mr-3">
+                            <div
+                                className="flex-1 min-w-0 mr-3 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (!isActive && (e.key === 'Enter' || e.key === ' ')) {
+                                        e.preventDefault();
+                                        onActivate(m.id);
+                                    }
+                                }}
+                            >
                                 <div className={`font-bold truncate ${isActive ? 'text-blue-600' : 'text-gray-700 group-hover:text-blue-500'}`}>
                                     {m.source}
                                 </div>
@@ -53,8 +63,9 @@ const MaterialLibrary = ({ materials, onActivate, onDelete, currentId }) => {
                                         e.stopPropagation();
                                         setDeleteId(m.id);
                                     }}
-                                    className={`p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-10 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                    className={`p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-10 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`}
                                     title="Remover ficheiro"
+                                    aria-label={`Remover ${m.source}`}
                                 >
                                     <Trash2 size={18} />
                                 </button>
