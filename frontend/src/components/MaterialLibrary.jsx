@@ -99,4 +99,4 @@ const MaterialLibrary = ({ materials, onActivate, onDelete, currentId }) => {
     );
 };
 
-export default MaterialLibrary;
+export default React.memo(MaterialLibrary);
