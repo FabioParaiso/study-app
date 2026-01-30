@@ -14,21 +14,25 @@ const MaterialLibrary = ({ materials, onActivate, onDelete, currentId }) => {
                 Biblioteca de Estudo
             </h3>
 
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+            <ul className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar list-none">
                 {materials.map((m) => {
                     const isActive = m.id === currentId;
                     return (
-                        <div
+                        <li
                             key={m.id}
-                            onClick={() => !isActive && onActivate(m.id)}
-                            className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-center justify-between group relative
+                            className={`w-full p-3 rounded-xl border-2 transition-all flex items-center justify-between group relative
                                 ${isActive
-                                    ? 'bg-blue-50 border-blue-200 cursor-default'
-                                    : 'bg-white border-gray-100 hover:border-blue-300 hover:shadow-sm cursor-pointer'
+                                    ? 'bg-blue-50 border-blue-200'
+                                    : 'bg-white border-gray-100 hover:border-blue-300 hover:shadow-sm'
                                 }
                             `}
                         >
-                            <div className="flex-1 min-w-0 mr-3">
+                            <button
+                                onClick={() => !isActive && onActivate(m.id)}
+                                className={`flex-1 min-w-0 mr-3 text-left focus:outline-none focus:underline ${!isActive ? 'cursor-pointer' : 'cursor-default'}`}
+                                aria-label={`${isActive ? 'Material atual:' : 'Selecionar'} ${m.source}`}
+                                aria-current={isActive ? 'true' : undefined}
+                            >
                                 <div className={`font-bold truncate ${isActive ? 'text-blue-600' : 'text-gray-700 group-hover:text-blue-500'}`}>
                                     {m.source}
                                 </div>
@@ -38,7 +42,7 @@ const MaterialLibrary = ({ materials, onActivate, onDelete, currentId }) => {
                                     <span className="mx-1">•</span>
                                     <span>{m.total_xp || 0} XP</span>
                                 </div>
-                            </div>
+                            </button>
 
                             <div className="flex items-center gap-2">
                                 {/* Activate Check */}
@@ -53,16 +57,17 @@ const MaterialLibrary = ({ materials, onActivate, onDelete, currentId }) => {
                                         e.stopPropagation();
                                         setDeleteId(m.id);
                                     }}
-                                    className={`p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-10 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                    className={`p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-10 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-400 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                                     title="Remover ficheiro"
+                                    aria-label={`Remover ${m.source}`}
                                 >
                                     <Trash2 size={18} />
                                 </button>
                             </div>
-                        </div>
+                        </li>
                     );
                 })}
-            </div>
+            </ul>
 
             <Modal
                 isOpen={!!deleteId}
