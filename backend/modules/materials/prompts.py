@@ -11,7 +11,7 @@ def get_topic_extraction_prompt(text: str, existing_topics: list[str] = None) ->
 
         REGRAS OBRIGATÓRIAS:
         - Lê o texto como um todo; NÃO assumes que é um excerto.
-        - Output estritamente no formato JSON pedido.
+        - Saída estritamente no formato JSON pedido.
         - PT-PT; termos técnicos apenas se existirem no texto.
         
         REGRAS DE NOMEAÇÃO (CONCEITOS):

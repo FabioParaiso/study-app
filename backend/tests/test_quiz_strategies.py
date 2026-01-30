@@ -106,4 +106,4 @@ class TestQuizStrategies:
         from modules.quizzes.engine import ShortAnswerEvaluationStrategy
         strat = ShortAnswerEvaluationStrategy()
         prompt = strat.generate_evaluation_prompt("Context", "Question?", "Answer")
-        assert "Short Answer" in prompt
+        assert "Resposta Curta" in prompt

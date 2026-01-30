@@ -15,6 +15,7 @@ const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, ha
 
                 <QuestionHeader
                     topic={question.topic}
+                    concept={question.concepts?.[0]}
                     question={question.question}
                     onSpeak={handleSpeak}
                     isSpeaking={speakingPart === 'question'}

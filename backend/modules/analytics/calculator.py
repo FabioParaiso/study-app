@@ -111,6 +111,10 @@ class AnalyticsCalculator:
             effective_short = AnalyticsCalculator._calculate_effective_score(short_items, WINDOW_SIZE)
             effective_bloom = AnalyticsCalculator._calculate_effective_score(bloom_items, WINDOW_SIZE)
 
+            count_mcq = len(mcq_items)
+            count_short = len(short_items)
+            count_bloom = len(bloom_items)
+
             # Map to Percentage (0-100)
             final_percentage = round(effective_overall * 100)
 
@@ -138,6 +142,9 @@ class AnalyticsCalculator:
                 "effective_mcq": round(effective_mcq * 100),
                 "effective_short": round(effective_short * 100),
                 "effective_bloom": round(effective_bloom * 100),
+                "total_questions_mcq": count_mcq,
+                "total_questions_short": count_short,
+                "total_questions_bloom": count_bloom,
                 "total_questions": count,
                 "mastery_raw": round(mastery_raw * 100),
                 "status": status

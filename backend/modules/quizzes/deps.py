@@ -52,7 +52,7 @@ def get_generate_quiz_use_case(
     analytics_service = AnalyticsService(analytics_repo, concept_repo)
     topic_selector = AdaptiveTopicSelector(analytics_service)
     strategy_factory = QuizStrategyFactory(build_default_quiz_registry())
-    return GenerateQuizUseCase(material_repo, topic_selector, strategy_factory)
+    return GenerateQuizUseCase(material_repo, topic_selector, strategy_factory, analytics_service)
 
 
 def get_evaluate_answer_use_case(

@@ -222,7 +222,7 @@ const LandingPage = ({ onStart }) => {
                                 Sabemos que a batalha contra o telemóvel é difícil. O Super Study usa a mesma psicologia viciante dos videojogos para criar hábitos de estudo consistentes.
                             </p>
                             <p className="text-gray-600 text-lg leading-relaxed">
-                                O seu filho estuda autonomamente, e você ganha a paz de espírito de saber que ele está a aprender de verdade.
+                                O seu filho estuda autonomamente, e ganha a paz de espírito de saber que ele está a aprender de verdade.
                             </p>
                             <button
                                 onClick={onStart}

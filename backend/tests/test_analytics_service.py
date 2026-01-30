@@ -47,6 +47,9 @@ class TestAnalyticsService:
                 "topic": "Biology",
                 "concept": "Cell",
                 "success_rate": 50,
+                "total_questions_mcq": 2,
+                "total_questions_short": 0,
+                "total_questions_bloom": 0,
                 "total_questions": 2,
                 "mastery_raw": 50,
                 "status": "Em aprendizagem",
@@ -267,3 +270,25 @@ class TestAnalyticsService:
         
         # Bloom (1 item): Conf=0.1. Eff = 0.0*0.1 + 0.5*0.9 = 0.0 + 0.45 = 0.45 -> 45%
         assert stat["effective_bloom"] == 45
+
+    def test_build_mcq_quiz_concepts_prioritizes_worst_weak(self, service):
+        """Test MCQ concept list fills quotas and prioritizes weaker concepts."""
+        service.get_weak_points = Mock(return_value=[
+            {"concept": "Unseen", "effective_mcq": 0, "total_questions_mcq": 0},
+            {"concept": "Weak5", "effective_mcq": 5, "total_questions_mcq": 10},
+            {"concept": "Weak20", "effective_mcq": 20, "total_questions_mcq": 10},
+            {"concept": "Strong", "effective_mcq": 90, "total_questions_mcq": 10},
+        ])
+
+        result = service.build_mcq_quiz_concepts(
+            student_id=1,
+            material_id=2,
+            allowed_concepts={"Unseen", "Weak5", "Weak20", "Strong"},
+            total_questions=10
+        )
+
+        assert len(result) == 10
+        assert result.count("Unseen") == 5
+        assert result.count("Strong") == 1
+        assert result.count("Weak5") + result.count("Weak20") == 4
+        assert result.count("Weak5") > result.count("Weak20")

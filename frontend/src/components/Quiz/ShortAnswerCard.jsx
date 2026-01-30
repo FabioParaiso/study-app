@@ -43,6 +43,7 @@ const ShortAnswerCard = ({
 
                 <QuestionHeader
                     topic={question.topic}
+                    concept={question.concepts?.[0]}
                     question={question.question}
                     onSpeak={handleSpeak}
                     isSpeaking={speakingPart === 'question'}

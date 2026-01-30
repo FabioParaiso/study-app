@@ -11,6 +11,7 @@ import { Volume2, StopCircle } from 'lucide-react';
  */
 const QuestionHeader = ({
     topic,
+    concept,
     question,
     onSpeak,
     isSpeaking = false,
@@ -36,6 +37,11 @@ const QuestionHeader = ({
                     <span className="inline-block bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1 rounded-lg tracking-widest uppercase">
                         {topic}
                     </span>
+                    {concept && (
+                        <span className="inline-block bg-purple-100 text-purple-600 text-xs font-bold px-3 py-1 rounded-lg tracking-widest uppercase">
+                            {concept}
+                        </span>
+                    )}
                 </div>
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-700 leading-tight">
                     {question}

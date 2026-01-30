@@ -29,7 +29,7 @@ class QuizAIService:
 
         content = self.caller.call(
             prompt=prompt,
-            system_message="You are a JSON generator. Output only valid JSON.",
+            system_message="És um gerador de JSON. Devolve apenas JSON válido.",
             model=self.MODEL_QUIZ_GENERATION
         )
 
@@ -44,7 +44,7 @@ class QuizAIService:
 
         content = self.caller.call(
             prompt=prompt,
-            system_message="You are a teacher grading a test. Return JSON.",
+            system_message="És um professor a corrigir um teste. Devolve JSON.",
             model=self.MODEL_ANSWER_EVALUATION
         )
 

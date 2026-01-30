@@ -19,7 +19,7 @@ class TopicAIService:
 
         content_topics = self.caller.call(
             prompt=prompt_topics,
-            system_message="You are a JSON generator. Output only valid JSON.",
+            system_message="És um gerador de JSON. Devolve apenas JSON válido.",
             model=self.MODEL_TOPIC_EXTRACTION,
             temperature=0.0,
             seed=42,

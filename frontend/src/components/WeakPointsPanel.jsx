@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAnalytics } from '../hooks/useAnalytics';
-import { TrendingUp, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, BookOpen, Trophy, PenTool } from 'lucide-react';
+import { TrendingUp, ChevronDown, ChevronUp, BookOpen, Trophy, PenTool } from 'lucide-react';
 
 const WeakPointsPanel = ({ studentId, materialId }) => {
     const { points, loading } = useAnalytics(studentId, materialId);
@@ -69,19 +69,19 @@ const WeakPointsPanel = ({ studentId, materialId }) => {
 
                                                 <div className="flex items-center gap-2 text-xs font-bold shrink-0">
                                                     {/* MCQ Badge (Iniciante) */}
-                                                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-100" title="Iniciante">
+                                                    <div className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-100 w-20" title="Iniciante">
                                                         <Trophy size={13} strokeWidth={3} />
                                                         <span>{p.effective_mcq}%</span>
                                                     </div>
 
                                                     {/* Short Badge (Intermédio) */}
-                                                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-yellow-50 text-yellow-700 border border-yellow-100" title="Intermédio">
+                                                    <div className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-yellow-50 text-yellow-700 border border-yellow-100 w-20" title="Intermédio">
                                                         <BookOpen size={13} strokeWidth={3} />
                                                         <span>{p.effective_short}%</span>
                                                     </div>
 
                                                     {/* Bloom Badge (Avançado) */}
-                                                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-100" title="Avançado">
+                                                    <div className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-100 w-20" title="Avançado">
                                                         <PenTool size={13} strokeWidth={3} />
                                                         <span>{p.effective_bloom}%</span>
                                                     </div>
@@ -96,27 +96,7 @@ const WeakPointsPanel = ({ studentId, materialId }) => {
                 })}
             </div>
 
-            {points.some(p => p.success_rate < 70) ? (
-                <div className="mt-6 bg-red-50 border border-red-100 rounded-xl p-4 flex gap-3 text-sm text-red-800">
-                    <AlertTriangle className="shrink-0 mt-0.5 text-duo-red" size={18} />
-                    <div>
-                        <p className="font-bold">Alguns conceitos precisam de atenção!</p>
-                        <p className="text-red-600/80 mt-1 text-xs">
-                            O próximo quiz vai identificar estes pontos automaticamente.
-                        </p>
-                    </div>
-                </div>
-            ) : (
-                <div className="mt-6 bg-green-50 border border-green-100 rounded-xl p-4 flex gap-3 text-sm text-green-800">
-                    <CheckCircle className="shrink-0 mt-0.5 text-duo-green" size={18} />
-                    <div>
-                        <p className="font-bold">Domínio Total!</p>
-                        <p className="text-green-600/80 mt-1 text-xs">
-                            Continua o bom trabalho.
-                        </p>
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 };
