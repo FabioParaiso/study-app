@@ -20,6 +20,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                     <button
                         onClick={onClose}
                         className="p-2 rounded-full hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                        aria-label="Fechar"
                     >
                         <X size={20} />
                     </button>

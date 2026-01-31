@@ -21,7 +21,16 @@ const MaterialLibrary = ({ materials, onActivate, onDelete, currentId }) => {
                         <div
                             key={m.id}
                             onClick={() => !isActive && onActivate(m.id)}
-                            className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-center justify-between group relative
+                            role="button"
+                            tabIndex={0}
+                            aria-pressed={isActive}
+                            onKeyDown={(e) => {
+                                if ((e.key === 'Enter' || e.key === ' ') && !isActive) {
+                                    e.preventDefault();
+                                    onActivate(m.id);
+                                }
+                            }}
+                            className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-center justify-between group relative focus:outline-none focus:ring-2 focus:ring-blue-500
                                 ${isActive
                                     ? 'bg-blue-50 border-blue-200 cursor-default'
                                     : 'bg-white border-gray-100 hover:border-blue-300 hover:shadow-sm cursor-pointer'
@@ -53,8 +62,9 @@ const MaterialLibrary = ({ materials, onActivate, onDelete, currentId }) => {
                                         e.stopPropagation();
                                         setDeleteId(m.id);
                                     }}
-                                    className={`p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-10 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                    className={`p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-10 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`}
                                     title="Remover ficheiro"
+                                    aria-label={`Remover ${m.source}`}
                                 >
                                     <Trash2 size={18} />
                                 </button>
