@@ -8,15 +8,18 @@ const LoginPage = ({ onLogin, onBack }) => {
     const [name, setName] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [inviteCode, setInviteCode] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const registerEnabled = String(import.meta.env.VITE_REGISTER_ENABLED || "true").toLowerCase() !== "false";
 
     // Frontend validation
     const isFormValid = () => {
         if (name.trim().length < 2) return false;
 
         if (isRegistering) {
+            if (!registerEnabled) return false;
             // Backend Policy: 8+ chars, 1 upper, 1 lower, 1 digit, 1 special
             const hasUpper = /[A-Z]/.test(password);
             const hasLower = /[a-z]/.test(password);
@@ -26,6 +29,7 @@ const LoginPage = ({ onLogin, onBack }) => {
             if (password.length < 8) return false;
             if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) return false;
             if (password !== confirmPassword) return false;
+            if (inviteCode.trim().length === 0) return false;
         } else {
             // Login: Just needs to be filled
             if (password.length === 0) return false;
@@ -45,6 +49,10 @@ const LoginPage = ({ onLogin, onBack }) => {
         }
 
         if (isRegistering) {
+            if (!registerEnabled) {
+                setError("Registo desativado.");
+                return;
+            }
             const hasUpper = /[A-Z]/.test(password);
             const hasLower = /[a-z]/.test(password);
             const hasDigit = /\d/.test(password);
@@ -58,6 +66,10 @@ const LoginPage = ({ onLogin, onBack }) => {
                 setError("As credenciais não coincidem.");
                 return;
             }
+            if (inviteCode.trim().length === 0) {
+                setError("Codigo de convite obrigatorio.");
+                return;
+            }
         }
 
         setLoading(true);
@@ -65,13 +77,14 @@ const LoginPage = ({ onLogin, onBack }) => {
         try {
             let student;
             if (isRegistering) {
-                student = await authService.registerStudent(name, password);
+                student = await authService.registerStudent(name, password, inviteCode.trim());
             } else {
                 student = await authService.loginStudent(name, password);
             }
             // Clear password from state after successful login (security)
             setPassword("");
             setConfirmPassword("");
+            setInviteCode("");
             onLogin(student);
         } catch (err) {
             console.error(err);
@@ -120,7 +133,7 @@ const LoginPage = ({ onLogin, onBack }) => {
                     </h1>
                     <p className="text-gray-400 font-medium text-sm">
                         Plataforma de Operações de Estudo v2.0
-                    </p>
+                        </p>
                 </div>
 
                 {/* Main Card */}
@@ -207,6 +220,23 @@ const LoginPage = ({ onLogin, onBack }) => {
                             </div>
                         )}
 
+                        {/* Invite Code Input (Registration Only) */}
+                        {isRegistering && (
+                            <div className="relative group animate-slide-down">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-yellow-400 transition-colors">
+                                    <Key size={20} />
+                                </div>
+                                <input
+                                    type="text"
+                                    aria-label="Codigo de Convite"
+                                    value={inviteCode}
+                                    onChange={(e) => setInviteCode(e.target.value)}
+                                    placeholder="Codigo de Convite"
+                                    className="w-full pl-12 pr-4 py-4 bg-gray-900/50 border border-gray-700 rounded-xl outline-none font-bold text-white placeholder-gray-600 focus:border-yellow-400/50 focus:bg-gray-900 transition-all text-sm"
+                                />
+                            </div>
+                        )}
+
                         {/* Validation Hints (Cleaner) */}
                         {(() => {
                             const errors = [];
@@ -249,25 +279,28 @@ const LoginPage = ({ onLogin, onBack }) => {
                 </div>
 
                 {/* Toggle Mode */}
-                <div className="mt-8 text-center space-y-2">
-                    <p className="text-gray-500 text-xs">
-                        {isRegistering ? "Já tens credenciais?" : "Ainda não tens acesso?"}
-                    </p>
-                    <button
-                        onClick={() => {
-                            setIsRegistering(!isRegistering);
-                            setError("");
-                            setName("");
-                            setPassword("");
-                            setConfirmPassword("");
-                        }}
-                        className="text-white font-bold uppercase tracking-wider text-xs hover:text-yellow-400 hover:underline transition-all"
-                    >
-                        {isRegistering
-                            ? "LOGIN DE AGENTE"
-                            : "SOLICITAR ACESSO"}
-                    </button>
-                </div>
+                {registerEnabled && (
+                    <div className="mt-8 text-center space-y-2">
+                        <p className="text-gray-500 text-xs">
+                            {isRegistering ? "J? tens credenciais?" : "Ainda n?o tens acesso?"}
+                        </p>
+                        <button
+                            onClick={() => {
+                                setIsRegistering(!isRegistering);
+                                setError("");
+                                setName("");
+                                setPassword("");
+                                setConfirmPassword("");
+                                setInviteCode("");
+                            }}
+                            className="text-white font-bold uppercase tracking-wider text-xs hover:text-yellow-400 hover:underline transition-all"
+                        >
+                            {isRegistering
+                                ? "LOGIN DE AGENTE"
+                                : "SOLICITAR ACESSO"}
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Version */}

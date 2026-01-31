@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+import hmac
+import os
 from schemas.student import StudentCreate, StudentLogin
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from rate_limiter import limiter
 from modules.auth.service import AuthService, AuthServiceError
 from modules.auth.ports import AuthServicePort, StudentAuthRepositoryPort
 from modules.common.ports import TokenServicePort
 from dependencies import get_student_auth_repo, get_token_service
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 def get_auth_service(repo: StudentAuthRepositoryPort = Depends(get_student_auth_repo)):
     return AuthService(repo)
@@ -31,6 +31,14 @@ def register_student(
     auth_service: AuthServicePort = Depends(get_auth_service),
     token_service: TokenServicePort = Depends(get_token_service)
 ):
+    register_enabled = os.getenv("REGISTER_ENABLED", "true").strip().lower() not in {"0", "false", "no", "off"}
+    if not register_enabled:
+        raise HTTPException(status_code=403, detail="Registo desativado.")
+
+    invite_code = os.getenv("INVITE_CODE")
+    if invite_code:
+        if not student_data.invite_code or not hmac.compare_digest(student_data.invite_code, invite_code):
+            raise HTTPException(status_code=403, detail="Invite code invalido.")
     try:
         student = auth_service.register(student_data.name, student_data.password)
     except AuthServiceError as e:

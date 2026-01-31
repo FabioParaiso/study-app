@@ -8,8 +8,8 @@ export const authService = {
         }
         return res.data.user;
     },
-    registerStudent: async (name, password) => {
-        const res = await api.post('/register', { name, password });
+    registerStudent: async (name, password, inviteCode) => {
+        const res = await api.post('/register', { name, password, invite_code: inviteCode });
         if (res.data.access_token) {
             localStorage.setItem('study_token', res.data.access_token);
         }

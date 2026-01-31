@@ -1,4 +1,5 @@
 from schemas.study import QuizRequest, EvaluationRequest, QuizResultCreate
+from typing import Any
 from modules.materials.mapper import MaterialMapper
 from modules.quizzes.recorder import QuizRecordError
 from modules.quizzes.policies import (

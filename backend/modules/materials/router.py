@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Request
+import os
+from rate_limiter import limiter
 from modules.materials.deps import (
     get_ai_service,
     get_upload_material_use_case,
@@ -11,7 +13,7 @@ from modules.materials.deps import (
 )
 from modules.materials.errors import MaterialServiceError
 from schemas.study import AnalyzeRequest
-from dependencies import get_current_user
+from dependencies import get_current_user, enforce_ai_quota
 from models import Student
 from modules.materials.ports import (
     UploadMaterialUseCasePort,
@@ -25,6 +27,7 @@ from modules.materials.ports import (
 )
 
 router = APIRouter()
+AI_RATE_LIMIT = os.getenv("AI_RATE_LIMIT", "20/minute")
 
 # --- Endpoints ---
 @router.get("/current-material")
@@ -83,8 +86,11 @@ def activate_material(
     return {"status": "activated"}
 
 @router.post("/upload")
+@limiter.limit(AI_RATE_LIMIT)
 async def upload_file(
+    request: Request,
     current_user: Student = Depends(get_current_user),
+    _quota: None = Depends(enforce_ai_quota),
     file: UploadFile = File(...),
     use_case: UploadMaterialUseCasePort = Depends(get_upload_material_use_case),
     ai_service: TopicAIServicePort = Depends(get_ai_service)
@@ -105,9 +111,12 @@ async def upload_file(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post("/analyze-topics")
+@limiter.limit(AI_RATE_LIMIT)
 def analyze_topics_endpoint(
-    request: AnalyzeRequest,
+    request: Request,
+    payload: AnalyzeRequest,
     current_user: Student = Depends(get_current_user),
+    _quota: None = Depends(enforce_ai_quota),
     use_case: AnalyzeTopicsUseCasePort = Depends(get_analyze_topics_use_case),
     ai_service: TopicAIServicePort = Depends(get_ai_service)
 ):

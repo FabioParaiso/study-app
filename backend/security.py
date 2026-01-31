@@ -4,9 +4,16 @@ from jose import jwt, JWTError
 import os
 
 # Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key_change_me")
+DEFAULT_SECRET_KEY = "super_secret_key_change_me"
+SECRET_KEY = os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
+
+def ensure_secret_key() -> None:
+    if os.getenv("TEST_MODE") == "true":
+        return
+    if not os.getenv("SECRET_KEY") or SECRET_KEY == DEFAULT_SECRET_KEY:
+        raise RuntimeError("SECRET_KEY must be set to a strong value.")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     if not hashed_password:

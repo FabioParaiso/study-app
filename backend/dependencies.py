@@ -6,9 +6,11 @@ from repositories.student_repository import (
     StudentGamificationRepository,
     StudentLookupRepository,
 )
+from repositories.usage_repository import DailyUsageRepository
 from modules.auth.ports import StudentLookupRepositoryPort
 from modules.common.ports import TokenServicePort
 from services.token_service import TokenService
+from services.usage_service import UsageService, UsageLimitReached
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -27,6 +29,14 @@ def get_student_gamification_repo(db=Depends(get_db)):
 
 def get_token_service():
     return TokenService()
+
+
+def get_usage_repo(db=Depends(get_db)):
+    return DailyUsageRepository(db)
+
+
+def get_usage_service(repo=Depends(get_usage_repo)):
+    return UsageService(repo)
 
 
 def get_current_user(
@@ -53,3 +63,16 @@ def get_current_user(
         raise credentials_exception
         
     return student
+
+
+def enforce_ai_quota(
+    current_user=Depends(get_current_user),
+    usage_service: UsageService = Depends(get_usage_service),
+):
+    try:
+        usage_service.check_and_increment(current_user.id)
+    except UsageLimitReached as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Limite diario atingido ({exc.limit}/dia).",
+        )

@@ -4,6 +4,7 @@ import re
 class StudentCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=30, description="Nome do aluno")
     password: str = Field(..., description="Password (8+ chars, 1 upper, 1 lower, 1 digit, 1 special)")
+    invite_code: str | None = Field(default=None, min_length=1, max_length=64, description="Invite code (optional)")
 
     @field_validator('password')
     def validate_password(cls, v):

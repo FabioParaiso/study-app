@@ -70,6 +70,13 @@ pip install -r requirements.txt
 # Configurar Variáveis de Ambiente
 # Cria um ficheiro .env na pasta backend/ com:
 # OPENAI_API_KEY=sk-....
+# SECRET_KEY=uma-chave-forte
+# INVITE_CODE=um-codigo-secreto
+# REGISTER_ENABLED=true
+# DAILY_AI_CALL_LIMIT=50
+# AI_RATE_LIMIT=20/minute
+# ALLOWED_ORIGINS=http://localhost:5173
+# CORS_ALLOW_CREDENTIALS=false
 ```
 
 Para iniciar o servidor:
@@ -84,6 +91,11 @@ cd frontend
 
 # Instalar pacotes
 npm install
+
+# (Opcional) Configurar variaveis do frontend (frontend/.env):
+# VITE_API_URL=http://localhost:8000
+# VITE_REGISTER_ENABLED=false
+
 
 # Iniciar aplicação
 npm run dev
