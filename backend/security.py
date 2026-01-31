@@ -4,7 +4,11 @@ from jose import jwt, JWTError
 import os
 
 # Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key_change_me")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable is not set. Please set it in .env file.")
+if SECRET_KEY == "super_secret_key_change_me":
+    raise ValueError("Insecure SECRET_KEY detected. Do not use the default 'super_secret_key_change_me'.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 

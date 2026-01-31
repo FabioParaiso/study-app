@@ -9,6 +9,8 @@ from pathlib import Path
 
 # Set TEST_MODE to disable rate limiting
 os.environ["TEST_MODE"] = "true"
+# Set SECRET_KEY for tests to avoid using the insecure default (or failing if default is removed)
+os.environ["SECRET_KEY"] = "test-secret-key-fixed-for-tests"
 
 # Fix path to import backend modules
 sys.path.append(str(Path(__file__).parent.parent))

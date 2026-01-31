@@ -14,6 +14,7 @@ from modules.quizzes.ports import (
     QuizStrategyFactoryPort,
 )
 from modules.quizzes.errors import QuizServiceError
+from typing import Any
 
 
 class GenerateQuizUseCase:
