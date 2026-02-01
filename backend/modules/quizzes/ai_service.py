@@ -1,16 +1,19 @@
 import json
 from typing import Any
+from llm_models import get_llm_models
 from modules.common.ports import LLMCallerPort
 from modules.quizzes.engine import QuizGenerationStrategy
 from modules.quizzes.answer_evaluator import AnswerEvaluator
 
 
 class QuizAIService:
-    MODEL_QUIZ_GENERATION = "gpt-4o-mini"
-    MODEL_ANSWER_EVALUATION = "gpt-4o-mini"
 
     def __init__(self, caller: LLMCallerPort | None):
         self.caller = caller
+        models = get_llm_models()
+        self.model_quiz_generation = models.quiz_generation
+        self.model_answer_evaluation = models.answer_evaluation
+        self.reasoning_effort = models.reasoning_effort
 
     def is_available(self) -> bool:
         return bool(self.caller and self.caller.is_available())
@@ -30,7 +33,8 @@ class QuizAIService:
         content = self.caller.call(
             prompt=prompt,
             system_message="És um gerador de JSON. Devolve apenas JSON válido.",
-            model=self.MODEL_QUIZ_GENERATION
+            model=self.model_quiz_generation,
+            reasoning_effort=self.reasoning_effort
         )
 
         if content is None:
@@ -45,7 +49,8 @@ class QuizAIService:
         content = self.caller.call(
             prompt=prompt,
             system_message="És um professor a corrigir um teste. Devolve JSON.",
-            model=self.MODEL_ANSWER_EVALUATION
+            model=self.model_answer_evaluation,
+            reasoning_effort=self.reasoning_effort
         )
 
         if content is None:
