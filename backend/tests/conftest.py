@@ -17,6 +17,10 @@ from database import Base, get_db
 from main import app
 import models # Register tables for Base.metadata.create_all
 
+# Disable invite code for tests
+if "INVITE_CODE" in os.environ:
+    del os.environ["INVITE_CODE"]
+
 # Setup in-memory DB for ALL tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
@@ -71,9 +75,19 @@ def client():
     from importlib import reload
     import modules.auth.router
     
+    import rate_limiter
+    
     # Force reload main and routers where limiter is used
+    reload(rate_limiter)
     reload(modules.auth.router)
     reload(main)
+
+    # Re-apply DB override after reload
+    main.app.dependency_overrides[get_db] = override_get_db
+    
+    # Disable invite code again after reload(main) which runs load_dotenv()
+    if "INVITE_CODE" in os.environ:
+        del os.environ["INVITE_CODE"]
     
     yield TestClient(main.app)
     

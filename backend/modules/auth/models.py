@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Student(Base):
     __tablename__ = "students"
@@ -12,7 +12,7 @@ class Student(Base):
     current_avatar = Column(String, default='mascot')
     high_score = Column(Integer, default=0)
     hashed_password = Column(String, nullable=False) # Password is now mandatory
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     quiz_results = relationship("QuizResult", back_populates="student")
     materials = relationship("StudyMaterial", back_populates="student")

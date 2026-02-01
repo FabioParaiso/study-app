@@ -1,11 +1,28 @@
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useGamification } from './useGamification';
+import { studyService } from '../services/studyService';
+
+vi.mock('../services/studyService', () => ({
+    studyService: {
+        updateAvatar: vi.fn()
+    }
+}));
 
 // Mock auth context or service if needed
 // Assuming simple state logic for now based on file view earlier
 
 describe('useGamification Hook', () => {
+    let consoleError;
+
+    beforeEach(() => {
+        consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        consoleError.mockRestore();
+    });
+
     it('initializes with default values', () => {
         const { result } = renderHook(() => useGamification());
 
@@ -38,5 +55,28 @@ describe('useGamification Hook', () => {
         });
 
         expect(result.current.level.min).toBeGreaterThan(0);
+    });
+
+    it('syncs stats from props', () => {
+        const student = { id: 1, current_avatar: 'rocket' };
+        const stats = { total_xp: 300, high_score: 42 };
+        const { result } = renderHook(() => useGamification(student, stats));
+
+        expect(result.current.totalXP).toBe(300);
+        expect(result.current.highScore).toBe(42);
+        expect(result.current.selectedAvatar).toBe('rocket');
+    });
+
+    it('reverts avatar when update fails', async () => {
+        const student = { id: 1, current_avatar: 'mascot' };
+        const { result } = renderHook(() => useGamification(student, {}));
+
+        studyService.updateAvatar.mockRejectedValueOnce(new Error('fail'));
+
+        await act(async () => {
+            await result.current.changeAvatar('rocket');
+        });
+
+        expect(result.current.selectedAvatar).toBe('mascot');
     });
 });

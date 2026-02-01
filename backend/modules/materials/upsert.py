@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from models import StudyMaterial, Topic, Concept
 from modules.materials.ports import MaterialUpsertRepositoryPort
 
@@ -15,17 +15,19 @@ class MaterialUpserter:
         if material:
             material.text = text
             material.is_active = True
-            material.last_accessed = datetime.utcnow()
+            material.last_accessed = datetime.now(timezone.utc)
         else:
             material = StudyMaterial(
                 student_id=student_id,
                 text=text,
                 source=source_name,
                 is_active=True,
-                last_accessed=datetime.utcnow()
+                last_accessed=datetime.now(timezone.utc)
             )
 
+        print(f"DEBUG: MaterialUpserter.upsert topics={topics}")
         material.topics = self._build_topics(topics)
+        print(f"DEBUG: MaterialUpserter built topics count={len(material.topics)}")
         return self.repo.save_material(material)
 
     @staticmethod

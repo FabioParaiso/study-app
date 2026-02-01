@@ -121,7 +121,10 @@ class SaveQuizResultUseCase:
             current = self.material_repo.load(user_id)
             material_id = current.id if current else None
 
-        analytics_data = [item.dict() for item in result.detailed_results]
+        analytics_data = [
+            item.model_dump() if hasattr(item, "model_dump") else item.dict()
+            for item in result.detailed_results
+        ]
         try:
             self.recorder.record(
                 user_id=user_id,
