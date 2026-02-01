@@ -57,17 +57,3 @@ jobs:
         working-directory: frontend
         run: npm run test -- --run
 
-  create-pr:
-    runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
-    steps:
-      - name: Create or update PR to main
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          existing_pr=$(gh pr list --head staging --base main --state open --json number --jq '.[0].number')
-          if [ -n "$existing_pr" ]; then
-            gh pr edit "$existing_pr" --title "staging -> main" --body "Auto PR after staging tests passed."
-          else
-            gh pr create --base main --head staging --title "staging -> main" --body "Auto PR after staging tests passed."
-          fi
