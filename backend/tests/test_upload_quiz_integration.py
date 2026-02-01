@@ -65,6 +65,7 @@ def test_upload_and_generate_quiz_flow(client):
     _override_quiz_ai_service(client.app, [
         {
             "topic": "Photosynthesis",
+            "concepts": ["Photosynthesis"],
             "question": "What is photosynthesis?",
             "options": ["A", "B", "C", "D"],
             "correctIndex": 0,
@@ -121,7 +122,7 @@ def test_generate_open_ended_quiz(client, db_session):
 
     # Generate Quiz (mock AI quiz generation)
     _override_quiz_ai_service(client.app, [
-        {"question": "Explain the causes of WWII.", "topic": "History"}
+        {"question": "Explain the causes of WWII.", "topic": "History", "concepts": ["History"]}
     ])
     try:
         quiz_request = {
@@ -158,6 +159,7 @@ def test_generate_quiz_shuffles_correct_index(client):
     questions = [
         {
             "topic": "Topic",
+            "concepts": ["Topic"],
             "question": "Q",
             "options": ["A", "B", "C", "D"],
             "correctIndex": 0,
