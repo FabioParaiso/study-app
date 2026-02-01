@@ -24,7 +24,7 @@ def _build_use_case():
     return GenerateQuizUseCase(material_repo, topic_selector, strategy_factory)
 
 
-def test_generate_quiz_retries_when_missing_concepts():
+def test_generate_quiz_retries_when_llm_missing_concepts():
     use_case = _build_use_case()
     request = QuizRequest(topics=[], quiz_type="short_answer")
 
@@ -41,7 +41,7 @@ def test_generate_quiz_retries_when_missing_concepts():
     assert ai_service.generate_quiz.call_count == 2
 
 
-def test_generate_quiz_fails_after_retry():
+def test_generate_quiz_fails_after_retry_when_llm_missing_concepts():
     use_case = _build_use_case()
     request = QuizRequest(topics=[], quiz_type="short_answer")
 
