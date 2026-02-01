@@ -1,4 +1,5 @@
 import random
+from datetime import datetime, timedelta, timezone, time as time_cls
 from modules.analytics.calculator import AnalyticsCalculator
 from modules.analytics.ports import AnalyticsRepositoryPort
 from modules.materials.ports import MaterialConceptPairsRepositoryPort
@@ -15,6 +16,12 @@ class AnalyticsService:
             concept_pairs = self.material_repo.get_concept_pairs_for_student(student_id)
 
         analytics_items = self.analytics_repo.fetch_question_analytics(student_id, material_id)
+        
+        # DEBUG PRINTS
+        print(f"DEBUG: get_weak_points material_id={material_id}")
+        print(f"DEBUG: concept_pairs={concept_pairs}")
+        print(f"DEBUG: analytics_items count={len(analytics_items)}")
+        
         return AnalyticsCalculator.build_results(concept_pairs, analytics_items)
 
     def get_adaptive_topics(self, student_id: int, material_id: int = None):
@@ -64,6 +71,105 @@ class AnalyticsService:
             "unseen": unseen,
             "weak": weak,
             "strong": strong
+        }
+
+    @staticmethod
+    def _parse_datetime(value) -> datetime | None:
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                return None
+        return None
+
+    @staticmethod
+    def _to_local_date(value, tz_offset_minutes: int):
+        dt = AnalyticsService._parse_datetime(value)
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.astimezone(timezone.utc)
+        local_dt = dt + timedelta(minutes=tz_offset_minutes)
+        return local_dt.date()
+
+    def get_recent_metrics(self, student_id: int, days: int = 30, tz_offset_minutes: int = 0) -> dict:
+        safe_days = max(1, min(int(days or 30), 90))
+        tz_offset_minutes = int(tz_offset_minutes or 0)
+
+        now_utc = datetime.now(timezone.utc)
+        local_now = now_utc + timedelta(minutes=tz_offset_minutes)
+        end_local_date = local_now.date()
+        start_local_date = end_local_date - timedelta(days=safe_days - 1)
+
+        start_utc = datetime.combine(start_local_date, time_cls.min, tzinfo=timezone.utc) - timedelta(minutes=tz_offset_minutes)
+        end_utc = datetime.combine(end_local_date + timedelta(days=1), time_cls.min, tzinfo=timezone.utc) - timedelta(minutes=tz_offset_minutes)
+
+        sessions = self.analytics_repo.fetch_quiz_sessions(student_id, start_utc, end_utc)
+
+        quiz_types = ["multiple-choice", "short_answer", "open-ended"]
+        daily_map: dict = {}
+        cursor = start_local_date
+        while cursor <= end_local_date:
+            daily_map[cursor] = {
+                "day": cursor.isoformat(),
+                "active_seconds": 0,
+                "duration_seconds": 0,
+                "tests_total": 0,
+                "by_type": {qt: 0 for qt in quiz_types},
+            }
+            cursor += timedelta(days=1)
+
+        for session in sessions:
+            local_date = self._to_local_date(session.get("created_at"), tz_offset_minutes)
+            if local_date is None or local_date not in daily_map:
+                continue
+
+            entry = daily_map[local_date]
+            quiz_type = session.get("quiz_type") or "multiple-choice"
+            if quiz_type not in entry["by_type"]:
+                entry["by_type"][quiz_type] = 0
+            entry["by_type"][quiz_type] += 1
+            entry["tests_total"] += 1
+            entry["active_seconds"] += max(0, int(session.get("active_seconds") or 0))
+            entry["duration_seconds"] += max(0, int(session.get("duration_seconds") or 0))
+
+        daily = [daily_map[d] for d in sorted(daily_map.keys())]
+
+        totals_by_type = {qt: 0 for qt in quiz_types}
+        total_active = 0
+        total_duration = 0
+        total_tests = 0
+        goal_seconds = 30 * 60
+        days_with_goal = 0
+
+        for entry in daily:
+            total_active += entry["active_seconds"]
+            total_duration += entry["duration_seconds"]
+            total_tests += entry["tests_total"]
+            if entry["active_seconds"] >= goal_seconds:
+                days_with_goal += 1
+            for qt, count in entry["by_type"].items():
+                totals_by_type[qt] = totals_by_type.get(qt, 0) + count
+
+        return {
+            "range": {
+                "start": start_local_date.isoformat(),
+                "end": end_local_date.isoformat(),
+                "days": safe_days,
+                "tz_offset_minutes": tz_offset_minutes
+            },
+            "daily": daily,
+            "totals": {
+                "active_seconds": total_active,
+                "duration_seconds": total_duration,
+                "tests_total": total_tests,
+                "by_type": totals_by_type,
+                "days_with_goal": days_with_goal,
+                "goal_seconds": goal_seconds
+            }
         }
 
     def build_mcq_quiz_concepts(

@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time, timezone
 from unittest.mock import Mock
 from modules.analytics.service import AnalyticsService
 
@@ -292,3 +292,50 @@ class TestAnalyticsService:
         assert result.count("Strong") == 1
         assert result.count("Weak5") + result.count("Weak20") == 4
         assert result.count("Weak5") > result.count("Weak20")
+
+    def test_get_recent_metrics_aggregates_by_day(self, service, analytics_repo):
+        today = datetime.now(timezone.utc).date()
+        day0 = datetime.combine(today, time(12, 0), tzinfo=timezone.utc)
+        day1 = datetime.combine(today - timedelta(days=1), time(12, 0), tzinfo=timezone.utc)
+
+        analytics_repo.fetch_quiz_sessions.return_value = [
+            {
+                "created_at": day0,
+                "quiz_type": "multiple-choice",
+                "duration_seconds": 600,
+                "active_seconds": 500
+            },
+            {
+                "created_at": day0,
+                "quiz_type": "short_answer",
+                "duration_seconds": 1200,
+                "active_seconds": 1100
+            },
+            {
+                "created_at": day1,
+                "quiz_type": "open-ended",
+                "duration_seconds": 2000,
+                "active_seconds": 1900
+            }
+        ]
+
+        metrics = service.get_recent_metrics(student_id=1, days=2, tz_offset_minutes=0)
+
+        analytics_repo.fetch_quiz_sessions.assert_called_once()
+        daily = metrics["daily"]
+        assert len(daily) == 2
+
+        day0_entry = next(d for d in daily if d["day"] == day0.date().isoformat())
+        day1_entry = next(d for d in daily if d["day"] == day1.date().isoformat())
+
+        assert day0_entry["tests_total"] == 2
+        assert day0_entry["by_type"]["multiple-choice"] == 1
+        assert day0_entry["by_type"]["short_answer"] == 1
+        assert day0_entry["active_seconds"] == 1600
+
+        assert day1_entry["tests_total"] == 1
+        assert day1_entry["by_type"]["open-ended"] == 1
+
+        assert metrics["totals"]["tests_total"] == 3
+        assert metrics["totals"]["active_seconds"] == 3500
+        assert metrics["totals"]["days_with_goal"] == 1

@@ -13,7 +13,9 @@ class QuizResultRecorderPort(Protocol):
         quiz_type: str,
         analytics_data: List[Dict],
         material_id: int | None,
-        xp_earned: int
+        xp_earned: int,
+        duration_seconds: int,
+        active_seconds: int
     ) -> None: ...
 
 
@@ -33,7 +35,9 @@ class QuizResultPersistencePort(Protocol):
         quiz_type: str,
         analytics_data: List[Dict],
         material_id: int | None,
-        xp_earned: int
+        xp_earned: int,
+        duration_seconds: int,
+        active_seconds: int
     ) -> bool: ...
 
 

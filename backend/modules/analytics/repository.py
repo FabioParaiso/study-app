@@ -41,3 +41,33 @@ class AnalyticsRepository:
         except Exception as e:
             print(f"Error fetching analytics records: {e}")
             return []
+
+    def fetch_quiz_sessions(self, student_id: int, start_utc, end_utc) -> list[dict]:
+        """Returns quiz sessions for a student within [start_utc, end_utc)."""
+        try:
+            rows = (
+                self.db.query(
+                    QuizResult.created_at,
+                    QuizResult.quiz_type,
+                    QuizResult.duration_seconds,
+                    QuizResult.active_seconds,
+                )
+                .filter(
+                    QuizResult.student_id == student_id,
+                    QuizResult.created_at >= start_utc,
+                    QuizResult.created_at < end_utc,
+                )
+                .all()
+            )
+            return [
+                {
+                    "created_at": row.created_at,
+                    "quiz_type": row.quiz_type,
+                    "duration_seconds": row.duration_seconds,
+                    "active_seconds": row.active_seconds,
+                }
+                for row in rows
+            ]
+        except Exception as e:
+            print(f"Error fetching quiz sessions: {e}")
+            return []

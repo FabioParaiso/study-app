@@ -30,6 +30,20 @@ class GenerateQuizUseCase:
         self.strategy_factory = strategy_factory
         self.analytics_service = analytics_service
 
+    @staticmethod
+    def _questions_have_concepts(questions: list[dict] | None) -> bool:
+        if not isinstance(questions, list) or not questions:
+            return False
+        for question in questions:
+            if not isinstance(question, dict):
+                return False
+            concepts = question.get("concepts")
+            if not isinstance(concepts, list):
+                return False
+            if not any(isinstance(c, str) and c.strip() for c in concepts):
+                return False
+        return True
+
     def execute(self, user_id: int, request: QuizRequest, ai_service: QuizGeneratorPort) -> list[dict]:
         material = self.material_repo.load(user_id)
         if not material or not material.text:
@@ -76,8 +90,11 @@ class GenerateQuizUseCase:
             material_concepts = concept_sequence
 
         questions = ai_service.generate_quiz(strategy, text, target_topics, priority_topics, material_concepts)
-        
-        if not questions:
+
+        if not self._questions_have_concepts(questions):
+            questions = ai_service.generate_quiz(strategy, text, target_topics, priority_topics, material_concepts)
+
+        if not self._questions_have_concepts(questions):
             raise QuizServiceError("Failed to generate quiz. Please try again.", status_code=500)
 
         post_processor = QuestionPostProcessor(request.quiz_type)
@@ -121,7 +138,10 @@ class SaveQuizResultUseCase:
             current = self.material_repo.load(user_id)
             material_id = current.id if current else None
 
-        analytics_data = [item.dict() for item in result.detailed_results]
+        analytics_data = [
+            item.model_dump() if hasattr(item, "model_dump") else item.dict()
+            for item in result.detailed_results
+        ]
         try:
             self.recorder.record(
                 user_id=user_id,
@@ -130,7 +150,9 @@ class SaveQuizResultUseCase:
                 quiz_type=result.quiz_type,
                 analytics_data=analytics_data,
                 material_id=material_id,
-                xp_earned=result.xp_earned
+                xp_earned=result.xp_earned,
+                duration_seconds=result.duration_seconds,
+                active_seconds=result.active_seconds
             )
         except QuizRecordError as e:
             raise QuizServiceError(str(e), status_code=e.status_code)

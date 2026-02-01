@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { studyService } from '../services/studyService';
 import { useQuizEngine } from './useQuizEngine';
 import { calculateXPFromScore } from '../utils/xpCalculator';
 import { buildDetailedResults } from '../utils/quizAnalytics';
+
+const IDLE_THRESHOLD_MS = 60 * 1000;
 
 export function useQuiz(student, materialId) {
     const {
@@ -17,6 +19,93 @@ export function useQuiz(student, materialId) {
     const [quizType, setQuizType] = useState(null);
 
     const [sessionXP, setSessionXP] = useState(0);
+    const timingRef = useRef({
+        activeSeconds: 0,
+        durationSeconds: 0,
+        lastInputAt: 0,
+        lastTickAt: 0,
+        intervalId: null
+    });
+    const isEvaluatingRef = useRef(false);
+
+    const markActivity = useCallback(() => {
+        timingRef.current.lastInputAt = Date.now();
+    }, []);
+
+    const resetTiming = useCallback(() => {
+        const now = Date.now();
+        timingRef.current.activeSeconds = 0;
+        timingRef.current.durationSeconds = 0;
+        timingRef.current.lastInputAt = now;
+        timingRef.current.lastTickAt = now;
+    }, []);
+
+    const startTiming = useCallback(() => {
+        if (timingRef.current.intervalId) return;
+        resetTiming();
+
+        const tick = () => {
+            const now = Date.now();
+            const lastTickAt = timingRef.current.lastTickAt || now;
+            const deltaSeconds = Math.max(0, (now - lastTickAt) / 1000);
+            timingRef.current.durationSeconds += deltaSeconds;
+
+            const hasDocument = typeof document !== 'undefined';
+            const isVisible = !hasDocument || document.visibilityState === 'visible';
+            const hasFocus = !hasDocument || (typeof document.hasFocus === 'function' ? document.hasFocus() : true);
+            const isActive = isVisible && hasFocus && (
+                isEvaluatingRef.current || (now - timingRef.current.lastInputAt) <= IDLE_THRESHOLD_MS
+            );
+
+            if (isActive) {
+                timingRef.current.activeSeconds += deltaSeconds;
+            }
+            timingRef.current.lastTickAt = now;
+        };
+
+        timingRef.current.intervalId = setInterval(tick, 1000);
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('mousemove', markActivity);
+            window.addEventListener('mousedown', markActivity);
+            window.addEventListener('keydown', markActivity);
+            window.addEventListener('touchstart', markActivity);
+            window.addEventListener('scroll', markActivity, { passive: true });
+        }
+    }, [markActivity, resetTiming]);
+
+    const stopTiming = useCallback(() => {
+        if (timingRef.current.intervalId) {
+            clearInterval(timingRef.current.intervalId);
+            timingRef.current.intervalId = null;
+        }
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('mousemove', markActivity);
+            window.removeEventListener('mousedown', markActivity);
+            window.removeEventListener('keydown', markActivity);
+            window.removeEventListener('touchstart', markActivity);
+            window.removeEventListener('scroll', markActivity);
+        }
+    }, [markActivity]);
+
+    const getTimingSnapshot = useCallback(() => {
+        const durationSeconds = Math.max(0, Math.round(timingRef.current.durationSeconds));
+        const activeSeconds = Math.max(0, Math.round(Math.min(timingRef.current.activeSeconds, durationSeconds)));
+        return { durationSeconds, activeSeconds };
+    }, []);
+
+    useEffect(() => {
+        isEvaluatingRef.current = isEvaluating;
+    }, [isEvaluating]);
+
+    useEffect(() => {
+        if (gameState === 'playing') {
+            startTiming();
+        } else {
+            stopTiming();
+        }
+        return () => stopTiming();
+    }, [gameState, startTiming, stopTiming]);
 
     const startQuiz = async (type, topic) => {
         setLoading(true);
@@ -122,8 +211,11 @@ export function useQuiz(student, materialId) {
             if (errors.length > 0) {
                 console.error('CRITICAL: Questions missing valid concepts.', errors);
                 alert("Ocorreu um erro ao registar os conceitos das perguntas. Tenta gerar um novo teste.");
-                return;
             }
+
+            const submissionScore = quizType === 'multiple-choice'
+                ? score
+                : getOpenEndedAverage();
 
             // Optimistic Completion: Update UI immediately, send data in background.
             if (quizType === 'multiple-choice' && updateHighScoreCallback) {
@@ -132,13 +224,16 @@ export function useQuiz(student, materialId) {
 
             // Submit Analytics in background
             if (student?.id) {
+                const { durationSeconds, activeSeconds } = getTimingSnapshot();
                 studyService.submitQuizResult(
-                    score,
+                    submissionScore,
                     questions.length,
                     quizType,
                     detailedResults,
                     sessionXP,
-                    materialId
+                    materialId,
+                    durationSeconds,
+                    activeSeconds
                 ).catch(err => console.error("Failed to submit analytics", err));
             }
         }

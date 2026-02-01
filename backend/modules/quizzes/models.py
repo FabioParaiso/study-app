@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
-from datetime import datetime
+from datetime import datetime, timezone
 
 class QuizResult(Base):
     __tablename__ = "quiz_results"
@@ -13,7 +13,9 @@ class QuizResult(Base):
     score = Column(Integer)
     total_questions = Column(Integer)
     quiz_type = Column(String) # 'multiple-choice', 'short_answer', or 'open-ended'
-    created_at = Column(DateTime, default=datetime.utcnow)
+    duration_seconds = Column(Integer, default=0, nullable=False)
+    active_seconds = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     student = relationship("Student", back_populates="quiz_results")
     analytics = relationship("QuestionAnalytics", back_populates="quiz_result", cascade="all, delete-orphan")

@@ -16,15 +16,27 @@ class QuizResultPersistenceRepository(QuizRepositoryBase):
         quiz_type: str,
         analytics_data: list[dict],
         material_id: int | None,
-        xp_earned: int
+        xp_earned: int,
+        duration_seconds: int,
+        active_seconds: int
     ) -> bool:
         try:
+            effective_correct = score
+            if quiz_type != "multiple-choice":
+                if total > 0:
+                    normalized = max(0, min(100, score))
+                    effective_correct = round((normalized / 100) * total)
+                else:
+                    effective_correct = 0
+
             result = QuizResult(
                 student_id=student_id,
                 study_material_id=material_id,
                 score=score,
                 total_questions=total,
-                quiz_type=quiz_type
+                quiz_type=quiz_type,
+                duration_seconds=max(0, int(duration_seconds or 0)),
+                active_seconds=max(0, int(active_seconds or 0))
             )
             self.db.add(result)
             self.db.flush()
@@ -45,7 +57,7 @@ class QuizResultPersistenceRepository(QuizRepositoryBase):
                 material = self.db.query(StudyMaterial).filter(StudyMaterial.id == material_id).first()
                 if material:
                     material.total_questions_answered += total
-                    material.correct_answers_count += score
+                    material.correct_answers_count += effective_correct
                     material.total_xp += xp_earned
                     material.high_score = max(material.high_score, score)
 
