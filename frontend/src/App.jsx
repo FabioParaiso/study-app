@@ -11,6 +11,7 @@ import LoadingOverlay from './components/LoadingOverlay';
 import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
 import QuizPage from './pages/QuizPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 
 export default function App() {
     // --- Custom Hooks (SRP) ---
@@ -43,6 +44,7 @@ export default function App() {
     };
 
     const handleStart = (type) => startQuiz(type, selectedTopic);
+    const handleOpenAnalytics = () => setGameState('analytics');
 
     // --- Render ---
 
@@ -83,6 +85,21 @@ export default function App() {
                 materialsList={materialsList}
                 activateMaterial={activateMaterial}
                 onDeleteMaterial={deleteMaterial}
+                onOpenAnalytics={handleOpenAnalytics}
+            />
+        );
+    }
+
+    if (gameState === 'analytics') {
+        return (
+            <AnalyticsPage
+                student={student}
+                selectedAvatar={selectedAvatar}
+                changeAvatar={changeAvatar}
+                totalXP={totalXP}
+                onLogout={handleLogout}
+                level={level}
+                onBack={() => setGameState('intro')}
             />
         );
     }

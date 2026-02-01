@@ -36,7 +36,9 @@ def test_record_quiz_result_counts_mcq_correct(db_session):
         quiz_type="multiple-choice",
         analytics_data=[],
         material_id=material.id,
-        xp_earned=0
+        xp_earned=0,
+        duration_seconds=120,
+        active_seconds=110
     )
 
     assert success is True
@@ -56,7 +58,9 @@ def test_record_quiz_result_normalizes_open_ended_score(db_session):
         quiz_type="open-ended",
         analytics_data=[],
         material_id=material.id,
-        xp_earned=0
+        xp_earned=0,
+        duration_seconds=200,
+        active_seconds=180
     )
 
     assert success is True

@@ -37,14 +37,16 @@ export const studyService = {
         });
         return res.data;
     },
-    submitQuizResult: async (score, total, type, detailedResults, xpEarned, materialId) => {
+    submitQuizResult: async (score, total, type, detailedResults, xpEarned, materialId, durationSeconds = 0, activeSeconds = 0) => {
         await api.post('/quiz/result', {
             score,
             total_questions: total,
             quiz_type: type,
             detailed_results: detailedResults,
             study_material_id: materialId,
-            xp_earned: xpEarned
+            xp_earned: xpEarned,
+            duration_seconds: Math.round(durationSeconds),
+            active_seconds: Math.round(activeSeconds)
         });
     },
     getWeakPoints: async (materialId) => {
@@ -53,6 +55,15 @@ export const studyService = {
             url += `&material_id=${materialId}`;
         }
         const res = await api.get(url);
+        return res.data;
+    },
+    getMetrics: async (days = 30, tzOffsetMinutes = 0) => {
+        const params = new URLSearchParams({
+            days: String(days),
+            tz_offset_minutes: String(tzOffsetMinutes),
+            t: String(Date.now())
+        });
+        const res = await api.get(`/analytics/metrics?${params.toString()}`);
         return res.data;
     },
     updateAvatar: async (avatar) => {

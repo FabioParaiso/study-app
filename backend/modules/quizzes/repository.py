@@ -16,7 +16,9 @@ class QuizResultPersistenceRepository(QuizRepositoryBase):
         quiz_type: str,
         analytics_data: list[dict],
         material_id: int | None,
-        xp_earned: int
+        xp_earned: int,
+        duration_seconds: int,
+        active_seconds: int
     ) -> bool:
         try:
             effective_correct = score
@@ -32,7 +34,9 @@ class QuizResultPersistenceRepository(QuizRepositoryBase):
                 study_material_id=material_id,
                 score=score,
                 total_questions=total,
-                quiz_type=quiz_type
+                quiz_type=quiz_type,
+                duration_seconds=max(0, int(duration_seconds or 0)),
+                active_seconds=max(0, int(active_seconds or 0))
             )
             self.db.add(result)
             self.db.flush()

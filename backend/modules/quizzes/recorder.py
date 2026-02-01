@@ -25,7 +25,9 @@ class QuizResultRecorder:
         quiz_type: str,
         analytics_data: list[dict],
         material_id: int | None,
-        xp_earned: int
+        xp_earned: int,
+        duration_seconds: int,
+        active_seconds: int
     ) -> None:
         analytics_data = self.resolver.apply(material_id, analytics_data)
         success = self.quiz_repo.record_quiz_result(
@@ -35,7 +37,9 @@ class QuizResultRecorder:
             quiz_type=quiz_type,
             analytics_data=analytics_data,
             material_id=material_id,
-            xp_earned=xp_earned
+            xp_earned=xp_earned,
+            duration_seconds=duration_seconds,
+            active_seconds=active_seconds
         )
         if not success:
             raise QuizRecordError("Failed to save results", status_code=500)
