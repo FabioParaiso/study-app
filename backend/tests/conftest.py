@@ -16,6 +16,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from database import Base, get_db
 from main import app
 import models # Register tables for Base.metadata.create_all
+from modules.materials.deps import get_ai_service
 
 # Setup in-memory DB for ALL tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -33,8 +34,19 @@ def override_get_db():
     finally:
         db.close()
 
-# Apply valid overrides globally for testing
+# Mock AI Service
+class MockTopicAIService:
+    def is_available(self) -> bool:
+        return True
+    def extract_topics(self, text: str) -> dict:
+        return {"General": ["Mock Concept"]}
+
+def override_get_ai_service():
+    return MockTopicAIService()
+
+# Apply valid overrides globally for testing (this might be overwritten if main is reloaded)
 app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[get_ai_service] = override_get_ai_service
 
 @pytest.fixture
 def db_session():
@@ -75,6 +87,13 @@ def client():
     reload(modules.auth.router)
     reload(main)
     
+    # Re-apply overrides to the reloaded app instance
+    from modules.materials.deps import get_ai_service
+    from database import get_db
+
+    main.app.dependency_overrides[get_ai_service] = override_get_ai_service
+    main.app.dependency_overrides[get_db] = override_get_db
+
     yield TestClient(main.app)
     
     # Restore original (optional, but good practice)
@@ -83,8 +102,6 @@ def client():
 @pytest.fixture(autouse=True)
 def init_db():
     """Create tables before each test and drop after."""
-    # Debug: Check if tables are registered
-    print(f"DEBUG: Creating tables. Registered models: {list(Base.metadata.tables.keys())}")
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)

@@ -11,7 +11,7 @@ from modules.materials.deps import (
     get_activate_material_use_case,
     get_delete_material_use_case,
 )
-from modules.materials.errors import MaterialServiceError
+from modules.materials.errors import MaterialServiceError, MAX_FILE_SIZE
 from schemas.study import AnalyzeRequest
 from dependencies import get_current_user, enforce_ai_quota
 from models import Student
@@ -96,16 +96,28 @@ async def upload_file(
     ai_service: TopicAIServicePort = Depends(get_ai_service)
 ):
     try:
-        content = await file.read()
+        content = bytearray()
+        size = 0
+        while True:
+            chunk = await file.read(1024 * 1024)  # Read in 1MB chunks
+            if not chunk:
+                break
+            size += len(chunk)
+            if size > MAX_FILE_SIZE:
+                raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+            content.extend(chunk)
+
         return await use_case.execute(
             user_id=current_user.id,
-            file_content=content,
+            file_content=bytes(content),
             filename=file.filename,
             file_type=file.content_type,
             ai_service=ai_service
         )
     except MaterialServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error processing upload: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
