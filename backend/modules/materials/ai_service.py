@@ -1,13 +1,16 @@
 import json
+from llm_models import get_llm_models
 from modules.common.ports import LLMCallerPort
 from modules.materials.topic_extractor import TopicExtractor
 
 
 class TopicAIService:
-    MODEL_TOPIC_EXTRACTION = "gpt-4o-mini"
 
     def __init__(self, caller: LLMCallerPort | None):
         self.caller = caller
+        models = get_llm_models()
+        self.model_topic_extraction = models.topic_extraction
+        self.reasoning_effort = models.reasoning_effort
 
     def is_available(self) -> bool:
         return bool(self.caller and self.caller.is_available())
@@ -20,10 +23,10 @@ class TopicAIService:
         content_topics = self.caller.call(
             prompt=prompt_topics,
             system_message="És um gerador de JSON. Devolve apenas JSON válido.",
-            model=self.MODEL_TOPIC_EXTRACTION,
+            model=self.model_topic_extraction,
             temperature=0.0,
             seed=42,
-            reasoning_effort="none"
+            reasoning_effort=self.reasoning_effort
         )
 
         if content_topics is None:
