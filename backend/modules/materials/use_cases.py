@@ -41,11 +41,11 @@ class UploadMaterialUseCase(UploadMaterialUseCasePort):
         file_type: str | None,
         ai_service: TopicAIServicePort
     ) -> dict:
-        if not ai_service or not ai_service.is_available():
-            raise MaterialServiceError("API Key is required for topic extraction.")
-
         if len(file_content) > MAX_FILE_SIZE:
             raise MaterialServiceError("File too large. Maximum size is 10MB.", status_code=413)
+
+        if not ai_service or not ai_service.is_available():
+            raise MaterialServiceError("API Key is required for topic extraction.")
 
         resolved_type = self.file_type_resolver.resolve(filename, file_type)
 

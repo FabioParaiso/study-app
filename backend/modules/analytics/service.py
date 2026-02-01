@@ -15,6 +15,12 @@ class AnalyticsService:
             concept_pairs = self.material_repo.get_concept_pairs_for_student(student_id)
 
         analytics_items = self.analytics_repo.fetch_question_analytics(student_id, material_id)
+        
+        # DEBUG PRINTS
+        print(f"DEBUG: get_weak_points material_id={material_id}")
+        print(f"DEBUG: concept_pairs={concept_pairs}")
+        print(f"DEBUG: analytics_items count={len(analytics_items)}")
+        
         return AnalyticsCalculator.build_results(concept_pairs, analytics_items)
 
     def get_adaptive_topics(self, student_id: int, material_id: int = None):

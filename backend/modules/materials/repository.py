@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from models import StudyMaterial
 
@@ -62,16 +62,15 @@ class MaterialReadRepository(MaterialRepositoryBase):
 
     def activate(self, student_id: int, material_id: int) -> bool:
         try:
-            self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).update({"is_active": False})
-
             item = self.db.query(StudyMaterial).filter(
                 StudyMaterial.student_id == student_id,
                 StudyMaterial.id == material_id
             ).first()
 
             if item:
+                self.db.query(StudyMaterial).filter(StudyMaterial.student_id == student_id).update({"is_active": False})
                 item.is_active = True
-                item.last_accessed = datetime.utcnow()
+                item.last_accessed = datetime.now(timezone.utc)
                 self.db.commit()
                 return True
             return False

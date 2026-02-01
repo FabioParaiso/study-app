@@ -82,7 +82,7 @@ def activate_material(
 ):
     success = use_case.execute(current_user.id, material_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Material not found")
+        raise HTTPException(status_code=404, detail="Material not found. Active material unchanged.")
     return {"status": "activated"}
 
 @router.post("/upload")

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
-from datetime import datetime
+from datetime import datetime, timezone
 
 class StudyMaterial(Base):
     __tablename__ = "study_materials"
@@ -17,10 +17,10 @@ class StudyMaterial(Base):
     high_score = Column(Integer, default=0)
     total_questions_answered = Column(Integer, default=0)
     correct_answers_count = Column(Integer, default=0)
-    last_accessed = Column(DateTime, default=datetime.utcnow)
+    last_accessed = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     student = relationship("Student", back_populates="materials")
     topics = relationship("Topic", back_populates="material", cascade="all, delete-orphan")

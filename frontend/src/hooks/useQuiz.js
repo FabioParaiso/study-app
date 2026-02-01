@@ -125,6 +125,10 @@ export function useQuiz(student, materialId) {
                 return;
             }
 
+            const submissionScore = quizType === 'multiple-choice'
+                ? score
+                : getOpenEndedAverage();
+
             // Optimistic Completion: Update UI immediately, send data in background.
             if (quizType === 'multiple-choice' && updateHighScoreCallback) {
                 updateHighScoreCallback(score);
@@ -133,7 +137,7 @@ export function useQuiz(student, materialId) {
             // Submit Analytics in background
             if (student?.id) {
                 studyService.submitQuizResult(
-                    score,
+                    submissionScore,
                     questions.length,
                     quizType,
                     detailedResults,

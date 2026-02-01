@@ -1,21 +1,21 @@
-name: Staging Tests + PR
+name: Main Tests
 
 on:
-  push:
-    branches: ["staging"]
   pull_request:
-    branches: ["staging"]
+    branches: ["main"]
+  push:
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
-  group: "staging-tests"
+  group: "main-tests-${{ github.ref }}"
   cancel-in-progress: true
 
 jobs:
-  backend-tests:
+  backend-tests-full:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -32,11 +32,11 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt
 
-      - name: Run backend tests
+      - name: Run backend tests (full)
         working-directory: backend
-        run: pytest -k "not integration"
+        run: pytest
 
-  frontend-tests:
+  frontend-tests-full:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,7 +53,6 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run frontend tests
+      - name: Run frontend tests (full)
         working-directory: frontend
         run: npm run test -- --run
-

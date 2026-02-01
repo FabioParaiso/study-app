@@ -24,7 +24,7 @@ class TestQuizStrategies:
         """Test strict logic: valid topics generate instruction."""
         instr = PromptBuilder._build_topic_instruction(["Photosynthesis"], ["Cells"])
         assert "Photosynthesis" in instr
-        assert "ESCOPO DE CONTEÚDO (FILTRADO)" in instr
+        assert "ÂMBITO DE CONTEÚDO (FILTRADO)" in instr
 
     def test_priority_instruction(self, strategies):
         """Test priority topics instruction generation."""
