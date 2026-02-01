@@ -91,7 +91,7 @@ describe('useQuiz', () => {
         expect(call[0]).toBe(2);
     });
 
-    it('does not submit results when concepts are missing', async () => {
+    it('submits results even when concepts are missing', async () => {
         const questions = [
             { question: 'Q1', correctIndex: 0 },
             { question: 'Q2', correctIndex: 1 }
@@ -113,9 +113,13 @@ describe('useQuiz', () => {
 
         await act(async () => {
             await result.current.nextQuestion();
+        });
+        await act(async () => {
             await result.current.nextQuestion();
         });
 
-        expect(studyService.submitQuizResult).not.toHaveBeenCalled();
+        await waitFor(() => {
+            expect(studyService.submitQuizResult).toHaveBeenCalled();
+        });
     });
 });

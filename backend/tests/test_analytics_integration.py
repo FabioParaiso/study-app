@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock
 from io import BytesIO
+from datetime import datetime, timedelta, time, timezone
 from modules.materials.deps import get_ai_service as materials_get_ai_service
 
 
@@ -228,3 +229,61 @@ def test_open_ended_score_average_updates_counts(client, db_session):
     assert material is not None
     # 70% of 4 -> round(2.8) = 3
     assert material.correct_answers_count == 3
+
+
+def test_get_metrics_endpoint_returns_daily_counts(client, db_session):
+    import time as time_mod
+    name = f"MetricsUser{int(time_mod.time()*1000)}"
+    register_response = client.post("/register", json={"name": name, "password": "StrongPass1!"})
+    token = register_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    student_id = register_response.json()["user"]["id"]
+
+    from models import QuizResult
+
+    today = datetime.now(timezone.utc).date()
+    day0 = datetime.combine(today, time(12, 0), tzinfo=timezone.utc)
+    day1 = datetime.combine(today - timedelta(days=1), time(12, 0), tzinfo=timezone.utc)
+
+    db_session.add_all([
+        QuizResult(
+            student_id=student_id,
+            study_material_id=None,
+            score=5,
+            total_questions=10,
+            quiz_type="multiple-choice",
+            duration_seconds=600,
+            active_seconds=500,
+            created_at=day0
+        ),
+        QuizResult(
+            student_id=student_id,
+            study_material_id=None,
+            score=7,
+            total_questions=10,
+            quiz_type="short_answer",
+            duration_seconds=1200,
+            active_seconds=1100,
+            created_at=day1
+        )
+    ])
+    db_session.commit()
+
+    response = client.get("/analytics/metrics?days=2&tz_offset_minutes=0", headers=headers)
+    assert response.status_code == 200
+
+    payload = response.json()
+    assert payload["range"]["days"] == 2
+    daily = payload["daily"]
+    assert len(daily) == 2
+
+    day0_entry = next(d for d in daily if d["day"] == day0.date().isoformat())
+    day1_entry = next(d for d in daily if d["day"] == day1.date().isoformat())
+
+    assert day0_entry["tests_total"] == 1
+    assert day0_entry["by_type"]["multiple-choice"] == 1
+    assert day1_entry["tests_total"] == 1
+    assert day1_entry["by_type"]["short_answer"] == 1
+
+    assert payload["totals"]["tests_total"] == 2
+    assert payload["totals"]["active_seconds"] == 1600

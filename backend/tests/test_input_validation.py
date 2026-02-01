@@ -6,8 +6,8 @@ from unittest.mock import patch, MagicMock
 
 @patch("modules.quizzes.ai_service.QuizAIService.generate_quiz")
 @patch("modules.materials.repository.MaterialReadRepository.load")
-def test_topic_validation(mock_load, mock_generate, client, auth_headers):
-    """Test the topic validation logic specifically."""
+def test_topic_validation_rejects_invalid_topics_allows_valid(mock_load, mock_generate, client, auth_headers):
+    """Validate topic input constraints without exercising LLM schema failures."""
     
     # Mock loaded material
     mock_material = MagicMock()
@@ -19,7 +19,13 @@ def test_topic_validation(mock_load, mock_generate, client, auth_headers):
     mock_load.return_value = mock_material
 
     # Mock generate to return a dummy list (success)
-    mock_generate.return_value = [{"question": "q", "options": ["o"], "correctIndex": 0, "explanation": "e"}]
+    mock_generate.return_value = [{
+        "question": "q",
+        "options": ["o"],
+        "correctIndex": 0,
+        "explanation": "e",
+        "concepts": ["Conceito"]
+    }]
 
     # 1. Test Too Long Topic
     payload = {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, BarChart3 } from 'lucide-react';
 import IntroHeader from '../components/Intro/IntroHeader';
 import UploadSection from '../components/Intro/UploadSection';
 import MaterialDashboard from '../components/Intro/MaterialDashboard';
@@ -10,7 +10,7 @@ const IntroScreen = ({
     file, handleFileChange, analyzeFile, isAnalyzing, savedMaterial, clearMaterial,
     availableTopics, selectedTopic, setSelectedTopic, detectTopics, errorMsg, loading, startQuiz,
     changeAvatar, selectedAvatar, level, totalXP, highScore, nextLevel, LEVELS,
-    materialsList, activateMaterial, onDeleteMaterial
+    materialsList, activateMaterial, onDeleteMaterial, onOpenAnalytics
 }) => {
 
     // Duolingo-style Button Component
@@ -75,6 +75,25 @@ const IntroScreen = ({
 
                 {/* Sidebar (Right) */}
                 <div className="space-y-6">
+                    {/* Analytics */}
+                    <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-duo-blue text-white rounded-xl flex items-center justify-center">
+                                <BarChart3 size={22} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-700 text-lg uppercase tracking-wide">Metricas</h3>
+                                <p className="text-xs uppercase font-bold text-gray-400 tracking-widest">Ultimos 30 dias</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onOpenAnalytics}
+                            className="w-full py-3 px-6 rounded-2xl border-b-4 font-bold uppercase tracking-wider transition-all active:border-b-0 active:translate-y-1 flex items-center justify-center gap-2 bg-duo-blue border-duo-blue-dark text-white hover:bg-[#20BEF5]"
+                        >
+                            Ver dashboard
+                        </button>
+                    </div>
+
                     {/* Library (Navigation) - Absolute top for maximum stability */}
                     <MaterialLibrary
                         materials={materialsList}

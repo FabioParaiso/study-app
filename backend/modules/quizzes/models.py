@@ -13,6 +13,8 @@ class QuizResult(Base):
     score = Column(Integer)
     total_questions = Column(Integer)
     quiz_type = Column(String) # 'multiple-choice', 'short_answer', or 'open-ended'
+    duration_seconds = Column(Integer, default=0, nullable=False)
+    active_seconds = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     student = relationship("Student", back_populates="quiz_results")
