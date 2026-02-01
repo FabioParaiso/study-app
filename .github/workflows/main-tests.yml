@@ -1,19 +1,21 @@
-name: Staging Tests + PR
+name: Main Tests
 
 on:
+  pull_request:
+    branches: ["main"]
   push:
-    branches: ["staging"]
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
-  group: "staging-tests"
+  group: "main-tests-${{ github.ref }}"
   cancel-in-progress: true
 
 jobs:
-  backend-tests:
+  backend-tests-full:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,11 +32,11 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt
 
-      - name: Run backend tests
+      - name: Run backend tests (full)
         working-directory: backend
-        run: pytest -k "not integration"
+        run: pytest
 
-  frontend-tests:
+  frontend-tests-full:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -51,21 +53,6 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run frontend tests
+      - name: Run frontend tests (full)
         working-directory: frontend
         run: npm run test -- --run
-
-  create-pr:
-    runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
-    steps:
-      - name: Create or update PR to main
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          existing_pr=$(gh pr list --head staging --base main --state open --json number --jq '.[0].number')
-          if [ -n "$existing_pr" ]; then
-            gh pr edit "$existing_pr" --title "staging -> main" --body "Auto PR after staging tests passed."
-          else
-            gh pr create --base main --head staging --title "staging -> main" --body "Auto PR after staging tests passed."
-          fi
