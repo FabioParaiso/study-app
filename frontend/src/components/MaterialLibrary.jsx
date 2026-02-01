@@ -54,6 +54,7 @@ const MaterialLibrary = ({ materials, onActivate, onDelete, currentId }) => {
                                         setDeleteId(m.id);
                                     }}
                                     className={`p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all z-10 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                    aria-label="Remover ficheiro"
                                     title="Remover ficheiro"
                                 >
                                     <Trash2 size={18} />

@@ -19,6 +19,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                     <h3 className="text-xl font-black text-gray-800">{title}</h3>
                     <button
                         onClick={onClose}
+                        aria-label="Fechar modal"
                         className="p-2 rounded-full hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
                     >
                         <X size={20} />
