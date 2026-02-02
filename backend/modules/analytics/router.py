@@ -28,3 +28,19 @@ def get_recent_metrics(
         days=days,
         tz_offset_minutes=tz_offset_minutes
     )
+
+
+@router.get("/analytics/learning-trend")
+def get_learning_trend(
+    current_user: Student = Depends(get_current_user),
+    days: int = 30,
+    tz_offset_minutes: int = 0,
+    min_questions: int = 1,
+    analytics_service: AnalyticsServicePort = Depends(get_analytics_service)
+):
+    return analytics_service.get_learning_trend(
+        current_user.id,
+        days=days,
+        tz_offset_minutes=tz_offset_minutes,
+        min_questions=min_questions
+    )

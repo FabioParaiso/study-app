@@ -12,6 +12,7 @@ class AnalyticsRepository:
             query = (
                 self.db.query(
                     QuestionAnalytics.is_correct,
+                    QuestionAnalytics.concept_id,
                     QuestionAnalytics.topic.label("raw_concept"),
                     Concept.name.label("concept_name"),
                     Topic.name.label("topic_name"),
@@ -30,6 +31,7 @@ class AnalyticsRepository:
             return [
                 {
                     "is_correct": row.is_correct,
+                    "concept_id": row.concept_id,
                     "raw_concept": row.raw_concept,
                     "concept_name": row.concept_name,
                     "topic_name": row.topic_name,

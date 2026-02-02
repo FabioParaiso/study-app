@@ -1,10 +1,14 @@
 import random
+from collections import deque
 from datetime import datetime, timedelta, timezone, time as time_cls
 from modules.analytics.calculator import AnalyticsCalculator
+from modules.analytics.constants import QUIZ_TYPES, EFFECTIVE_WINDOW_SIZE
 from modules.analytics.ports import AnalyticsRepositoryPort
 from modules.materials.ports import MaterialConceptPairsRepositoryPort
 
+
 class AnalyticsService:
+
     def __init__(self, analytics_repo: AnalyticsRepositoryPort, material_repo: MaterialConceptPairsRepositoryPort):
         self.analytics_repo = analytics_repo
         self.material_repo = material_repo
@@ -17,11 +21,6 @@ class AnalyticsService:
 
         analytics_items = self.analytics_repo.fetch_question_analytics(student_id, material_id)
         
-        # DEBUG PRINTS
-        print(f"DEBUG: get_weak_points material_id={material_id}")
-        print(f"DEBUG: concept_pairs={concept_pairs}")
-        print(f"DEBUG: analytics_items count={len(analytics_items)}")
-        
         return AnalyticsCalculator.build_results(concept_pairs, analytics_items)
 
     def get_adaptive_topics(self, student_id: int, material_id: int = None):
@@ -29,19 +28,16 @@ class AnalyticsService:
         if not analytics:
             return {"boost": [], "mastered": []}
 
-        def _unique_topics(items: list[str]) -> list[str]:
-            seen: set[str] = set()
-            unique: list[str] = []
-            for topic in items:
-                if topic not in seen:
-                    seen.add(topic)
-                    unique.append(topic)
-            return unique
-
-        boost = _unique_topics([item["topic"] for item in analytics if item["success_rate"] < 70])
-        mastered = _unique_topics([item["topic"] for item in analytics if item["success_rate"] >= 90])
+        boost = self._unique_topics([item["topic"] for item in analytics if item["success_rate"] < 70])
+        mastered = self._unique_topics([item["topic"] for item in analytics if item["success_rate"] >= 90])
         
         return {"boost": boost, "mastered": mastered}
+
+    @staticmethod
+    def _unique_topics(items: list[str]) -> list[str]:
+        """Return unique items preserving order."""
+        seen: set[str] = set()
+        return [x for x in items if not (x in seen or seen.add(x))]
 
     def get_classified_concepts(self, student_id: int, material_id: int | None = None) -> dict[str, list[str]]:
         results = self.get_weak_points(student_id, material_id)
@@ -109,7 +105,7 @@ class AnalyticsService:
 
         sessions = self.analytics_repo.fetch_quiz_sessions(student_id, start_utc, end_utc)
 
-        quiz_types = ["multiple-choice", "short_answer", "open-ended"]
+        quiz_types = QUIZ_TYPES
         daily_map: dict = {}
         cursor = start_local_date
         while cursor <= end_local_date:
@@ -142,15 +138,10 @@ class AnalyticsService:
         total_active = 0
         total_duration = 0
         total_tests = 0
-        goal_seconds = 30 * 60
-        days_with_goal = 0
-
         for entry in daily:
             total_active += entry["active_seconds"]
             total_duration += entry["duration_seconds"]
             total_tests += entry["tests_total"]
-            if entry["active_seconds"] >= goal_seconds:
-                days_with_goal += 1
             for qt, count in entry["by_type"].items():
                 totals_by_type[qt] = totals_by_type.get(qt, 0) + count
 
@@ -166,10 +157,133 @@ class AnalyticsService:
                 "active_seconds": total_active,
                 "duration_seconds": total_duration,
                 "tests_total": total_tests,
-                "by_type": totals_by_type,
-                "days_with_goal": days_with_goal,
-                "goal_seconds": goal_seconds
+                "by_type": totals_by_type
             }
+        }
+
+    def get_learning_trend(
+        self,
+        student_id: int,
+        days: int = 30,
+        tz_offset_minutes: int = 0,
+        min_questions: int = 1
+    ) -> dict:
+        safe_days = max(1, min(int(days or 30), 90))
+        tz_offset_minutes = int(tz_offset_minutes or 0)
+        min_questions = max(1, int(min_questions or 1))
+
+        now_utc = datetime.now(timezone.utc)
+        local_now = now_utc + timedelta(minutes=tz_offset_minutes)
+        end_local_date = local_now.date()
+        start_local_date = end_local_date - timedelta(days=safe_days - 1)
+
+        end_utc = datetime.combine(end_local_date + timedelta(days=1), time_cls.min, tzinfo=timezone.utc) - timedelta(minutes=tz_offset_minutes)
+
+        items = self.analytics_repo.fetch_question_analytics(student_id, None)
+
+        quiz_types = QUIZ_TYPES
+        events_by_day: dict = {}
+
+        for item in items:
+            dt = self._parse_datetime(item.get("created_at"))
+            if dt is None:
+                continue
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.astimezone(timezone.utc)
+            if dt >= end_utc:
+                continue
+
+            quiz_type = item.get("quiz_type") or "multiple-choice"
+            if quiz_type not in quiz_types:
+                continue
+
+            concept_id = item.get("concept_id")
+            if concept_id:
+                concept_key = ("id", concept_id)
+            else:
+                raw_name = item.get("concept_name") or item.get("raw_concept") or "Geral"
+                norm_name = raw_name.strip().lower()
+                if not norm_name:
+                    norm_name = "geral"
+                concept_key = ("name", norm_name)
+
+            local_date = (dt + timedelta(minutes=tz_offset_minutes)).date()
+            events_by_day.setdefault(local_date, []).append({
+                "dt": dt,
+                "quiz_type": quiz_type,
+                "is_correct": bool(item.get("is_correct")),
+                "concept_key": concept_key
+            })
+
+        for day_events in events_by_day.values():
+            day_events.sort(key=lambda e: e["dt"])
+
+        state: dict = {qt: {} for qt in quiz_types}
+
+        def _update_state(event: dict):
+            qt = event["quiz_type"]
+            concept_key = event["concept_key"]
+            if concept_key not in state[qt]:
+                state[qt][concept_key] = {
+                    "window": deque(maxlen=EFFECTIVE_WINDOW_SIZE),
+                    "total": 0,
+                    "effective": 0.0
+                }
+            entry = state[qt][concept_key]
+            entry["window"].append(event["is_correct"])
+            entry["total"] += 1
+            # Convert deque to list of dicts for AnalyticsCalculator compatibility
+            window_items = [{"is_correct": v} for v in entry["window"]]
+            entry["effective"] = AnalyticsCalculator._calculate_effective_score(window_items, EFFECTIVE_WINDOW_SIZE)
+
+        pre_days = sorted(d for d in events_by_day.keys() if d < start_local_date)
+        for day in pre_days:
+            for event in events_by_day[day]:
+                _update_state(event)
+
+        daily = []
+        cursor = start_local_date
+        while cursor <= end_local_date:
+            day_events = events_by_day.get(cursor, [])
+            day_counts = {qt: 0 for qt in quiz_types}
+
+            for event in day_events:
+                _update_state(event)
+                day_counts[event["quiz_type"]] += 1
+
+            by_level = {}
+            for qt in quiz_types:
+                if day_counts[qt] < min_questions:
+                    value = None
+                else:
+                    seen = [s for s in state[qt].values() if s["total"] > 0]
+                    if not seen:
+                        value = None
+                    else:
+                        avg = sum(s["effective"] for s in seen) / len(seen)
+                        value = round(avg * 100)
+                by_level[qt] = {
+                    "value": value,
+                    "questions": day_counts[qt]
+                }
+
+            daily.append({
+                "day": cursor.isoformat(),
+                "by_level": by_level
+            })
+
+            cursor += timedelta(days=1)
+
+        return {
+            "range": {
+                "start": start_local_date.isoformat(),
+                "end": end_local_date.isoformat(),
+                "days": safe_days,
+                "tz_offset_minutes": tz_offset_minutes,
+                "min_questions": min_questions
+            },
+            "daily": daily
         }
 
     def build_mcq_quiz_concepts(

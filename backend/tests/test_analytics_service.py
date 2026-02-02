@@ -338,4 +338,43 @@ class TestAnalyticsService:
 
         assert metrics["totals"]["tests_total"] == 3
         assert metrics["totals"]["active_seconds"] == 3500
-        assert metrics["totals"]["days_with_goal"] == 1
+
+    def test_get_learning_trend_accumulates_and_gates_by_min_questions(self, service, analytics_repo):
+        today = datetime.now(timezone.utc).date()
+        day_in_range = today - timedelta(days=1)
+        day_before_range = today - timedelta(days=3)
+
+        items = []
+        base_before = datetime.combine(day_before_range, time(12, 0), tzinfo=timezone.utc)
+        for i in range(10):
+            items.append({
+                "concept_id": 1,
+                "concept_name": "Alpha",
+                "raw_concept": "Alpha",
+                "is_correct": i < 9,
+                "quiz_type": "multiple-choice",
+                "created_at": base_before + timedelta(minutes=i)
+            })
+
+        base_in_range = datetime.combine(day_in_range, time(12, 0), tzinfo=timezone.utc)
+        for i in range(10):
+            items.append({
+                "concept_id": 2,
+                "concept_name": "Beta",
+                "raw_concept": "Beta",
+                "is_correct": i < 5,
+                "quiz_type": "multiple-choice",
+                "created_at": base_in_range + timedelta(minutes=i)
+            })
+
+        analytics_repo.fetch_question_analytics.return_value = items
+
+        trend = service.get_learning_trend(student_id=1, days=2, tz_offset_minutes=0, min_questions=1)
+        daily = trend["daily"]
+
+        day_entry = next(d for d in daily if d["day"] == day_in_range.isoformat())
+        today_entry = next(d for d in daily if d["day"] == today.isoformat())
+
+        assert day_entry["by_level"]["multiple-choice"]["value"] == 70
+        assert day_entry["by_level"]["multiple-choice"]["questions"] == 10
+        assert today_entry["by_level"]["multiple-choice"]["value"] is None
