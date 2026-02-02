@@ -11,7 +11,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: "staging-tests"
+  group: "staging-tests-${{ github.head_ref || github.ref }}"
   cancel-in-progress: true
 
 jobs:
