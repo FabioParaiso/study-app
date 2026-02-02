@@ -66,6 +66,16 @@ export const studyService = {
         const res = await api.get(`/analytics/metrics?${params.toString()}`);
         return res.data;
     },
+    getLearningTrend: async (days = 30, tzOffsetMinutes = 0, minQuestions = 1) => {
+        const params = new URLSearchParams({
+            days: String(days),
+            tz_offset_minutes: String(tzOffsetMinutes),
+            min_questions: String(minQuestions),
+            t: String(Date.now())
+        });
+        const res = await api.get(`/analytics/learning-trend?${params.toString()}`);
+        return res.data;
+    },
     updateAvatar: async (avatar) => {
         const res = await api.post('/gamification/avatar', { avatar });
         return res.data;

@@ -1,5 +1,6 @@
 from typing import Iterable
 from datetime import datetime
+from modules.analytics.constants import QUIZ_TYPES, EFFECTIVE_WINDOW_SIZE
 
 
 class AnalyticsCalculator:
@@ -67,7 +68,6 @@ class AnalyticsCalculator:
                 concept_groups[key].append(item)
 
         results = []
-        WINDOW_SIZE = 10
 
         # 3. Process Each Group
         def _created_at_key(item: dict) -> float:
@@ -91,11 +91,11 @@ class AnalyticsCalculator:
 
             # --- Overall Metric (Legacy Support) ---
             # We still calculate this for backward compatibility and general overview
-            effective_overall = AnalyticsCalculator._calculate_effective_score(sorted_items, WINDOW_SIZE)
+            effective_overall = AnalyticsCalculator._calculate_effective_score(sorted_items, EFFECTIVE_WINDOW_SIZE)
             
             # Raw Mastery for display (all time? or window? stored logic used window)
             # Replicating original logic for mastery_raw:
-            window = sorted_items[:WINDOW_SIZE]
+            window = sorted_items[:EFFECTIVE_WINDOW_SIZE]
             if window:
                 mastery_raw = sum(1 for i in window if i.get("is_correct")) / len(window)
             else:
@@ -107,9 +107,9 @@ class AnalyticsCalculator:
             short_items = [i for i in sorted_items if i.get("quiz_type") == "short_answer"]
             bloom_items = [i for i in sorted_items if i.get("quiz_type") == "open-ended"]
 
-            effective_mcq = AnalyticsCalculator._calculate_effective_score(mcq_items, WINDOW_SIZE)
-            effective_short = AnalyticsCalculator._calculate_effective_score(short_items, WINDOW_SIZE)
-            effective_bloom = AnalyticsCalculator._calculate_effective_score(bloom_items, WINDOW_SIZE)
+            effective_mcq = AnalyticsCalculator._calculate_effective_score(mcq_items, EFFECTIVE_WINDOW_SIZE)
+            effective_short = AnalyticsCalculator._calculate_effective_score(short_items, EFFECTIVE_WINDOW_SIZE)
+            effective_bloom = AnalyticsCalculator._calculate_effective_score(bloom_items, EFFECTIVE_WINDOW_SIZE)
 
             count_mcq = len(mcq_items)
             count_short = len(short_items)
