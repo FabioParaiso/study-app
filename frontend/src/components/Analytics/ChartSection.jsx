@@ -62,7 +62,7 @@ const AxisLabel = ({ idx, label, center = false, style }) => (
  * Wrapper component for chart sections in the Analytics Dashboard.
  * Provides consistent styling for title, subtitle, legend, and scrollable content.
  */
-const ChartSection = ({ title, subtitle, showLegend = false, useLine = false, rightContent, children }) => (
+const ChartSection = ({ title, subtitle, showLegend = false, useLine = false, rightContent, children, contentRef }) => (
     <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 space-y-4">
         <div className="flex items-center justify-between">
             <div>
@@ -72,7 +72,7 @@ const ChartSection = ({ title, subtitle, showLegend = false, useLine = false, ri
             {showLegend && <ChartLegend useLine={useLine} />}
             {rightContent}
         </div>
-        <div className="overflow-x-auto overflow-y-visible">
+        <div className="overflow-x-auto overflow-y-visible" ref={contentRef}>
             {children}
         </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ArrowLeft, BarChart3, Clock, CheckCircle2, Layers } from 'lucide-react';
+import { ArrowLeft, BarChart3, Clock, Layers } from 'lucide-react';
 import IntroHeader from '../components/Intro/IntroHeader';
 import MetricCard from '../components/Analytics/MetricCard';
 import { ChartSection, TYPE_LABELS, TYPE_COLORS, LINE_COLORS, LEVEL_SHORT, AxisLabel } from '../components/Analytics/ChartSection';
@@ -10,7 +10,6 @@ import { studyService } from '../services/studyService';
 
 const CHART_HEIGHT_PX = 120;
 const LINE_CHART_HEIGHT_PX = 140;
-const LINE_CHART_MIN_WIDTH = 720;
 
 const formatActiveTooltip = (day) => {
     const minutes = formatMinutes(day.active_seconds);
@@ -84,15 +83,10 @@ const AnalyticsPage = ({
         return learningTrend.daily || [];
     }, [learningTrend]);
 
-    const learningChartWidth = useMemo(() => {
-        if (learningDaily.length === 0) return LINE_CHART_MIN_WIDTH;
-        return Math.max(LINE_CHART_MIN_WIDTH, learningDaily.length * 24);
-    }, [learningDaily]);
-
     const learningColumnWidth = useMemo(() => {
-        if (learningDaily.length === 0) return LINE_CHART_MIN_WIDTH;
-        return learningChartWidth / learningDaily.length;
-    }, [learningDaily, learningChartWidth]);
+        if (learningDaily.length === 0) return 0;
+        return 100 / learningDaily.length;
+    }, [learningDaily]);
 
     const learningValues = useMemo(() => {
         const values = {};
@@ -118,8 +112,6 @@ const AnalyticsPage = ({
 
     const totalActiveMinutes = totals ? formatMinutes(totals.active_seconds) : 0;
     const avgActiveMinutes = totals ? formatMinutes((totals.active_seconds || 0) / 30) : 0;
-    const daysWithGoal = totals ? totals.days_with_goal || 0 : 0;
-
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-800">
             <IntroHeader
@@ -165,7 +157,7 @@ const AnalyticsPage = ({
 
                 {!loading && !errorMsg && (
                     <>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <MetricCard
                                 icon={Clock}
                                 iconBg="bg-duo-green"
@@ -177,13 +169,6 @@ const AnalyticsPage = ({
                                 iconBg="bg-duo-blue"
                                 label="Media diaria"
                                 value={`${avgActiveMinutes} min`}
-                            />
-                            <MetricCard
-                                icon={CheckCircle2}
-                                iconBg="bg-yellow-400"
-                                iconTextColour="text-yellow-900"
-                                label="Dias >= 30 min"
-                                value={`${daysWithGoal}/30`}
                             />
                         </div>
 
@@ -209,23 +194,22 @@ const AnalyticsPage = ({
                                 </div>
                             )}
                             {!trendLoading && !trendError && learningDaily.length > 0 && (
-                                <div className="min-w-[720px]" style={{ width: `${learningChartWidth}px` }}>
-                                    <div className="relative" style={{ height: `${LINE_CHART_HEIGHT_PX}px` }}>
+                                <div className="w-full">
+                                    <div className="relative w-full" style={{ height: `${LINE_CHART_HEIGHT_PX}px` }}>
                                         <svg
-                                            viewBox={`0 0 ${learningChartWidth} ${LINE_CHART_HEIGHT_PX}`}
-                                            width={learningChartWidth}
-                                            height={LINE_CHART_HEIGHT_PX}
-                                            className="absolute inset-0"
+                                            viewBox={`0 0 100 ${LINE_CHART_HEIGHT_PX}`}
+                                            preserveAspectRatio="none"
+                                            className="absolute inset-0 w-full h-full"
                                         >
-                                            <line x1="0" y1={LINE_CHART_HEIGHT_PX} x2={learningChartWidth} y2={LINE_CHART_HEIGHT_PX} stroke="#e5e7eb" strokeWidth="1" />
+                                            <line x1="0" y1={LINE_CHART_HEIGHT_PX} x2="100" y2={LINE_CHART_HEIGHT_PX} stroke="#e5e7eb" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                                             {[25, 50, 75].map((tick) => {
                                                 const y = (1 - tick / 100) * LINE_CHART_HEIGHT_PX;
                                                 return (
-                                                    <line key={tick} x1="0" y1={y} x2={learningChartWidth} y2={y} stroke="#f3f4f6" strokeWidth="1" />
+                                                    <line key={tick} x1="0" y1={y} x2="100" y2={y} stroke="#f3f4f6" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                                                 );
                                             })}
                                             {Object.keys(TYPE_LABELS).map((type) => {
-                                                const paths = buildLinePaths(learningValues[type], learningChartWidth, LINE_CHART_HEIGHT_PX, learningColumnWidth / 2);
+                                                const paths = buildLinePaths(learningValues[type], 100, LINE_CHART_HEIGHT_PX, learningColumnWidth / 2);
                                                 return paths.map((path, idx) => (
                                                     <path
                                                         key={`${type}-${idx}`}
@@ -235,20 +219,29 @@ const AnalyticsPage = ({
                                                         strokeWidth="2.5"
                                                         strokeLinecap="round"
                                                         strokeLinejoin="round"
+                                                        vectorEffect="non-scaling-stroke"
                                                     />
                                                 ));
                                             })}
                                         </svg>
-                                        <div className="absolute inset-0 flex">
-                                            {learningDaily.map((day) => (
-                                                <TooltipTarget key={day.day} text={formatLearningTooltip(day)} enabled={true}>
-                                                    <div style={{ width: `${learningColumnWidth}px`, height: `${LINE_CHART_HEIGHT_PX}px` }}></div>
-                                                </TooltipTarget>
-                                            ))}
+                                        <div className="absolute inset-0 flex z-10">
+                                            {learningDaily.map((day) => {
+                                                const hasData = day.by_level && Object.values(day.by_level).some(l => l.value !== null && l.value > 0);
+                                                return (
+                                                    <div key={day.day} className="flex-1 h-full">
+                                                        <TooltipTarget text={formatLearningTooltip(day)} enabled={hasData}>
+                                                            <div
+                                                                className={`w-full transition-colors ${hasData ? 'hover:bg-duo-blue/10' : ''}`}
+                                                                style={{ height: `${LINE_CHART_HEIGHT_PX}px` }}
+                                                            />
+                                                        </TooltipTarget>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                     <div className="flex mt-2">
-                                        {learningDaily.map((day, idx) => <AxisLabel key={day.day} idx={idx} label={formatDayLabel(day.day)} center style={{ width: `${learningColumnWidth}px` }} />
+                                        {learningDaily.map((day, idx) => <AxisLabel key={day.day} idx={idx} label={formatDayLabel(day.day)} center style={{ width: `${learningColumnWidth}%` }} />
                                         )}
                                     </div>
                                 </div>

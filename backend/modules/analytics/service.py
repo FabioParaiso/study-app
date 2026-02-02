@@ -138,15 +138,10 @@ class AnalyticsService:
         total_active = 0
         total_duration = 0
         total_tests = 0
-        goal_seconds = 30 * 60
-        days_with_goal = 0
-
         for entry in daily:
             total_active += entry["active_seconds"]
             total_duration += entry["duration_seconds"]
             total_tests += entry["tests_total"]
-            if entry["active_seconds"] >= goal_seconds:
-                days_with_goal += 1
             for qt, count in entry["by_type"].items():
                 totals_by_type[qt] = totals_by_type.get(qt, 0) + count
 
@@ -162,9 +157,7 @@ class AnalyticsService:
                 "active_seconds": total_active,
                 "duration_seconds": total_duration,
                 "tests_total": total_tests,
-                "by_type": totals_by_type,
-                "days_with_goal": days_with_goal,
-                "goal_seconds": goal_seconds
+                "by_type": totals_by_type
             }
         }
 

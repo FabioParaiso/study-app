@@ -338,7 +338,6 @@ class TestAnalyticsService:
 
         assert metrics["totals"]["tests_total"] == 3
         assert metrics["totals"]["active_seconds"] == 3500
-        assert metrics["totals"]["days_with_goal"] == 1
 
     def test_get_learning_trend_accumulates_and_gates_by_min_questions(self, service, analytics_repo):
         today = datetime.now(timezone.utc).date()
