@@ -1,8 +1,8 @@
 import random
 from collections import deque
 from datetime import datetime, timedelta, timezone, time as time_cls
-from modules.analytics.calculator import AnalyticsCalculator
-from modules.analytics.constants import QUIZ_TYPES, EFFECTIVE_WINDOW_SIZE
+from modules.analytics.calculator import AnalyticsCalculator, _calculate_mastery_simple
+from modules.analytics.constants import QUIZ_TYPES, CONFIDENCE_WINDOW
 from modules.analytics.ports import AnalyticsRepositoryPort
 from modules.materials.ports import MaterialConceptPairsRepositoryPort
 
@@ -28,10 +28,25 @@ class AnalyticsService:
         if not analytics:
             return {"boost": [], "mastered": []}
 
-        boost = self._unique_topics([item["topic"] for item in analytics if item["success_rate"] < 70])
-        mastered = self._unique_topics([item["topic"] for item in analytics if item["success_rate"] >= 90])
+        boost = []
+        mastered = []
         
-        return {"boost": boost, "mastered": mastered}
+        for item in analytics:
+            topic = item["topic"]
+            
+            # Only use established MCQ scores for adaptive topics
+            mcq_data = item.get("score_data_mcq", {})
+            if mcq_data.get("confidence_level") != "established":
+                continue
+            
+            score = (mcq_data.get("score") or 0) * 100
+            
+            if score < 70:
+                boost.append(topic)
+            elif score >= 90:
+                mastered.append(topic)
+        
+        return {"boost": self._unique_topics(boost), "mastered": self._unique_topics(mastered)}
 
     @staticmethod
     def _unique_topics(items: list[str]) -> list[str]:
@@ -51,17 +66,19 @@ class AnalyticsService:
             if not concept:
                 continue
 
-            mcq_count = item.get("total_questions_mcq", 0)
-            effective_mcq = item.get("effective_mcq", 0)
-
-            if mcq_count == 0:
+            mcq_data = item.get("score_data_mcq", {})
+            confidence_level = mcq_data.get("confidence_level", "not_seen")
+            
+            # Exploring and not_seen count as unseen
+            if confidence_level in ("not_seen", "exploring"):
                 unseen.append(concept)
-            elif effective_mcq <= 75:
-                # <= 75% includes "Weak" and "Learning" (Fraco/Em aprendizagem) for MCQ only
-                weak.append(concept)
             else:
-                # > 75% includes "Strong" (Forte/Ok) for MCQ only
-                strong.append(concept)
+                # Building or established - use actual score
+                score = (mcq_data.get("score") or 0) * 100
+                if score <= 75:
+                    weak.append(concept)
+                else:
+                    strong.append(concept)
                 
         return {
             "unseen": unseen,
@@ -226,16 +243,16 @@ class AnalyticsService:
             concept_key = event["concept_key"]
             if concept_key not in state[qt]:
                 state[qt][concept_key] = {
-                    "window": deque(maxlen=EFFECTIVE_WINDOW_SIZE),
+                    "window": deque(maxlen=CONFIDENCE_WINDOW),
                     "total": 0,
                     "effective": 0.0
                 }
             entry = state[qt][concept_key]
             entry["window"].append(event["is_correct"])
             entry["total"] += 1
-            # Convert deque to list of dicts for AnalyticsCalculator compatibility
+            # Convert deque to list of dicts for mastery calculation
             window_items = [{"is_correct": v} for v in entry["window"]]
-            entry["effective"] = AnalyticsCalculator._calculate_effective_score(window_items, EFFECTIVE_WINDOW_SIZE)
+            entry["effective"] = _calculate_mastery_simple(window_items, CONFIDENCE_WINDOW)
 
         pre_days = sorted(d for d in events_by_day.keys() if d < start_local_date)
         for day in pre_days:
@@ -302,18 +319,25 @@ class AnalyticsService:
                 continue
             if allowed_concepts and concept not in allowed_concepts:
                 continue
+            
+            mcq_data = item.get("score_data_mcq", {})
+            confidence_level = mcq_data.get("confidence_level", "not_seen")
+            score_pct = round((mcq_data.get("score") or 0) * 100)
+            
             items.append({
                 "concept": concept,
-                "effective_mcq": item.get("effective_mcq", 0),
+                "effective_mcq": score_pct,
+                "confidence_level": confidence_level,
                 "total_questions_mcq": item.get("total_questions_mcq", 0),
             })
 
         if not items or total_questions <= 0:
             return []
 
-        unseen_items = [i for i in items if i["total_questions_mcq"] == 0]
-        weak_items = [i for i in items if i["total_questions_mcq"] > 0 and i["effective_mcq"] <= 75]
-        strong_items = [i for i in items if i["total_questions_mcq"] > 0 and i["effective_mcq"] > 75]
+        # Treat "not_seen" and "exploring" as unseen
+        unseen_items = [i for i in items if i["confidence_level"] in ("not_seen", "exploring")]
+        weak_items = [i for i in items if i["confidence_level"] not in ("not_seen", "exploring") and i["effective_mcq"] <= 75]
+        strong_items = [i for i in items if i["confidence_level"] not in ("not_seen", "exploring") and i["effective_mcq"] > 75]
 
         unseen_items = sorted(unseen_items, key=lambda i: i["concept"].lower())
         weak_items = sorted(weak_items, key=lambda i: (i["effective_mcq"], i["concept"].lower()))

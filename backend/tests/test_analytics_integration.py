@@ -75,11 +75,14 @@ def test_submit_quiz_and_get_analytics(client):
     # Verify analytics structure
     for topic_stat in analytics:
         assert "topic" in topic_stat
-        assert "success_rate" in topic_stat
+        assert "score_data_mcq" in topic_stat
         
-    # Verify Math has lower success rate (3/5 with confidence -> 55%)
+    # Verify Math has building state (5 attempts = building)
     math_stat = next(t for t in analytics if t["topic"] == "Math")
-    assert math_stat["success_rate"] == 55
+    mcq_data = math_stat["score_data_mcq"]
+    assert mcq_data["confidence_level"] == "building"
+    assert mcq_data["attempts_count"] == 5
+    assert "%" in mcq_data["display_value"]  # Should show percentage
 
 
 def test_adaptive_topics_from_analytics(client):
@@ -142,7 +145,10 @@ def test_adaptive_topics_from_analytics(client):
     analytics = analytics_response.json()
     
     physics_stat = next(t for t in analytics if t["topic"] == "Physics")
-    assert physics_stat["success_rate"] < 70  # Should be in "boost" category
+    mcq_data = physics_stat["score_data_mcq"]
+    # Only 3 attempts = exploring state, no score yet
+    assert mcq_data["confidence_level"] == "exploring"
+    assert mcq_data["attempts_count"] == 3
 
 
 def test_quiz_result_without_material_id_uses_active(client):

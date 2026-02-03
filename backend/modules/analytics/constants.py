@@ -1,7 +1,10 @@
 # Canonical constants for the analytics module.
-# These are shared between service.py and calculator.py.
 
+# Unified window for mastery calculation and confidence threshold
+CONFIDENCE_WINDOW = 7
+
+# Minimum attempts before showing score (percentage)
+EXPLORING_THRESHOLD = 5
+
+# Quiz types
 QUIZ_TYPES = ["multiple-choice", "short_answer", "open-ended"]
-
-# Default sliding window size for effective mastery calculations.
-EFFECTIVE_WINDOW_SIZE = 10
