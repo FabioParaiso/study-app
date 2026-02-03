@@ -315,115 +315,62 @@ class AnalyticsService:
         items: list[dict] = []
         for item in results:
             concept = item.get("concept")
-            if not concept:
+            if not concept or (allowed_concepts and concept not in allowed_concepts):
                 continue
-            if allowed_concepts and concept not in allowed_concepts:
-                continue
-            
             mcq_data = item.get("score_data_mcq", {})
-            confidence_level = mcq_data.get("confidence_level", "not_seen")
-            score_pct = round((mcq_data.get("score") or 0) * 100)
-            
             items.append({
                 "concept": concept,
-                "effective_mcq": score_pct,
-                "confidence_level": confidence_level,
-                "total_questions_mcq": item.get("total_questions_mcq", 0),
+                "score": round((mcq_data.get("score") or 0) * 100),
+                "confidence_level": mcq_data.get("confidence_level", "not_seen"),
+                "attempts": mcq_data.get("attempts_count", 0),
             })
 
         if not items or total_questions <= 0:
             return []
 
-        # Treat "not_seen" and "exploring" as unseen
-        unseen_items = [i for i in items if i["confidence_level"] in ("not_seen", "exploring")]
-        weak_items = [i for i in items if i["confidence_level"] not in ("not_seen", "exploring") and i["effective_mcq"] <= 75]
-        strong_items = [i for i in items if i["confidence_level"] not in ("not_seen", "exploring") and i["effective_mcq"] > 75]
+        # Classify into 3 buckets
+        below = [i for i in items if i["confidence_level"] in ("not_seen", "exploring")]
+        weak  = [i for i in items if i["confidence_level"] not in ("not_seen", "exploring") and i["score"] <= 75]
+        strong = [i for i in items if i["confidence_level"] not in ("not_seen", "exploring") and i["score"] > 75]
 
-        unseen_items = sorted(unseen_items, key=lambda i: i["concept"].lower())
-        weak_items = sorted(weak_items, key=lambda i: (i["effective_mcq"], i["concept"].lower()))
-        strong_items = sorted(strong_items, key=lambda i: (i["effective_mcq"], i["concept"].lower()))
+        # Sort within buckets
+        below.sort(key=lambda i: (i["attempts"], i["concept"].lower()))
+        weak.sort(key=lambda i: (i["score"], i["concept"].lower()))
+        strong.sort(key=lambda i: (-i["score"], i["concept"].lower()))  # highest score first (least urgent)
 
-        def _repeat_by_weight(
-            bucket: list[dict],
-            count: int,
-            weight_fn=None,
-            ensure_each_once: bool = True
-        ) -> list[str]:
-            if count <= 0 or not bucket:
-                return []
+        total_unique = len(below) + len(weak) + len(strong)
 
-            concepts = [i["concept"] for i in bucket]
-            if ensure_each_once and count <= len(concepts):
-                return concepts[:count]
+        if total_unique == 0:
+            return []
 
-            selected: list[str] = []
-            remaining = count
-            if ensure_each_once:
-                selected = concepts[:]
-                remaining = count - len(concepts)
+        if total_unique >= total_questions:
+            # ENOUGH UNIQUE CONCEPTS — max 1x each, priority selection
+            guaranteed = []
+            remaining_strong = list(strong)
+            remaining_weak = list(weak)
 
-            if remaining <= 0:
-                return selected
+            # Guarantee 1 strong if below+weak would fill all slots
+            if strong and (len(below) + len(weak)) >= total_questions:
+                guaranteed.append(strong[0]["concept"])
+                remaining_strong = strong[1:]
 
-            if weight_fn is None:
-                idx = 0
-                while remaining > 0:
-                    selected.append(concepts[idx % len(concepts)])
-                    idx += 1
-                    remaining -= 1
-                return selected
+            # Guarantee 1 weak if below would fill all remaining slots
+            if weak and len(below) >= (total_questions - len(guaranteed)):
+                guaranteed.append(weak[0]["concept"])
+                remaining_weak = weak[1:]
 
-            weights = [max(1, int(weight_fn(i))) for i in bucket]
-            total_weight = sum(weights)
-            allocations = [int((w / total_weight) * remaining) for w in weights]
-            allocated = sum(allocations)
-            remainder = remaining - allocated
-            order = sorted(
-                range(len(bucket)),
-                key=lambda i: (-weights[i], concepts[i].lower())
-            )
-            for i in range(remainder):
-                allocations[order[i % len(order)]] += 1
-            for idx, count in enumerate(allocations):
-                if count > 0:
-                    selected.extend([concepts[idx]] * count)
-            return selected
+            remaining_slots = total_questions - len(guaranteed)
+            pool = below + remaining_weak + remaining_strong
+            selected = [i["concept"] for i in pool[:remaining_slots]]
+            selected.extend(guaranteed)
+        else:
+            # FEW CONCEPTS — round-robin with priority order
+            concepts_ordered = [i["concept"] for i in (below + weak + strong)]
+            selected = []
+            idx = 0
+            while len(selected) < total_questions:
+                selected.append(concepts_ordered[idx % len(concepts_ordered)])
+                idx += 1
 
-        def _fill(bucket: list[dict], count: int, weight_fn=None) -> tuple[list[str], int]:
-            if count <= 0:
-                return [], 0
-            if not bucket:
-                return [], count
-            return _repeat_by_weight(bucket, count, weight_fn=weight_fn, ensure_each_once=True), 0
-
-        def _weak_weight(item: dict) -> int:
-            return max(1, 100 - int(item.get("effective_mcq", 0)))
-
-        selected: list[str] = []
-        shortage = 0
-
-        unseen_selected, shortage = _fill(unseen_items, 5)
-        selected.extend(unseen_selected)
-
-        weak_selected, shortage = _fill(weak_items, 4 + shortage, weight_fn=_weak_weight)
-        selected.extend(weak_selected)
-
-        strong_selected, shortage = _fill(strong_items, 1 + shortage)
-        selected.extend(strong_selected)
-
-        if shortage > 0:
-            fallback_bucket = weak_items or unseen_items or strong_items
-            if fallback_bucket:
-                fallback_weight = _weak_weight if fallback_bucket is weak_items else None
-                selected.extend(
-                    _repeat_by_weight(
-                        fallback_bucket,
-                        shortage,
-                        weight_fn=fallback_weight,
-                        ensure_each_once=False
-                    )
-                )
-
-        selected = selected[:total_questions]
         random.shuffle(selected)
         return selected
