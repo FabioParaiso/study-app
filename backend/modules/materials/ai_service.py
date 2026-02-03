@@ -10,7 +10,7 @@ class TopicAIService:
         self.caller = caller
         models = get_llm_models()
         self.model_topic_extraction = models.topic_extraction
-        self.reasoning_effort = models.reasoning_effort
+        self.reasoning_effort = models.topic_extraction_reasoning or models.reasoning_effort
 
     def is_available(self) -> bool:
         return bool(self.caller and self.caller.is_available())
