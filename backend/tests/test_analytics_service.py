@@ -241,41 +241,136 @@ class TestAnalyticsService:
 
     # ==================== BUILD MCQ QUIZ CONCEPTS ====================
 
-    def test_build_mcq_quiz_concepts_treats_exploring_as_unseen(self, service):
-        """Test exploring concepts are treated as unseen for quiz generation."""
+    def test_mcq_below_threshold_prioritised_by_attempts(self, service):
+        """Concepts with fewer attempts are selected before those with more."""
+        service.get_weak_points = Mock(return_value=[
+            *[{
+                "concept": f"Below{i}",
+                "score_data_mcq": {"confidence_level": "not_seen", "score": None, "attempts_count": 0},
+            } for i in range(6)],
+            *[{
+                "concept": f"BelowOld{i}",
+                "score_data_mcq": {"confidence_level": "exploring", "score": 0.2, "attempts_count": 3},
+            } for i in range(6)],
+        ])
+
+        result = service.build_mcq_quiz_concepts(student_id=1, total_questions=10)
+
+        assert len(result) == 10
+        # All 6 zero-attempt concepts must be present (they have priority)
+        for i in range(6):
+            assert f"Below{i}" in result
+
+    def test_mcq_max_one_per_concept_when_enough_unique(self, service):
+        """No concept appears more than once when there are >= total_questions unique concepts."""
         service.get_weak_points = Mock(return_value=[
             {
-                "concept": "Unseen",
-                "score_data_mcq": {"confidence_level": "not_seen", "score": None},
-                "total_questions_mcq": 0,
-            },
+                "concept": f"C{i}",
+                "score_data_mcq": {"confidence_level": "not_seen", "score": None, "attempts_count": 0},
+            }
+            for i in range(12)
+        ])
+
+        result = service.build_mcq_quiz_concepts(student_id=1, total_questions=10)
+
+        assert len(result) == 10
+        assert len(set(result)) == 10  # all unique
+
+    def test_mcq_repetitions_when_few_concepts(self, service):
+        """With fewer concepts than slots, round-robin fills to total_questions."""
+        service.get_weak_points = Mock(return_value=[
+            {"concept": "A", "score_data_mcq": {"confidence_level": "not_seen", "score": None, "attempts_count": 0}},
+            {"concept": "B", "score_data_mcq": {"confidence_level": "established", "score": 0.4, "attempts_count": 5}},
+            {"concept": "C", "score_data_mcq": {"confidence_level": "established", "score": 0.9, "attempts_count": 10}},
+        ])
+
+        result = service.build_mcq_quiz_concepts(student_id=1, total_questions=10)
+
+        assert len(result) == 10
+        # Each concept appears at least once
+        assert "A" in result
+        assert "B" in result
+        assert "C" in result
+        # Round-robin: 10 / 3 => each appears 3 or 4 times
+        for c in ["A", "B", "C"]:
+            assert result.count(c) >= 3
+
+    def test_mcq_strong_guaranteed_when_many_below(self, service):
+        """At least 1 strong concept even when below-threshold concepts fill all slots."""
+        service.get_weak_points = Mock(return_value=[
+            *[{
+                "concept": f"Below{i}",
+                "score_data_mcq": {"confidence_level": "not_seen", "score": None, "attempts_count": 0},
+            } for i in range(15)],
             {
-                "concept": "Exploring",
-                "score_data_mcq": {"confidence_level": "exploring", "score": None},
-                "total_questions_mcq": 3,
-            },
-            {
-                "concept": "Weak",
-                "score_data_mcq": {"confidence_level": "established", "score": 0.4},
-                "total_questions_mcq": 10,
-            },
-            {
-                "concept": "Strong",
-                "score_data_mcq": {"confidence_level": "established", "score": 0.9},
-                "total_questions_mcq": 10,
+                "concept": "Strong1",
+                "score_data_mcq": {"confidence_level": "established", "score": 0.95, "attempts_count": 20},
             },
         ])
 
-        result = service.build_mcq_quiz_concepts(
-            student_id=1,
-            material_id=2,
-            allowed_concepts={"Unseen", "Exploring", "Weak", "Strong"},
-            total_questions=10
-        )
+        result = service.build_mcq_quiz_concepts(student_id=1, total_questions=10)
 
         assert len(result) == 10
-        # Both Unseen and Exploring should be in unseen bucket (5 slots)
-        assert result.count("Unseen") + result.count("Exploring") >= 2
+        assert "Strong1" in result
+
+    def test_mcq_weak_guaranteed_when_many_below(self, service):
+        """At least 1 weak concept even when below-threshold would fill remaining slots."""
+        below = [{
+            "concept": f"Below{i}",
+            "score_data_mcq": {"confidence_level": "not_seen", "score": None, "attempts_count": 0},
+        } for i in range(12)]
+        weak = [{
+            "concept": f"Weak{i}",
+            "score_data_mcq": {"confidence_level": "established", "score": 0.5, "attempts_count": 8},
+        } for i in range(8)]
+        service.get_weak_points = Mock(return_value=below + weak)
+
+        result = service.build_mcq_quiz_concepts(student_id=1, total_questions=10)
+
+        assert len(result) == 10
+        weak_in_result = [c for c in result if c.startswith("Weak")]
+        assert len(weak_in_result) >= 1
+
+    def test_mcq_all_below_fills_quiz(self, service):
+        """When only below-threshold concepts exist, the quiz is still filled."""
+        service.get_weak_points = Mock(return_value=[
+            {
+                "concept": f"Below{i}",
+                "score_data_mcq": {"confidence_level": "not_seen", "score": None, "attempts_count": i},
+            }
+            for i in range(5)
+        ])
+
+        result = service.build_mcq_quiz_concepts(student_id=1, total_questions=10)
+
+        assert len(result) == 10
+        # All 5 concepts must appear (round-robin)
+        for i in range(5):
+            assert f"Below{i}" in result
+
+    def test_mcq_no_below_weak_plus_strong(self, service):
+        """With 0 below-threshold, weak and strong fill quiz correctly."""
+        service.get_weak_points = Mock(return_value=[
+            *[{
+                "concept": f"Weak{i}",
+                "score_data_mcq": {"confidence_level": "established", "score": 0.3 + i * 0.05, "attempts_count": 10},
+            } for i in range(7)],
+            *[{
+                "concept": f"Strong{i}",
+                "score_data_mcq": {"confidence_level": "established", "score": 0.85 + i * 0.02, "attempts_count": 15},
+            } for i in range(5)],
+        ])
+
+        result = service.build_mcq_quiz_concepts(student_id=1, total_questions=10)
+
+        assert len(result) == 10
+        assert len(set(result)) == 10  # all unique
+        # All 7 weak should be present (priority over strong)
+        for i in range(7):
+            assert f"Weak{i}" in result
+        # 3 strong fill remaining slots
+        strong_in_result = [c for c in result if c.startswith("Strong")]
+        assert len(strong_in_result) == 3
 
     # ==================== LABELS PT-PT ====================
 
