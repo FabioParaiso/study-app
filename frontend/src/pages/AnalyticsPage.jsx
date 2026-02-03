@@ -1,39 +1,15 @@
-import React, { useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
-import { ArrowLeft, BarChart3, Clock, CheckCircle2, Layers } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { ArrowLeft, BarChart3, Clock, Layers } from 'lucide-react';
 import IntroHeader from '../components/Intro/IntroHeader';
+import MetricCard from '../components/Analytics/MetricCard';
+import { ChartSection, TYPE_LABELS, TYPE_COLORS, LINE_COLORS, LEVEL_SHORT, AxisLabel } from '../components/Analytics/ChartSection';
+import { TooltipTarget } from '../components/common/Tooltip';
+import { calcBarHeight, formatMinutes, formatDayLabel, formatDayTitle, buildLinePaths } from '../utils/chartUtils';
+import { useAsyncData } from '../hooks/useAsyncData';
 import { studyService } from '../services/studyService';
 
-const TYPE_LABELS = {
-    'multiple-choice': 'Iniciante',
-    'short_answer': 'Intermedio',
-    'open-ended': 'Avancado'
-};
-
-const TYPE_COLORS = {
-    'multiple-choice': 'bg-green-500',
-    'short_answer': 'bg-yellow-500',
-    'open-ended': 'bg-purple-500'
-};
-
 const CHART_HEIGHT_PX = 120;
-const TOOLTIP_OFFSET_PX = 8;
-const TOOLTIP_EDGE_PADDING = 8;
-
-const formatMinutes = (seconds) => Math.round((seconds || 0) / 60);
-
-const formatDayLabel = (isoDay) => {
-    if (!isoDay) return '';
-    const parts = isoDay.split('-');
-    if (parts.length !== 3) return isoDay;
-    return `${parts[2]}/${parts[1]}`;
-};
-
-const formatDayTitle = (isoDay) => {
-    if (!isoDay) return '';
-    const parts = isoDay.split('-');
-    if (parts.length !== 3) return isoDay;
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-};
+const LINE_CHART_HEIGHT_PX = 140;
 
 const formatActiveTooltip = (day) => {
     const minutes = formatMinutes(day.active_seconds);
@@ -48,82 +24,17 @@ const formatTestsTooltip = (day, byType) => {
     return `${formatDayTitle(day.day)} - ${total} ${label} (${counts})`;
 };
 
-const FloatingTooltip = ({ anchorRef, text, visible }) => {
-    const tooltipRef = useRef(null);
-    const [style, setStyle] = useState({ left: 0, top: 0, placement: "top" });
-
-    useLayoutEffect(() => {
-        if (!visible) return;
-
-        const updatePosition = () => {
-            if (!anchorRef.current || !tooltipRef.current) return;
-            const anchorRect = anchorRef.current.getBoundingClientRect();
-            const tooltipRect = tooltipRef.current.getBoundingClientRect();
-
-            let top = anchorRect.top - tooltipRect.height - TOOLTIP_OFFSET_PX;
-            let placement = "top";
-            if (top < TOOLTIP_EDGE_PADDING) {
-                top = anchorRect.bottom + TOOLTIP_OFFSET_PX;
-                placement = "bottom";
-            }
-
-            const centerX = anchorRect.left + anchorRect.width / 2;
-            let left = centerX - tooltipRect.width / 2;
-            const maxLeft = window.innerWidth - tooltipRect.width - TOOLTIP_EDGE_PADDING;
-            left = Math.max(TOOLTIP_EDGE_PADDING, Math.min(left, maxLeft));
-
-            setStyle({ left, top, placement });
-        };
-
-        const frameId = requestAnimationFrame(updatePosition);
-        window.addEventListener('resize', updatePosition);
-        window.addEventListener('scroll', updatePosition, true);
-
-        return () => {
-            cancelAnimationFrame(frameId);
-            window.removeEventListener('resize', updatePosition);
-            window.removeEventListener('scroll', updatePosition, true);
-        };
-    }, [visible, text, anchorRef]);
-
-    return (
-        <div
-            ref={tooltipRef}
-            role="tooltip"
-            aria-hidden={!visible}
-            className={`pointer-events-none fixed z-50 rounded-xl bg-white text-gray-700 text-[10px] font-bold px-2.5 py-1.5 border border-gray-200 shadow-md max-w-[220px] whitespace-normal text-center transition-opacity ${visible ? 'opacity-100' : 'opacity-0'}`}
-            style={{ left: style.left, top: style.top }}
-        >
-            {text}
-            <span
-                className={`absolute left-1/2 -translate-x-1/2 w-0 h-0 border-4 border-transparent ${style.placement === "top" ? "top-full border-t-white" : "bottom-full border-b-white"}`}
-            ></span>
-        </div>
-    );
-};
-
-const TooltipTarget = ({ text, enabled = true, children }) => {
-    const anchorRef = useRef(null);
-    const [visible, setVisible] = useState(false);
-
-    const show = () => setVisible(true);
-    const hide = () => setVisible(false);
-
-    return (
-        <div
-            ref={anchorRef}
-            className="relative flex flex-col items-center"
-            onMouseEnter={show}
-            onMouseLeave={hide}
-            onFocus={show}
-            onBlur={hide}
-            tabIndex={enabled ? 0 : -1}
-            aria-label={text}
-        >
-            {children}
-            {enabled && <FloatingTooltip anchorRef={anchorRef} text={text} visible={visible} />}
-        </div>
-    );
+const formatLearningTooltip = (day) => {
+    if (!day) return '';
+    const byLevel = day.by_level || {};
+    const parts = Object.keys(TYPE_LABELS).map((type) => {
+        const entry = byLevel[type] || {};
+        const value = entry.value;
+        const questions = entry.questions || 0;
+        const display = value === null || value === undefined ? "-" : `${value}%`;
+        return `${LEVEL_SHORT[type]} ${display} (${questions})`;
+    });
+    return `${formatDayTitle(day.day)} - ${parts.join(" | ")}`;
 };
 
 const AnalyticsPage = ({
@@ -135,38 +46,27 @@ const AnalyticsPage = ({
     level,
     onBack
 }) => {
-    const [metrics, setMetrics] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [errorMsg, setErrorMsg] = useState('');
+    const tzOffset = useMemo(() => -new Date().getTimezoneOffset(), []);
 
-    useEffect(() => {
-        let cancelled = false;
-        const tzOffset = -new Date().getTimezoneOffset();
+    const {
+        data: metrics,
+        loading,
+        error: errorMsg
+    } = useAsyncData(
+        () => studyService.getMetrics(30, tzOffset),
+        [tzOffset],
+        'Nao foi possivel carregar as metricas.'
+    );
 
-        setLoading(true);
-        setErrorMsg('');
-
-        studyService.getMetrics(30, tzOffset)
-            .then((data) => {
-                if (!cancelled) {
-                    setMetrics(data);
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setErrorMsg('Nao foi possivel carregar as metricas.');
-                }
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setLoading(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const {
+        data: learningTrend,
+        loading: trendLoading,
+        error: trendError
+    } = useAsyncData(
+        () => studyService.getLearningTrend(30, tzOffset, 1),
+        [tzOffset],
+        'Nao foi possivel carregar a evolucao.'
+    );
 
     const { daily, totals } = useMemo(() => {
         if (!metrics) {
@@ -177,6 +77,28 @@ const AnalyticsPage = ({
             totals: metrics.totals || null
         };
     }, [metrics]);
+
+    const learningDaily = useMemo(() => {
+        if (!learningTrend) return [];
+        return learningTrend.daily || [];
+    }, [learningTrend]);
+
+    const learningColumnWidth = useMemo(() => {
+        if (learningDaily.length === 0) return 0;
+        return 100 / learningDaily.length;
+    }, [learningDaily]);
+
+    const learningValues = useMemo(() => {
+        const values = {};
+        Object.keys(TYPE_LABELS).forEach((type) => {
+            values[type] = learningDaily.map((day) => {
+                const entry = day.by_level?.[type];
+                const value = entry?.value;
+                return value === null || value === undefined ? null : value;
+            });
+        });
+        return values;
+    }, [learningDaily]);
 
     const maxActive = useMemo(() => {
         if (daily.length === 0) return 1;
@@ -190,8 +112,6 @@ const AnalyticsPage = ({
 
     const totalActiveMinutes = totals ? formatMinutes(totals.active_seconds) : 0;
     const avgActiveMinutes = totals ? formatMinutes((totals.active_seconds || 0) / 30) : 0;
-    const daysWithGoal = totals ? totals.days_with_goal || 0 : 0;
-
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-800">
             <IntroHeader
@@ -237,119 +157,157 @@ const AnalyticsPage = ({
 
                 {!loading && !errorMsg && (
                     <>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-duo-green text-white flex items-center justify-center">
-                                    <Clock size={22} />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tempo ativo (30 dias)</p>
-                                    <p className="text-2xl font-black text-gray-700">{totalActiveMinutes} min</p>
-                                </div>
-                            </div>
-                            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-duo-blue text-white flex items-center justify-center">
-                                    <Layers size={22} />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Media diaria</p>
-                                    <p className="text-2xl font-black text-gray-700">{avgActiveMinutes} min</p>
-                                </div>
-                            </div>
-                            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-yellow-400 text-yellow-900 flex items-center justify-center">
-                                    <CheckCircle2 size={22} />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Dias &gt;= 30 min</p>
-                                    <p className="text-2xl font-black text-gray-700">{daysWithGoal}/30</p>
-                                </div>
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <MetricCard
+                                icon={Clock}
+                                iconBg="bg-duo-green"
+                                label="Tempo ativo (30 dias)"
+                                value={`${totalActiveMinutes} min`}
+                            />
+                            <MetricCard
+                                icon={Layers}
+                                iconBg="bg-duo-blue"
+                                label="Media diaria"
+                                value={`${avgActiveMinutes} min`}
+                            />
                         </div>
 
-                        <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="font-black text-gray-700 uppercase tracking-wide text-sm">Tempo ativo por dia</h3>
-                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Minutos ativos</p>
+                        <ChartSection
+                            title="Domínio efetivo por nível"
+                            subtitle="Média acumulada (dias com atividade)"
+                            showLegend
+                            useLine
+                        >
+                            {trendLoading && (
+                                <div className="text-center text-gray-500 text-sm font-semibold py-10">
+                                    A carregar evolução...
                                 </div>
-                                <div className="text-xs font-bold text-gray-400">Max: {formatMinutes(maxActive)} min</div>
-                            </div>
-                            <div className="overflow-x-auto overflow-y-visible">
-                                <div className="flex items-end justify-end gap-2 min-w-[720px] h-44">
-                                    {daily.map((day, idx) => {
-                                        const heightPct = Math.round(((day.active_seconds || 0) / maxActive) * 100);
-                                        const barHeight = (day.active_seconds || 0) > 0
-                                            ? Math.max(2, Math.round((heightPct / 100) * CHART_HEIGHT_PX))
-                                            : 0;
-                                        const title = formatActiveTooltip(day);
-                                        const enabled = (day.active_seconds || 0) > 0;
-                                        return (
-                                            <div key={day.day} className="flex flex-col items-center gap-2">
-                                                <TooltipTarget text={title} enabled={enabled}>
-                                                    <div
-                                                        className="w-3 bg-duo-blue rounded-t"
-                                                        style={{ height: `${barHeight}px` }}
-                                                    ></div>
-                                                </TooltipTarget>
-                                                <span className={`text-[10px] font-bold ${idx % 5 === 0 ? 'text-gray-400' : 'text-transparent'}`}>{formatDayLabel(day.day)}</span>
-                                            </div>
-                                        );
-                                    })}
+                            )}
+                            {!trendLoading && trendError && (
+                                <div className="text-center text-duo-red text-sm font-semibold py-10">
+                                    {trendError}
                                 </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="font-black text-gray-700 uppercase tracking-wide text-sm">Testes por tipo (dia)</h3>
-                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Breakdown por nivel</p>
+                            )}
+                            {!trendLoading && !trendError && learningDaily.length === 0 && (
+                                <div className="text-center text-gray-400 text-sm font-semibold py-10">
+                                    Sem dados suficientes.
                                 </div>
-                                <div className="flex items-center gap-3 text-xs font-bold text-gray-400">
-                                    {Object.keys(TYPE_LABELS).map((type) => (
-                                        <div key={type} className="flex items-center gap-1">
-                                            <span className={`w-2 h-2 rounded-full ${TYPE_COLORS[type]}`}></span>
-                                            <span>{TYPE_LABELS[type]}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="overflow-x-auto overflow-y-visible">
-                                <div className="flex items-end justify-end gap-2 min-w-[720px] h-44">
-                                    {daily.map((day, idx) => {
-                                        const byType = day.by_type || {};
-                                        const title = formatTestsTooltip(day, byType);
-                                        const enabled = (day.tests_total || 0) > 0;
-                                        return (
-                                            <div key={day.day} className="flex flex-col items-center gap-2">
-                                                <TooltipTarget text={title} enabled={enabled}>
-                                                    <div className="relative w-3" style={{ height: `${CHART_HEIGHT_PX}px` }}>
-                                                        <div className="absolute inset-0 flex flex-col justify-end rounded-t overflow-hidden border border-transparent">
-                                                            {Object.keys(TYPE_LABELS).map((type) => {
-                                                                const count = byType[type] || 0;
-                                                                const heightPct = Math.round((count / maxTests) * 100);
-                                                                const segmentHeight = count > 0
-                                                                    ? Math.max(2, Math.round((heightPct / 100) * CHART_HEIGHT_PX))
-                                                                    : 0;
-                                                                return (
-                                                                    <div
-                                                                        key={type}
-                                                                        className={`${TYPE_COLORS[type]} w-full`}
-                                                                        style={{ height: `${segmentHeight}px` }}
-                                                                    ></div>
-                                                                );
-                                                            })}
-                                                        </div>
+                            )}
+                            {!trendLoading && !trendError && learningDaily.length > 0 && (
+                                <div className="w-full">
+                                    <div className="relative w-full" style={{ height: `${LINE_CHART_HEIGHT_PX}px` }}>
+                                        <svg
+                                            viewBox={`0 0 100 ${LINE_CHART_HEIGHT_PX}`}
+                                            preserveAspectRatio="none"
+                                            className="absolute inset-0 w-full h-full"
+                                        >
+                                            <line x1="0" y1={LINE_CHART_HEIGHT_PX} x2="100" y2={LINE_CHART_HEIGHT_PX} stroke="#e5e7eb" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                                            {[25, 50, 75].map((tick) => {
+                                                const y = (1 - tick / 100) * LINE_CHART_HEIGHT_PX;
+                                                return (
+                                                    <line key={tick} x1="0" y1={y} x2="100" y2={y} stroke="#f3f4f6" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                                                );
+                                            })}
+                                            {Object.keys(TYPE_LABELS).map((type) => {
+                                                const paths = buildLinePaths(learningValues[type], 100, LINE_CHART_HEIGHT_PX, learningColumnWidth / 2);
+                                                return paths.map((path, idx) => (
+                                                    <path
+                                                        key={`${type}-${idx}`}
+                                                        d={path}
+                                                        fill="none"
+                                                        stroke={LINE_COLORS[type]}
+                                                        strokeWidth="2.5"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        vectorEffect="non-scaling-stroke"
+                                                    />
+                                                ));
+                                            })}
+                                        </svg>
+                                        <div className="absolute inset-0 flex z-10">
+                                            {learningDaily.map((day) => {
+                                                const hasData = day.by_level && Object.values(day.by_level).some(l => l.value !== null && l.value > 0);
+                                                return (
+                                                    <div key={day.day} className="flex-1 h-full">
+                                                        <TooltipTarget text={formatLearningTooltip(day)} enabled={hasData}>
+                                                            <div
+                                                                className={`w-full transition-colors ${hasData ? 'hover:bg-duo-blue/10' : ''}`}
+                                                                style={{ height: `${LINE_CHART_HEIGHT_PX}px` }}
+                                                            />
+                                                        </TooltipTarget>
                                                     </div>
-                                                </TooltipTarget>
-                                                <span className={`text-[10px] font-bold ${idx % 5 === 0 ? 'text-gray-400' : 'text-transparent'}`}>{formatDayLabel(day.day)}</span>
-                                            </div>
-                                        );
-                                    })}
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div className="flex mt-2">
+                                        {learningDaily.map((day, idx) => <AxisLabel key={day.day} idx={idx} label={formatDayLabel(day.day)} center style={{ width: `${learningColumnWidth}%` }} />
+                                        )}
+                                    </div>
                                 </div>
+                            )}
+                        </ChartSection>
+
+                        <ChartSection
+                            title="Tempo ativo por dia"
+                            subtitle="Minutos ativos"
+                            rightContent={<div className="text-xs font-bold text-gray-400">Max: {formatMinutes(maxActive)} min</div>}
+                        >
+                            <div className="flex items-end justify-end gap-2 min-w-[720px] h-44">
+                                {daily.map((day, idx) => {
+                                    const barHeight = calcBarHeight(day.active_seconds, maxActive, CHART_HEIGHT_PX);
+                                    const title = formatActiveTooltip(day);
+                                    const enabled = (day.active_seconds || 0) > 0;
+                                    return (
+                                        <div key={day.day} className="flex flex-col items-center gap-2">
+                                            <TooltipTarget text={title} enabled={enabled}>
+                                                <div
+                                                    className="w-3 bg-duo-blue rounded-t"
+                                                    style={{ height: `${barHeight}px` }}
+                                                ></div>
+                                            </TooltipTarget>
+                                            <AxisLabel idx={idx} label={formatDayLabel(day.day)} />
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        </div>
+                        </ChartSection>
+
+                        <ChartSection
+                            title="Testes por tipo (dia)"
+                            subtitle="Breakdown por nivel"
+                            showLegend
+                        >
+                            <div className="flex items-end justify-end gap-2 min-w-[720px] h-44">
+                                {daily.map((day, idx) => {
+                                    const byType = day.by_type || {};
+                                    const title = formatTestsTooltip(day, byType);
+                                    const enabled = (day.tests_total || 0) > 0;
+                                    return (
+                                        <div key={day.day} className="flex flex-col items-center gap-2">
+                                            <TooltipTarget text={title} enabled={enabled}>
+                                                <div className="relative w-3" style={{ height: `${CHART_HEIGHT_PX}px` }}>
+                                                    <div className="absolute inset-0 flex flex-col justify-end rounded-t overflow-hidden border border-transparent">
+                                                        {Object.keys(TYPE_LABELS).map((type) => {
+                                                            const count = byType[type] || 0;
+                                                            const segmentHeight = calcBarHeight(count, maxTests, CHART_HEIGHT_PX);
+                                                            return (
+                                                                <div
+                                                                    key={type}
+                                                                    className={`${TYPE_COLORS[type]} w-full`}
+                                                                    style={{ height: `${segmentHeight}px` }}
+                                                                ></div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </TooltipTarget>
+                                            <AxisLabel idx={idx} label={formatDayLabel(day.day)} />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </ChartSection>
                     </>
                 )}
             </main>

@@ -75,4 +75,16 @@ describe('studyService', () => {
         expect(url).toContain('days=7');
         expect(url).toContain('tz_offset_minutes=-60');
     });
+
+    it('getLearningTrend builds query string with days, offset, and min_questions', async () => {
+        api.get.mockResolvedValue({ data: { ok: true } });
+
+        await studyService.getLearningTrend(14, 120, 3);
+
+        const url = api.get.mock.calls[0][0];
+        expect(url).toContain('/analytics/learning-trend?');
+        expect(url).toContain('days=14');
+        expect(url).toContain('tz_offset_minutes=120');
+        expect(url).toContain('min_questions=3');
+    });
 });
