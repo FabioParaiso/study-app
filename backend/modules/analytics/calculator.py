@@ -1,24 +1,117 @@
 from typing import Iterable
 from datetime import datetime
-from modules.analytics.constants import QUIZ_TYPES, EFFECTIVE_WINDOW_SIZE
+from modules.analytics.constants import QUIZ_TYPES, CONFIDENCE_WINDOW, EXPLORING_THRESHOLD
+
+
+def _get_building_status(mastery: float) -> tuple[str, str]:
+    """Labels para estado 'building' (PT-PT)."""
+    if mastery >= 0.8:
+        return ("promising", "Promissor")
+    elif mastery >= 0.65:
+        return ("progressing", "Em Progresso")
+    else:
+        return ("still_learning", "Ainda a Aprender")
+
+
+def _get_established_status(mastery: float) -> tuple[str, str]:
+    """Labels para estado 'established' (PT-PT)."""
+    if mastery >= 0.8:
+        return ("strong", "Forte")
+    elif mastery >= 0.65:
+        return ("ok", "Bom")
+    else:
+        return ("needs_practice", "Precisa de Prática")
+
+
+def _calculate_mastery_simple(items: list[dict], window_size: int = 7) -> float:
+    """
+    Simple mastery calculation for learning trend.
+    Returns mastery score 0.0-1.0 based on last N items.
+    """
+    if not items:
+        return 0.0
+    
+    window = items[:window_size]
+    if not window:
+        return 0.0
+    
+    correct = sum(1 for i in window if i.get("is_correct"))
+    return correct / len(window)
 
 
 class AnalyticsCalculator:
     @staticmethod
-    def _calculate_effective_score(items: list[dict], window_size: int = 10) -> float:
-        if not items:
-            return 0.0
+    def _calculate_score_data(items: list[dict]) -> dict:
+        """
+        Calculates score data with gradual confidence levels.
         
-        # Items are expected to be sorted by recency (newest first)
-        window = items[:window_size]
-        count = len(window)
+        Returns dict with:
+        - score: float | None (None if exploring)
+        - confidence_level: "not_seen" | "exploring" | "building" | "established"
+        - attempts_count: int
+        - attempts_needed: int
+        - display_value: str ("--", "X/5", or "XX%")
+        - status_key: str
+        - status_label: str (PT-PT)
+        """
+        count = len(items) if items else 0
         
-        correct_count = sum(1 for i in window if i.get("is_correct"))
-        mastery = correct_count / count
+        # State: Not seen
+        if count == 0:
+            return {
+                "score": None,
+                "confidence_level": "not_seen",
+                "attempts_count": 0,
+                "attempts_needed": EXPLORING_THRESHOLD,
+                "display_value": "--",
+                "status_key": "not_seen",
+                "status_label": "Não Visto"
+            }
         
-        confidence = min(1.0, count / float(window_size))
+        window = items[:CONFIDENCE_WINDOW]
+        actual_count = len(window)
         
-        return (mastery * confidence) + (0.5 * (1 - confidence))
+        # State: Exploring (1-4 attempts)
+        if actual_count < EXPLORING_THRESHOLD:
+            return {
+                "score": None,
+                "confidence_level": "exploring",
+                "attempts_count": actual_count,
+                "attempts_needed": EXPLORING_THRESHOLD - actual_count,
+                "display_value": f"{actual_count}/{EXPLORING_THRESHOLD}",
+                "status_key": "exploring",
+                "status_label": "Em Exploração"
+            }
+        
+        # Calculate mastery
+        correct = sum(1 for i in window if i.get("is_correct"))
+        mastery = correct / actual_count
+        score_pct = round(mastery * 100)
+        
+        # State: Building (5-6 attempts)
+        if actual_count < CONFIDENCE_WINDOW:
+            status_key, status_label = _get_building_status(mastery)
+            return {
+                "score": mastery,
+                "confidence_level": "building",
+                "attempts_count": actual_count,
+                "attempts_needed": CONFIDENCE_WINDOW - actual_count,
+                "display_value": f"{score_pct}%",
+                "status_key": status_key,
+                "status_label": status_label
+            }
+        
+        # State: Established (7+ attempts)
+        status_key, status_label = _get_established_status(mastery)
+        return {
+            "score": mastery,
+            "confidence_level": "established",
+            "attempts_count": actual_count,
+            "attempts_needed": 0,
+            "display_value": f"{score_pct}%",
+            "status_key": status_key,
+            "status_label": status_label
+        }
 
     @staticmethod
     def build_results(
@@ -26,9 +119,7 @@ class AnalyticsCalculator:
         analytics_items: Iterable[dict]
     ) -> list[dict]:
         """
-        Build per-concept success rates using Effective Mastery logic.
-        Effective = Mastery (last 10) * Confidence + 0.5 * (1 - Confidence)
-        Now split by mode: MCQ, Short, Bloom.
+        Build per-concept results with score_data per quiz type.
         """
         # 1. Initialize Skeleton (Group by Concept)
         concept_groups: dict[tuple[str, str], list[dict]] = {}
@@ -89,65 +180,28 @@ class AnalyticsCalculator:
                 reverse=True
             )
 
-            # --- Overall Metric (Legacy Support) ---
-            # We still calculate this for backward compatibility and general overview
-            effective_overall = AnalyticsCalculator._calculate_effective_score(sorted_items, EFFECTIVE_WINDOW_SIZE)
-            
-            # Raw Mastery for display (all time? or window? stored logic used window)
-            # Replicating original logic for mastery_raw:
-            window = sorted_items[:EFFECTIVE_WINDOW_SIZE]
-            if window:
-                mastery_raw = sum(1 for i in window if i.get("is_correct")) / len(window)
-            else:
-                mastery_raw = 0.0
-
-            # --- Split Metrics ---
-            # Filter preserves the sort order (recency)
+            # Filter by quiz type (preserves sort order)
             mcq_items = [i for i in sorted_items if i.get("quiz_type") == "multiple-choice"]
             short_items = [i for i in sorted_items if i.get("quiz_type") == "short_answer"]
             bloom_items = [i for i in sorted_items if i.get("quiz_type") == "open-ended"]
 
-            effective_mcq = AnalyticsCalculator._calculate_effective_score(mcq_items, EFFECTIVE_WINDOW_SIZE)
-            effective_short = AnalyticsCalculator._calculate_effective_score(short_items, EFFECTIVE_WINDOW_SIZE)
-            effective_bloom = AnalyticsCalculator._calculate_effective_score(bloom_items, EFFECTIVE_WINDOW_SIZE)
-
-            count_mcq = len(mcq_items)
-            count_short = len(short_items)
-            count_bloom = len(bloom_items)
-
-            # Map to Percentage (0-100)
-            final_percentage = round(effective_overall * 100)
-
-            # Determine Status (based on Overall for now, or maybe highest?)
-            # Keeping original logic based on overall effective score
-            status = "Em aprendizagem"
-            count = len(sorted_items)
-            
-            if count >= 3:
-                 if effective_overall >= 0.8:
-                     status = "Forte"
-                 elif effective_overall >= 0.65:
-                     status = "Ok"
-                 else:
-                     status = "Fraco"
-            elif count > 0:
-                status = "Em aprendizagem"
-            else:
-                status = "Não visto"
+            # Calculate score_data for each type
+            score_data_mcq = AnalyticsCalculator._calculate_score_data(mcq_items)
+            score_data_short = AnalyticsCalculator._calculate_score_data(short_items)
+            score_data_bloom = AnalyticsCalculator._calculate_score_data(bloom_items)
 
             results.append({
                 "topic": t_name,
                 "concept": c_name,
-                "success_rate": final_percentage,
-                "effective_mcq": round(effective_mcq * 100),
-                "effective_short": round(effective_short * 100),
-                "effective_bloom": round(effective_bloom * 100),
-                "total_questions_mcq": count_mcq,
-                "total_questions_short": count_short,
-                "total_questions_bloom": count_bloom,
-                "total_questions": count,
-                "mastery_raw": round(mastery_raw * 100),
-                "status": status
+                # Score data per type
+                "score_data_mcq": score_data_mcq,
+                "score_data_short": score_data_short,
+                "score_data_bloom": score_data_bloom,
+                # Counts for convenience
+                "total_questions_mcq": len(mcq_items),
+                "total_questions_short": len(short_items),
+                "total_questions_bloom": len(bloom_items),
+                "total_questions": len(sorted_items),
             })
 
-        return sorted(results, key=lambda x: (x["topic"], x["success_rate"]))
+        return sorted(results, key=lambda x: (x["topic"], x["concept"]))
