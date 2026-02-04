@@ -31,6 +31,15 @@ class GenerateQuizUseCase:
         self.analytics_service = analytics_service
 
     @staticmethod
+    def _build_concept_sequence(analytics_service, user_id, material_id, allowed_set, allowed_list, builder, total):
+        sequence = []
+        if analytics_service:
+            sequence = getattr(analytics_service, builder)(user_id, material_id, allowed_set, total_questions=total)
+        if not sequence and allowed_list:
+            sequence = [allowed_list[i % len(allowed_list)] for i in range(total)]
+        return sequence
+
+    @staticmethod
     def _questions_have_concepts(questions: list[dict] | None) -> bool:
         if not isinstance(questions, list) or not questions:
             return False
@@ -68,26 +77,31 @@ class GenerateQuizUseCase:
 
         quiz_type = request.quiz_type or "multiple-choice"
         is_multiple_choice = quiz_type == "multiple-choice"
+        is_short_answer = quiz_type == "short_answer"
+
+        # Gate: short answer requires all concepts to have confident MCQ data
+        if is_short_answer and self.analytics_service:
+            readiness = self.analytics_service.check_short_answer_readiness(user_id, material_id)
+            if not readiness["is_ready"]:
+                ready = readiness["ready_concepts"]
+                total = readiness["total_concepts"]
+                raise QuizServiceError(
+                    f"Ainda não estás pronto para o Intermédio. "
+                    f"Pratica mais no Quiz Rápido ({ready}/{total} conceitos prontos).",
+                    status_code=403
+                )
 
         material_concepts: list[str] = allowed_concepts
         if is_multiple_choice:
-            if self.analytics_service:
-                concept_sequence = self.analytics_service.build_mcq_quiz_concepts(
-                    user_id,
-                    material_id,
-                    allowed_concepts_set,
-                    total_questions=10
-                )
-            else:
-                concept_sequence = []
-
-            if not concept_sequence and allowed_concepts:
-                idx = 0
-                while len(concept_sequence) < 10:
-                    concept_sequence.append(allowed_concepts[idx % len(allowed_concepts)])
-                    idx += 1
-
-            material_concepts = concept_sequence
+            material_concepts = self._build_concept_sequence(
+                self.analytics_service, user_id, material_id, allowed_concepts_set, allowed_concepts,
+                builder="build_mcq_quiz_concepts", total=10
+            )
+        elif is_short_answer:
+            material_concepts = self._build_concept_sequence(
+                self.analytics_service, user_id, material_id, allowed_concepts_set, allowed_concepts,
+                builder="build_short_quiz_concepts", total=8
+            )
 
         questions = ai_service.generate_quiz(strategy, text, target_topics, priority_topics, material_concepts)
 
