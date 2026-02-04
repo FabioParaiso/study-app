@@ -47,12 +47,13 @@ const ChartLegend = ({ useLine = false }) => (
  * @param {number} idx - Current index in the data array.
  * @param {string} label - The label text to display.
  * @param {boolean} center - Whether to center the text.
+ * @param {string} className - Optional extra classnames.
  * @param {object} style - Optional inline styles.
  */
-const AxisLabel = ({ idx, label, center = false, style }) => (
+const AxisLabel = ({ idx, label, center = false, className = '', style }) => (
     <span
         style={style}
-        className={`text-[10px] font-bold ${center ? 'text-center' : ''} ${idx % 5 === 0 ? 'text-gray-400' : 'text-transparent'}`}
+        className={`text-[10px] font-bold ${center ? 'text-center' : ''} ${idx % 5 === 0 ? 'text-gray-400' : 'text-transparent'} ${className}`}
     >
         {label}
     </span>
@@ -72,7 +73,7 @@ const ChartSection = ({ title, subtitle, showLegend = false, useLine = false, ri
             {showLegend && <ChartLegend useLine={useLine} />}
             {rightContent}
         </div>
-        <div className="overflow-x-auto overflow-y-visible" ref={contentRef}>
+        <div className="overflow-x-hidden overflow-y-visible" ref={contentRef}>
             {children}
         </div>
     </div>
