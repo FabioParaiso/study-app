@@ -60,7 +60,7 @@ class PromptBuilder:
 
     @staticmethod
     def _build_vocab_instruction(material_concepts: list[str]) -> str:
-        """Whitelist simples para prompts não-MCQ."""
+        """Whitelist simples para open-ended."""
         if not material_concepts:
             return ""
         v_str = ", ".join(material_concepts)
@@ -69,8 +69,8 @@ class PromptBuilder:
         - Cria perguntas APENAS para estes conceitos."""
 
     @staticmethod
-    def _build_mcq_sequence_instruction(concepts: list[str]) -> str:
-        """Lista ordenada: 1 linha = 1 pergunta (MCQ), permitindo repetições."""
+    def _build_fixed_sequence_instruction(concepts: list[str]) -> str:
+        """Lista ordenada: 1 linha = 1 pergunta (MCQ/short), permitindo repetições."""
         if not concepts:
             return ""
         lines = "\n".join(f"{idx}. {concept}" for idx, concept in enumerate(concepts, start=1))
@@ -81,14 +81,14 @@ class PromptBuilder:
 
     @classmethod
     def build_quiz_prompt(cls, quiz_type: str, text: str, topics: list[str], priority_topics: list[str] | None, material_concepts: list[str] | None) -> str:
-        """Constrói o prompt final; MCQ usa sequência fixa, outros usam whitelist."""
+        """Constrói o prompt final; MCQ e short_answer usam sequência fixa, open-ended usa whitelist."""
         material_concepts = material_concepts or []
         topic_concepts = cls._dedupe_list(material_concepts)
-        is_mcq = quiz_type == "multiple-choice"
+        uses_fixed_sequence = quiz_type in ("multiple-choice", "short_answer")
 
         topic_instr = cls._build_topic_instruction(topics, topic_concepts)
-        priority_instr = "" if is_mcq else cls._build_priority_instruction(priority_topics or [], min_questions=2)
-        vocab_instr = cls._build_mcq_sequence_instruction(material_concepts) if is_mcq else cls._build_vocab_instruction(material_concepts)
+        priority_instr = "" if uses_fixed_sequence else cls._build_priority_instruction(priority_topics or [], min_questions=2)
+        vocab_instr = cls._build_fixed_sequence_instruction(material_concepts) if uses_fixed_sequence else cls._build_vocab_instruction(material_concepts)
 
         template = {
             "multiple-choice": MULTIPLE_CHOICE_TEMPLATE,
