@@ -41,6 +41,7 @@ def test_llm_models_production_defaults(monkeypatch):
     assert models.answer_evaluation == "gpt-5.2"
     assert models.topic_extraction == "gpt-5.2"
     assert models.reasoning_effort == "low"
+    assert models.topic_extraction_reasoning == "medium"
 
 
 def test_llm_models_staging_defaults(monkeypatch):
@@ -51,6 +52,7 @@ def test_llm_models_staging_defaults(monkeypatch):
     assert models.answer_evaluation == "gpt-4o-mini"
     assert models.topic_extraction == "gpt-4o-mini"
     assert models.reasoning_effort == "none"
+    assert models.topic_extraction_reasoning is None
 
 
 def test_llm_models_ignore_env_overrides(monkeypatch):

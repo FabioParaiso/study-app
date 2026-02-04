@@ -10,6 +10,7 @@ class LLMModelConfig:
     answer_evaluation: str
     topic_extraction: str
     reasoning_effort: str | None = None
+    topic_extraction_reasoning: str | None = None
 
 
 _ENV_ALIASES = {
@@ -30,6 +31,7 @@ _DEFAULT_MODELS = {
         answer_evaluation="gpt-5.2",
         topic_extraction="gpt-5.2",
         reasoning_effort="low",
+        topic_extraction_reasoning="medium",
     ),
     "staging": LLMModelConfig(
         quiz_generation="gpt-4o-mini",

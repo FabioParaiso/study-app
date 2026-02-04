@@ -24,7 +24,7 @@ REGRAS PARA AS OPÇÕES (DISTRATORES):
 1. As opções erradas devem ser ERROS COMUNS de raciocínio.
 2. PROIBIDO usar "Nenhuma das anteriores" ou "Todas as anteriores".
 3. As opções devem ter comprimentos semelhantes.
-4. NÃO use prefixos como "A)", "B)" no texto das opções.
+4. NÃO use prefixos de letra ou número (ex: "a)", "b)", "1)") no texto das opções.
 
 CRITÉRIOS DE EXPLICAÇÃO (MODELO MENTAL):
 - Explica COMO se chega à resposta correta.
@@ -57,7 +57,7 @@ Retorna APENAS um objeto JSON com a chave "questions".
             "topic": "Nome do Tópico Principal",
             "concepts": ["Nome Exato do Conceito Avaliado (Apenas 1)"],
             "question": "Pergunta interessante?",
-            "options": ["Opção Plausível A", "Opção Plausível B", "Opção Correta", "Opção Plausível C"],
+            "options": ["Distrator plausível", "Outro distrator", "Opção correta", "Terceiro distrator"],
             "correctIndex": 2,
             "explanation": "Sabias que... [Explicação divertida com analogia ou curiosidade]"
         }}
