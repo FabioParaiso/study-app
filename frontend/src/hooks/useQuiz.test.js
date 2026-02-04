@@ -92,34 +92,39 @@ describe('useQuiz', () => {
     });
 
     it('submits results even when concepts are missing', async () => {
-        const questions = [
-            { question: 'Q1', correctIndex: 0 },
-            { question: 'Q2', correctIndex: 1 }
-        ];
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            const questions = [
+                { question: 'Q1', correctIndex: 0 },
+                { question: 'Q2', correctIndex: 1 }
+            ];
 
-        studyService.generateQuiz.mockResolvedValue(questions);
-        studyService.submitQuizResult.mockResolvedValue({});
+            studyService.generateQuiz.mockResolvedValue(questions);
+            studyService.submitQuizResult.mockResolvedValue({});
 
-        const { result } = renderHook(() => useQuiz({ id: 1 }, 10));
+            const { result } = renderHook(() => useQuiz({ id: 1 }, 10));
 
-        await act(async () => {
-            await result.current.startQuiz('multiple-choice', 'all');
-        });
+            await act(async () => {
+                await result.current.startQuiz('multiple-choice', 'all');
+            });
 
-        act(() => {
-            result.current.handleAnswer(0, 0, () => {});
-            result.current.handleAnswer(1, 1, () => {});
-        });
+            act(() => {
+                result.current.handleAnswer(0, 0, () => {});
+                result.current.handleAnswer(1, 1, () => {});
+            });
 
-        await act(async () => {
-            await result.current.nextQuestion();
-        });
-        await act(async () => {
-            await result.current.nextQuestion();
-        });
+            await act(async () => {
+                await result.current.nextQuestion();
+            });
+            await act(async () => {
+                await result.current.nextQuestion();
+            });
 
-        await waitFor(() => {
-            expect(studyService.submitQuizResult).toHaveBeenCalled();
-        });
+            await waitFor(() => {
+                expect(studyService.submitQuizResult).toHaveBeenCalled();
+            });
+        } finally {
+            consoleSpy.mockRestore();
+        }
     });
 });

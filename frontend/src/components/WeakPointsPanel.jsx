@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useAnalytics } from '../hooks/useAnalytics';
 import { TrendingUp, ChevronDown, ChevronUp, BookOpen, Trophy, PenTool } from 'lucide-react';
 
 /**
@@ -72,27 +71,28 @@ const ScoreBadge = ({ scoreData, icon: Icon }) => {
     );
 };
 
-const WeakPointsPanel = ({ studentId, materialId }) => {
-    const { points, loading } = useAnalytics(studentId, materialId);
+const WeakPointsPanel = ({ points = [], loading = false }) => {
     const [expandedTopics, setExpandedTopics] = useState({});
+
+    const safePoints = Array.isArray(points) ? points : [];
 
     const toggleTopic = (topic) => {
         setExpandedTopics(prev => ({ ...prev, [topic]: !prev[topic] }));
     };
 
     const groupedPoints = useMemo(() => {
-        if (!points) return {};
+        if (!safePoints.length) return {};
         const groups = {};
-        points.forEach(p => {
+        safePoints.forEach(p => {
             const topic = p.topic || "Geral";
             if (!groups[topic]) groups[topic] = [];
             groups[topic].push(p);
         });
         return groups;
-    }, [points]);
+    }, [safePoints]);
 
     if (loading) return <div className="animate-pulse h-20 bg-gray-100 rounded-xl"></div>;
-    if (points.length === 0) return null;
+    if (safePoints.length === 0) return null;
 
     return (
         <div className="bg-white rounded-2xl border-2 border-gray-200 p-6">
