@@ -245,15 +245,15 @@ def test_evaluate_answer_short_answer(client):
 
 
 def test_generate_short_answer_quiz_locked(client):
-    """Integration test: Verify Short Answer is locked for low XP users."""
-    
-    # Register (0 XP initially)
+    """Integration test: Verify Short Answer is locked when MCQ concepts lack confidence."""
+
+    # Register (0 XP initially, no MCQ practice)
     unique_name = f"LowXP{int(time.time()*100)}"
     register_response = client.post("/register", json={"name": unique_name, "password": "StrongPass1!"})
     assert register_response.status_code == 200
     token = register_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     # Upload material
     files = {"file": ("test.txt", BytesIO(b"Data."), "text/plain")}
     _override_material_ai_service(client.app, {
@@ -263,18 +263,18 @@ def test_generate_short_answer_quiz_locked(client):
         client.post("/upload", files=files, headers=headers)
     finally:
         client.app.dependency_overrides.pop(materials_get_ai_service, None)
-         
-    # Generate Short Answer (Requires 300 XP)
+
+    # Generate Short Answer (Requires all concepts with 5+ MCQ attempts)
     quiz_request = {
         "topics": [],
         "quiz_type": "short_answer",
         "api_key": "sk-test"
     }
     quiz_response = client.post("/generate-quiz", json=quiz_request, headers=headers)
-    
-    # Should be Forbidden (403)
+
+    # Should be Forbidden (403) — no MCQ practice yet
     assert quiz_response.status_code == 403
-    assert "Level Locked" in quiz_response.json()["detail"]
+    assert "conceitos prontos" in quiz_response.json()["detail"]
 
 
 def test_upload_file_size_limit(client):

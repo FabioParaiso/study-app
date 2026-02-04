@@ -131,6 +131,7 @@ SHORT_ANSWER_TEMPLATE = """
 NÍVEL: 5º ao 9º ano (11-15 anos).
 
 {priority_instruction}
+{vocab_instruction}
 
 OBJETIVO: TREINO DE SINTAXE E FACTOS
 O objetivo deste nível (Intermédio) é garantir que o aluno sabe construir uma frase completa com Sujeito e Verbo. Não queremos ainda reflexões profundas.
@@ -161,15 +162,16 @@ REGRAS DE SAÍDA (JSON) — OBRIGATÓRIO:
 - Se a LISTA DE CONCEITOS estiver vazia, devolve {{ "questions": [] }}.
 
 VALIDAÇÕES OBRIGATÓRIAS:
-- "questions" tem exatamente 8 perguntas.
+- "questions" tem exatamente o nº de linhas da LISTA FINAL DE CONCEITOS.
 - Cada "question" termina com "?".
-- "concepts" tem exatamente 1 item e está na lista.
+- "concepts" tem exatamente 1 item e corresponde ao conceito dessa linha.
+- Se um conceito aparecer mais do que uma vez, cria perguntas DIFERENTES em cada ocorrência.
 
 AUTO-VERIFICAÇÃO (antes de responder):
 - JSON válido + nº de perguntas correto + conceitos dentro da lista.
 
 FORMATO DE SAÍDA (JSON):
-Gera exatamente 8 perguntas e não incluas texto fora do JSON.
+Gera exatamente o nº de perguntas indicado na lista e não incluas texto fora do JSON.
 {{ 
     "questions": [
         {{ 

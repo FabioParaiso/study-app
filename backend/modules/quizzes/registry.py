@@ -51,7 +51,7 @@ def build_default_quiz_registry() -> QuizTypeRegistry:
     registry.register(
         "short_answer",
         QuizTypeDefinition(
-            min_xp=300,
+            min_xp=0,
             strategy_factory=ShortAnswerStrategy,
             evaluation_factory=ShortAnswerEvaluationStrategy
         ),

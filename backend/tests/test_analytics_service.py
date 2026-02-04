@@ -372,6 +372,216 @@ class TestAnalyticsService:
         strong_in_result = [c for c in result if c.startswith("Strong")]
         assert len(strong_in_result) == 3
 
+    # ==================== CHECK SHORT ANSWER READINESS ====================
+
+    def test_short_readiness_all_concepts_confident(self, service):
+        """Ready when all concepts have building/established MCQ confidence."""
+        service.get_weak_points = Mock(return_value=[
+            {"concept": "A", "score_data_mcq": {"confidence_level": "established", "score": 0.8, "attempts_count": 7}},
+            {"concept": "B", "score_data_mcq": {"confidence_level": "building", "score": 0.6, "attempts_count": 5}},
+        ])
+        result = service.check_short_answer_readiness(student_id=1)
+        assert result["is_ready"] is True
+        assert result["ready_concepts"] == 2
+        assert result["total_concepts"] == 2
+
+    def test_short_readiness_not_ready_when_exploring(self, service):
+        """Not ready when some concepts are still exploring."""
+        service.get_weak_points = Mock(return_value=[
+            {"concept": "A", "score_data_mcq": {"confidence_level": "established", "score": 0.9, "attempts_count": 10}},
+            {"concept": "B", "score_data_mcq": {"confidence_level": "exploring", "score": None, "attempts_count": 3}},
+            {"concept": "C", "score_data_mcq": {"confidence_level": "not_seen", "score": None, "attempts_count": 0}},
+        ])
+        result = service.check_short_answer_readiness(student_id=1)
+        assert result["is_ready"] is False
+        assert result["ready_concepts"] == 1
+        assert result["total_concepts"] == 3
+
+    def test_short_readiness_not_ready_when_empty(self, service):
+        """Not ready when there are no concepts."""
+        service.get_weak_points = Mock(return_value=[])
+        result = service.check_short_answer_readiness(student_id=1)
+        assert result["is_ready"] is False
+        assert result["total_concepts"] == 0
+
+    # ==================== BUILD SHORT QUIZ CONCEPTS ====================
+
+    def _make_short_item(self, concept, mcq_score, mcq_conf="established",
+                         short_score=0, short_conf="not_seen", short_attempts=0):
+        """Helper to build a concept item with MCQ and Short data."""
+        return {
+            "concept": concept,
+            "score_data_mcq": {
+                "confidence_level": mcq_conf,
+                "score": mcq_score / 100,
+                "attempts_count": 7 if mcq_conf == "established" else 5,
+            },
+            "score_data_short": {
+                "confidence_level": short_conf,
+                "score": short_score / 100 if short_score else None,
+                "attempts_count": short_attempts,
+            },
+        }
+
+    def test_short_bucket_a_weak_mcq_prioritised(self, service):
+        """Concepts with MCQ <= 75% go to bucket A (weak) and are prioritised."""
+        service.get_weak_points = Mock(return_value=[
+            self._make_short_item("Weak1", mcq_score=50),
+            self._make_short_item("Weak2", mcq_score=60),
+            self._make_short_item("Weak3", mcq_score=40),
+            self._make_short_item("Strong1", mcq_score=90),
+            self._make_short_item("Strong2", mcq_score=85),
+            self._make_short_item("Strong3", mcq_score=95),
+        ])
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert len(result) == 8
+        # All 3 weak concepts must appear (bucket A quota = 3)
+        assert "Weak1" in result
+        assert "Weak2" in result
+        assert "Weak3" in result
+
+    def test_short_bucket_classification(self, service):
+        """Concepts are correctly classified into A/B/C buckets."""
+        service.get_weak_points = Mock(return_value=[
+            # Bucket A: MCQ weak
+            self._make_short_item("WeakConcept", mcq_score=60),
+            # Bucket B: MCQ strong, short not mastered
+            self._make_short_item("ArticulateConcept", mcq_score=90, short_score=40, short_conf="building", short_attempts=5),
+            # Bucket C: MCQ strong, short strong
+            self._make_short_item("MasteredConcept", mcq_score=95, short_score=85, short_conf="established", short_attempts=7),
+        ])
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert len(result) == 8
+        assert "WeakConcept" in result
+        assert "ArticulateConcept" in result
+        assert "MasteredConcept" in result
+        # Weak concept should repeat more (expansion from bucket A)
+        assert result.count("WeakConcept") >= 2
+
+    def test_short_quotas_with_many_concepts(self, service):
+        """With many concepts, quotas limit each bucket (3A + 2B + 1C = 6 unique)."""
+        items = (
+            [self._make_short_item(f"Weak{i}", mcq_score=40 + i * 5) for i in range(8)]
+            + [self._make_short_item(f"Art{i}", mcq_score=80 + i) for i in range(5)]
+            + [self._make_short_item(f"Mast{i}", mcq_score=90 + i, short_score=80 + i, short_conf="established", short_attempts=7) for i in range(3)]
+        )
+        service.get_weak_points = Mock(return_value=items)
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert len(result) == 8
+        unique = set(result)
+        assert len(unique) == 6  # target 6 unique
+
+        weak_in = [c for c in unique if c.startswith("Weak")]
+        art_in = [c for c in unique if c.startswith("Art")]
+        mast_in = [c for c in unique if c.startswith("Mast")]
+        assert len(weak_in) == 3   # quota A
+        assert len(art_in) == 2    # quota B
+        assert len(mast_in) == 1   # quota C
+
+    def test_short_cascade_when_bucket_empty(self, service):
+        """When bucket A is empty, slots cascade to B then C."""
+        items = [
+            # No weak concepts — all MCQ strong
+            self._make_short_item(f"Art{i}", mcq_score=80 + i) for i in range(4)
+        ] + [
+            self._make_short_item(f"Mast{i}", mcq_score=90 + i, short_score=85, short_conf="established", short_attempts=7) for i in range(3)
+        ]
+        service.get_weak_points = Mock(return_value=items)
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert len(result) == 8
+        # All 4 articulate + some mastered should fill the 6 unique slots
+        for i in range(4):
+            assert f"Art{i}" in result
+
+    def test_short_repetitions_from_weak(self, service):
+        """Expansion to 8 questions repeats concepts from bucket A."""
+        service.get_weak_points = Mock(return_value=[
+            self._make_short_item("W1", mcq_score=50),
+            self._make_short_item("W2", mcq_score=60),
+            self._make_short_item("W3", mcq_score=70),
+            self._make_short_item("A1", mcq_score=85),
+            self._make_short_item("A2", mcq_score=90),
+            self._make_short_item("M1", mcq_score=95, short_score=85, short_conf="established", short_attempts=7),
+        ])
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert len(result) == 8
+        unique = set(result)
+        assert len(unique) == 6
+        # 2 extra slots should come from weak concepts (W1, W2, W3)
+        weak_counts = sum(1 for c in result if c.startswith("W"))
+        assert weak_counts >= 4  # 3 unique + at least 1 repetition
+
+    def test_short_few_concepts_round_robin(self, service):
+        """With fewer than 6 concepts, all are used and repeated."""
+        service.get_weak_points = Mock(return_value=[
+            self._make_short_item("Only1", mcq_score=50),
+            self._make_short_item("Only2", mcq_score=85),
+        ])
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert len(result) == 8
+        assert "Only1" in result
+        assert "Only2" in result
+        # Both concepts should repeat to fill 8 slots
+        assert result.count("Only1") >= 2
+        assert result.count("Only2") >= 2
+
+    def test_short_empty_returns_empty(self, service):
+        """Returns empty list when no concepts exist."""
+        service.get_weak_points = Mock(return_value=[])
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+        assert result == []
+
+    def test_short_all_mastered_still_fills_quiz(self, service):
+        """When all concepts are mastered (C), quiz still fills correctly."""
+        items = [
+            self._make_short_item(f"M{i}", mcq_score=90 + i, short_score=80 + i, short_conf="established", short_attempts=7)
+            for i in range(10)
+        ]
+        service.get_weak_points = Mock(return_value=items)
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert len(result) == 8
+        # Should still select 6 unique and expand to 8
+        assert len(set(result)) == 6
+
+    def test_short_weak_sorted_by_mcq_desc(self, service):
+        """Within bucket A, concepts are sorted by MCQ score descending (moderately weak first)."""
+        service.get_weak_points = Mock(return_value=[
+            self._make_short_item("VeryWeak", mcq_score=20),
+            self._make_short_item("ModerateWeak", mcq_score=70),
+            self._make_short_item("MildWeak", mcq_score=75),
+            self._make_short_item("Strong", mcq_score=90),
+        ])
+        # With quota A=3 and only 4 concepts, all 3 weak selected
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert "ModerateWeak" in result
+        assert "MildWeak" in result
+        assert "VeryWeak" in result
+
+    def test_short_respects_allowed_concepts(self, service):
+        """Only concepts in allowed_concepts set are considered."""
+        service.get_weak_points = Mock(return_value=[
+            self._make_short_item("Allowed1", mcq_score=50),
+            self._make_short_item("Excluded", mcq_score=60),
+            self._make_short_item("Allowed2", mcq_score=85),
+        ])
+        result = service.build_short_quiz_concepts(
+            student_id=1,
+            allowed_concepts={"Allowed1", "Allowed2"},
+            total_questions=8
+        )
+
+        assert "Allowed1" in result
+        assert "Allowed2" in result
+        assert "Excluded" not in result
+
     # ==================== LABELS PT-PT ====================
 
     def test_labels_are_in_portuguese(self, service, analytics_repo, material_repo):

@@ -303,6 +303,138 @@ class AnalyticsService:
             "daily": daily
         }
 
+    def check_short_answer_readiness(
+        self,
+        student_id: int,
+        material_id: int | None = None
+    ) -> dict:
+        """
+        Gate: ALL concepts must have confident MCQ data (building/established).
+        """
+        results = self.get_weak_points(student_id, material_id)
+
+        concepts = [r for r in results if r.get("concept")]
+        ready = sum(
+            1 for r in concepts
+            if r.get("score_data_mcq", {}).get("confidence_level") in ("building", "established")
+        )
+        total = len(concepts)
+
+        return {
+            "is_ready": total > 0 and ready == total,
+            "total_concepts": total,
+            "ready_concepts": ready,
+        }
+
+    def build_short_quiz_concepts(
+        self,
+        student_id: int,
+        material_id: int | None = None,
+        allowed_concepts: set[str] | None = None,
+        total_questions: int = 8
+    ) -> list[str]:
+        """
+        Build concept sequence for short-answer quizzes using MCQ × Short cross-reference.
+
+        Buckets (priority order):
+          A (mcq_weak):    MCQ ≤ 75% — MCQ alone didn't teach it, change modality
+          B (to_practice): MCQ > 75% AND (short ≤ 75% or < 5 short attempts)
+          C (mastered):    MCQ > 75% AND short > 75% with 5+ short attempts
+
+        Quotas (target 6 unique): A=3, B=2, C=1
+        Expand to total_questions with repetitions from A, then B.
+        """
+        results = self.get_weak_points(student_id, material_id)
+
+        items: list[dict] = []
+        for item in results:
+            concept = item.get("concept")
+            if not concept or (allowed_concepts and concept not in allowed_concepts):
+                continue
+
+            mcq_data = item.get("score_data_mcq", {})
+            short_data = item.get("score_data_short", {})
+
+            items.append({
+                "concept": concept,
+                "mcq_score": round((mcq_data.get("score") or 0) * 100),
+                "mcq_confidence": mcq_data.get("confidence_level", "not_seen"),
+                "short_score": round((short_data.get("score") or 0) * 100),
+                "short_confidence": short_data.get("confidence_level", "not_seen"),
+            })
+
+        if not items or total_questions <= 0:
+            return []
+
+        MCQ_STRONG_THRESHOLD = 75
+        SHORT_STRONG_THRESHOLD = 75
+
+        mcq_weak: list[dict] = []     # A: MCQ ≤ 75%
+        to_practice: list[dict] = []   # B: MCQ > 75%, short not yet mastered
+        mastered: list[dict] = []      # C: MCQ > 75%, short > 75% with confident data
+
+        for i in items:
+            mcq_confident = i["mcq_confidence"] in ("building", "established")
+            mcq_strong = mcq_confident and i["mcq_score"] > MCQ_STRONG_THRESHOLD
+            short_confident = i["short_confidence"] in ("building", "established")
+            short_strong = short_confident and i["short_score"] > SHORT_STRONG_THRESHOLD
+
+            if not mcq_strong:
+                mcq_weak.append(i)
+            elif short_strong:
+                mastered.append(i)
+            else:
+                to_practice.append(i)
+
+        # Sort within buckets
+        mcq_weak.sort(key=lambda i: (-i["mcq_score"], i["concept"].lower()))
+        to_practice.sort(key=lambda i: (i["short_score"], -i["mcq_score"], i["concept"].lower()))
+        mastered.sort(key=lambda i: (-(i["mcq_score"] + i["short_score"]), i["concept"].lower()))
+
+        # Quotas for unique concepts (target 6, cascade A → B → C)
+        target_unique = min(6, len(items))
+        buckets = [(mcq_weak, 3), (to_practice, 2), (mastered, 1)]
+
+        selected: list[dict] = []
+        for bucket, quota in buckets:
+            selected.extend(bucket[:quota])
+
+        # Cascade: fill remaining slots from each bucket's unused items
+        remaining = target_unique - len(selected)
+        if remaining > 0:
+            already = set(id(i) for i in selected)
+            for bucket, _ in buckets:
+                for item in bucket:
+                    if remaining <= 0:
+                        break
+                    if id(item) not in already:
+                        selected.append(item)
+                        already.add(id(item))
+                        remaining -= 1
+
+        unique_concepts = [i["concept"] for i in selected]
+
+        if not unique_concepts:
+            return []
+
+        # Expand to total_questions with repetitions
+        if len(unique_concepts) >= 6:
+            # Enough unique: extra slots repeat from mcq_weak (highest learning value)
+            mcq_weak_names = [i["concept"] for i in mcq_weak if i["concept"] in unique_concepts]
+            repeat_pool = mcq_weak_names or unique_concepts
+        else:
+            # Few concepts: round-robin all in priority order
+            repeat_pool = unique_concepts
+
+        result = list(unique_concepts)
+        idx = 0
+        while len(result) < total_questions:
+            result.append(repeat_pool[idx % len(repeat_pool)])
+            idx += 1
+
+        random.shuffle(result)
+        return result
+
     def build_mcq_quiz_concepts(
         self,
         student_id: int,
