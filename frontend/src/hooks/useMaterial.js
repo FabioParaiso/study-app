@@ -11,10 +11,21 @@ export const useMaterial = (studentId) => {
 
     const [materialsList, setMaterialsList] = useState([]);
 
+    const normalizeTopicList = useCallback((rawTopics) => {
+        const list = Array.isArray(rawTopics) ? rawTopics : Object.keys(rawTopics || {});
+        return list.sort();
+    }, []);
+
+    const syncTopics = useCallback((topicList) => {
+        setAvailableTopics(topicList);
+        setSelectedTopic(prev => (prev === 'all' || topicList.includes(prev) ? prev : 'all'));
+    }, []);
+
     const checkSavedMaterial = useCallback(async () => {
         if (!studentId) {
             setSavedMaterial(null);
-            setAvailableTopics([]);
+            syncTopics([]);
+            setSelectedTopic("all");
             setMaterialsList([]);
             return;
         }
@@ -24,11 +35,12 @@ export const useMaterial = (studentId) => {
                 setSavedMaterial(data);
 
                 // Handle new Dictionary structure {Topic: [Concepts]}
-                const rawTopics = data.topics || [];
-                const topicList = Array.isArray(rawTopics) ? rawTopics : Object.keys(rawTopics).sort();
-                setAvailableTopics(topicList);
+                const topicList = normalizeTopicList(data.topics);
+                syncTopics(topicList);
             } else {
                 setSavedMaterial(null);
+                syncTopics([]);
+                setSelectedTopic("all");
             }
             // Fetch library list
             const list = await studyService.getMaterials();
@@ -36,7 +48,7 @@ export const useMaterial = (studentId) => {
         } catch (err) {
             console.error(err);
         }
-    }, [studentId]);
+    }, [studentId, normalizeTopicList, syncTopics]);
 
     const handleFileChange = (e) => setFile(e.target.files[0]);
 
@@ -50,7 +62,8 @@ export const useMaterial = (studentId) => {
             setFile(null); // Clear file selection after upload
         } catch (err) {
             console.error(err);
-            setErrorMsg("Falha ao analisar o ficheiro.");
+            const detail = err?.response?.data?.detail;
+            setErrorMsg(detail || "Falha ao analisar o ficheiro.");
         } finally {
             setIsAnalyzing(false);
         }
@@ -64,14 +77,14 @@ export const useMaterial = (studentId) => {
             const data = await studyService.analyzeTopics();
 
             // Handle new Dictionary structure
-            const rawTopics = data.topics || [];
-            const topicList = Array.isArray(rawTopics) ? rawTopics : Object.keys(rawTopics).sort();
-            setAvailableTopics(topicList);
+            const topicList = normalizeTopicList(data.topics);
+            syncTopics(topicList);
 
             await checkSavedMaterial(); // Refresh to ensure sync
         } catch (err) {
             console.error(err);
-            setErrorMsg("Falha ao detetar tópicos.");
+            const detail = err?.response?.data?.detail;
+            setErrorMsg(detail || "Falha ao detetar tópicos.");
         } finally {
             setIsAnalyzing(false);
         }
@@ -82,7 +95,8 @@ export const useMaterial = (studentId) => {
         try {
             await studyService.clearMaterial();
             setSavedMaterial(null);
-            setAvailableTopics([]);
+            syncTopics([]);
+            setSelectedTopic("all");
         } catch (err) {
             console.error(err);
         }

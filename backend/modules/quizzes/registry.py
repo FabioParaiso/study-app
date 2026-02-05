@@ -43,7 +43,7 @@ def build_default_quiz_registry() -> QuizTypeRegistry:
     registry.register(
         "open-ended",
         QuizTypeDefinition(
-            min_xp=900,
+            min_xp=0,
             strategy_factory=OpenEndedStrategy,
             evaluation_factory=OpenEndedEvaluationStrategy
         ),

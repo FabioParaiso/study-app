@@ -303,6 +303,20 @@ class AnalyticsService:
             "daily": daily
         }
 
+    @staticmethod
+    def _build_readiness_status(results: list[dict], score_data_key: str) -> dict:
+        concepts = [result for result in results if result.get("concept")]
+        ready = sum(
+            1 for result in concepts
+            if result.get(score_data_key, {}).get("confidence_level") in ("building", "established")
+        )
+        total = len(concepts)
+        return {
+            "is_ready": total > 0 and ready == total,
+            "total_concepts": total,
+            "ready_concepts": ready,
+        }
+
     def check_short_answer_readiness(
         self,
         student_id: int,
@@ -312,19 +326,110 @@ class AnalyticsService:
         Gate: ALL concepts must have confident MCQ data (building/established).
         """
         results = self.get_weak_points(student_id, material_id)
+        return self._build_readiness_status(results, "score_data_mcq")
 
-        concepts = [r for r in results if r.get("concept")]
-        ready = sum(
-            1 for r in concepts
-            if r.get("score_data_mcq", {}).get("confidence_level") in ("building", "established")
-        )
-        total = len(concepts)
+    def check_open_ended_readiness(
+        self,
+        student_id: int,
+        material_id: int | None = None
+    ) -> dict:
+        """
+        Gate: ALL concepts must have confident Short data (building/established).
+        """
+        results = self.get_weak_points(student_id, material_id)
+        return self._build_readiness_status(results, "score_data_short")
 
-        return {
-            "is_ready": total > 0 and ready == total,
-            "total_concepts": total,
-            "ready_concepts": ready,
-        }
+    def build_open_quiz_concepts(
+        self,
+        student_id: int,
+        material_id: int | None = None,
+        allowed_concepts: set[str] | None = None,
+        total_concepts: int = 8
+    ) -> list[str]:
+        """
+        Build prioritized concept list for open-ended quizzes using Bloom × Short cross-reference.
+
+        Buckets (priority order):
+          below_bloom: bloom not_seen/exploring
+          weak_bloom:  bloom building/established, score ≤ 75
+          strong_bloom: bloom building/established, score > 75
+
+        Returns ordered list (no shuffle) — order matters for LLM prompt.
+        No round-robin repetition — just returns all available.
+        Guarantees 1 weak + 1 strong reserved when below dominates.
+        """
+        results = self.get_weak_points(student_id, material_id)
+
+        items: list[dict] = []
+        for item in results:
+            concept = item.get("concept")
+            if not concept or (allowed_concepts and concept not in allowed_concepts):
+                continue
+
+            bloom_data = item.get("score_data_bloom", {})
+            short_data = item.get("score_data_short", {})
+
+            items.append({
+                "concept": concept,
+                "bloom_score": round((bloom_data.get("score") or 0) * 100),
+                "bloom_confidence": bloom_data.get("confidence_level", "not_seen"),
+                "bloom_attempts": bloom_data.get("attempts_count", 0),
+                "short_score": round((short_data.get("score") or 0) * 100),
+            })
+
+        if not items or total_concepts <= 0:
+            return []
+
+        below_bloom: list[dict] = []
+        weak_bloom: list[dict] = []
+        strong_bloom: list[dict] = []
+
+        for i in items:
+            bloom_confident = i["bloom_confidence"] in ("building", "established")
+            if not bloom_confident:
+                below_bloom.append(i)
+            elif i["bloom_score"] <= 75:
+                weak_bloom.append(i)
+            else:
+                strong_bloom.append(i)
+
+        # Sort within buckets
+        below_bloom.sort(key=lambda i: (i["bloom_attempts"], -i["short_score"], i["concept"].lower()))
+        weak_bloom.sort(key=lambda i: (i["bloom_score"], i["bloom_attempts"], -i["short_score"], i["concept"].lower()))
+        strong_bloom.sort(key=lambda i: (-i["bloom_score"], i["concept"].lower()))
+
+        total_unique = len(below_bloom) + len(weak_bloom) + len(strong_bloom)
+
+        if total_unique == 0:
+            return []
+
+        target = min(total_concepts, total_unique)
+
+        if total_unique >= total_concepts:
+            # Enough unique — priority selection with guarantees
+            guaranteed = []
+            remaining_strong = list(strong_bloom)
+            remaining_weak = list(weak_bloom)
+
+            # Guarantee 1 strong if below+weak would fill all slots
+            if strong_bloom and (len(below_bloom) + len(weak_bloom)) >= total_concepts:
+                guaranteed.append(strong_bloom[0]["concept"])
+                remaining_strong = strong_bloom[1:]
+
+            # Guarantee 1 weak if below would fill all remaining slots
+            if weak_bloom and len(below_bloom) >= (total_concepts - len(guaranteed)):
+                guaranteed.append(weak_bloom[0]["concept"])
+                remaining_weak = weak_bloom[1:]
+
+            remaining_slots = total_concepts - len(guaranteed)
+            pool = below_bloom + remaining_weak + remaining_strong
+            selected = [i["concept"] for i in pool[:remaining_slots]]
+            selected.extend(guaranteed)
+        else:
+            # Few concepts — just return all in priority order (no repetition)
+            selected = [i["concept"] for i in (below_bloom + weak_bloom + strong_bloom)]
+
+        return selected[:target]
 
     def build_short_quiz_concepts(
         self,

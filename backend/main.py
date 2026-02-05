@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
+from pathlib import Path
 # Load env variables
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"))
 
 import models
 from database import engine

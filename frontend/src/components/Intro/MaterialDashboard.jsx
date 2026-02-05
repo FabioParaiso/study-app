@@ -22,6 +22,12 @@ const MaterialDashboard = ({
     const isShortReady = totalConcepts > 0 && readyConcepts === totalConcepts;
     const progressPct = totalConcepts ? (readyConcepts / totalConcepts) * 100 : 0;
 
+    const readyConceptsShort = conceptPoints.filter(p =>
+        ["building", "established"].includes(p?.score_data_short?.confidence_level)
+    ).length;
+    const isOpenReady = totalConcepts > 0 && readyConceptsShort === totalConcepts;
+    const progressPctShort = totalConcepts ? (readyConceptsShort / totalConcepts) * 100 : 0;
+
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Active Material Card */}
@@ -125,8 +131,8 @@ const MaterialDashboard = ({
                     </div>
                 )}
 
-                {/* Advanced Level - Requires 900 XP */}
-                {savedMaterial.total_xp >= 900 ? (
+                {/* Advanced Level - Requires Short readiness */}
+                {isOpenReady ? (
                     <button
                         onClick={() => startQuiz('open-ended')}
                         disabled={loading}
@@ -149,9 +155,9 @@ const MaterialDashboard = ({
                         <div className="text-center w-full">
                             <h3 className="font-black text-gray-400 text-lg uppercase tracking-wide">Avançado</h3>
                             <div className="mt-2 w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-300">
-                                <div className="bg-purple-500 h-2.5 rounded-full transition-all" style={{ width: `${Math.min((savedMaterial.total_xp / 900) * 100, 100)}%` }}></div>
+                                <div className="bg-purple-500 h-2.5 rounded-full transition-all" style={{ width: `${Math.min(progressPctShort, 100)}%` }}></div>
                             </div>
-                            <p className="text-gray-400 text-xs font-bold mt-1 uppercase">{savedMaterial.total_xp}/900 XP para desbloquear</p>
+                            <p className="text-gray-400 text-xs font-bold mt-1 uppercase">{readyConceptsShort}/{totalConcepts} conceitos prontos</p>
                         </div>
                     </div>
                 )}
