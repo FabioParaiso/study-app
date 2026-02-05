@@ -393,8 +393,25 @@ class AnalyticsService:
             return []
 
         if total_unique >= total_questions:
-            pool = below_short + weak_short + strong_short
-            selected = [i["concept"] for i in pool[:total_questions]]
+            # ENOUGH UNIQUE CONCEPTS — max 1x each, priority selection
+            guaranteed = []
+            remaining_strong = list(strong_short)
+            remaining_weak = list(weak_short)
+
+            # Guarantee 1 strong if below+weak would fill all slots
+            if strong_short and (len(below_short) + len(weak_short)) >= total_questions:
+                guaranteed.append(strong_short[0]["concept"])
+                remaining_strong = strong_short[1:]
+
+            # Guarantee 1 weak if below would fill all remaining slots
+            if weak_short and len(below_short) >= (total_questions - len(guaranteed)):
+                guaranteed.append(weak_short[0]["concept"])
+                remaining_weak = weak_short[1:]
+
+            remaining_slots = total_questions - len(guaranteed)
+            pool = below_short + remaining_weak + remaining_strong
+            selected = [i["concept"] for i in pool[:remaining_slots]]
+            selected.extend(guaranteed)
         else:
             concepts_ordered = [i["concept"] for i in (below_short + weak_short + strong_short)]
             selected = []

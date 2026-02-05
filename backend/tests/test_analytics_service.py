@@ -424,18 +424,28 @@ class TestAnalyticsService:
         }
 
     def test_short_priority_prefers_below_short(self, service):
-        """When below_short has enough items, weak/strong should be skipped."""
+        """below_short fills most slots; guaranteed weak/strong get 1 slot each."""
         service.get_weak_points = Mock(return_value=[
             self._make_short_item("Below1", mcq_score=90, short_conf="exploring", short_attempts=1),
             self._make_short_item("Below2", mcq_score=70, short_conf="not_seen", short_attempts=0),
             self._make_short_item("Below3", mcq_score=60, short_conf="exploring", short_attempts=2),
+            self._make_short_item("Below4", mcq_score=80, short_conf="exploring", short_attempts=0),
+            self._make_short_item("Below5", mcq_score=50, short_conf="not_seen", short_attempts=0),
+            self._make_short_item("Below6", mcq_score=75, short_conf="exploring", short_attempts=1),
+            self._make_short_item("Below7", mcq_score=65, short_conf="exploring", short_attempts=0),
+            self._make_short_item("Below8", mcq_score=85, short_conf="not_seen", short_attempts=0),
             self._make_short_item("Weak1", mcq_score=80, short_conf="building", short_score=60, short_attempts=4),
             self._make_short_item("Strong1", mcq_score=95, short_conf="established", short_score=90, short_attempts=6),
         ])
-        result = service.build_short_quiz_concepts(student_id=1, total_questions=2)
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
 
-        assert len(result) == 2
-        assert set(result).issubset({"Below1", "Below2", "Below3"})
+        assert len(result) == 8
+        # Guarantee: weak and strong each get 1 slot
+        assert "Weak1" in result
+        assert "Strong1" in result
+        # Remaining 6 slots filled from below_short
+        below_count = sum(1 for c in result if c.startswith("Below"))
+        assert below_count == 6
 
     def test_short_below_sorted_by_attempts_then_mcq_score(self, service):
         """below_short ordered by short_attempts asc, then mcq_score desc."""
@@ -469,6 +479,45 @@ class TestAnalyticsService:
         result = service.build_short_quiz_concepts(student_id=1, total_questions=3)
 
         assert set(result) == {"Below", "Weak", "Strong"}
+
+    def test_short_guarantees_weak_and_strong_when_below_dominates(self, service):
+        """When below_short would fill all slots, guarantee 1 weak and 1 strong."""
+        items = (
+            [self._make_short_item(f"B{i}", mcq_score=80, short_conf="exploring", short_attempts=i) for i in range(10)]
+            + [self._make_short_item("W1", mcq_score=70, short_conf="building", short_score=50, short_attempts=3)]
+            + [self._make_short_item("S1", mcq_score=90, short_conf="established", short_score=90, short_attempts=7)]
+        )
+        service.get_weak_points = Mock(return_value=items)
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert len(result) == 8
+        assert "W1" in result
+        assert "S1" in result
+
+    def test_short_guarantees_strong_when_below_and_weak_dominate(self, service):
+        """When below+weak would fill all slots, guarantee 1 strong."""
+        items = (
+            [self._make_short_item(f"B{i}", mcq_score=80, short_conf="exploring", short_attempts=i) for i in range(5)]
+            + [self._make_short_item(f"W{i}", mcq_score=70, short_conf="building", short_score=50, short_attempts=3) for i in range(5)]
+            + [self._make_short_item("S1", mcq_score=90, short_conf="established", short_score=90, short_attempts=7)]
+        )
+        service.get_weak_points = Mock(return_value=items)
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=8)
+
+        assert len(result) == 8
+        assert "S1" in result
+
+    def test_short_no_guarantee_needed_when_buckets_naturally_fit(self, service):
+        """When below_short is small, no guarantee needed — all buckets selected naturally."""
+        service.get_weak_points = Mock(return_value=[
+            self._make_short_item("B1", mcq_score=80, short_conf="exploring", short_attempts=0),
+            self._make_short_item("W1", mcq_score=70, short_conf="building", short_score=50, short_attempts=3),
+            self._make_short_item("W2", mcq_score=75, short_conf="building", short_score=60, short_attempts=4),
+            self._make_short_item("S1", mcq_score=90, short_conf="established", short_score=90, short_attempts=7),
+        ])
+        result = service.build_short_quiz_concepts(student_id=1, total_questions=4)
+
+        assert set(result) == {"B1", "W1", "W2", "S1"}
 
     def test_short_round_robin_when_few_concepts(self, service):
         """With fewer concepts than total_questions, round-robin repeats them."""
