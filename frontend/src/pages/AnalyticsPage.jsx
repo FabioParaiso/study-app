@@ -78,10 +78,63 @@ const AnalyticsPage = ({
         };
     }, [metrics]);
 
-    const learningDaily = useMemo(() => {
+    const learningDailyRaw = useMemo(() => {
         if (!learningTrend) return [];
         return learningTrend.daily || [];
     }, [learningTrend]);
+
+    const chartDays = useMemo(() => {
+        const candidates = [];
+        if (daily.length > 0) {
+            candidates.push(daily[0].day, daily[daily.length - 1].day);
+        }
+        if (learningDailyRaw.length > 0) {
+            candidates.push(learningDailyRaw[0].day, learningDailyRaw[learningDailyRaw.length - 1].day);
+        }
+        if (candidates.length === 0) return [];
+
+        const parseIso = (iso) => {
+            const [year, month, day] = iso.split('-').map(Number);
+            return new Date(Date.UTC(year, month - 1, day));
+        };
+        const formatIso = (date) => date.toISOString().slice(0, 10);
+
+        const start = parseIso(candidates.reduce((min, cur) => (cur < min ? cur : min)));
+        const end = parseIso(candidates.reduce((max, cur) => (cur > max ? cur : max)));
+
+        const days = [];
+        for (let ts = start.getTime(); ts <= end.getTime(); ts += 24 * 60 * 60 * 1000) {
+            days.push(formatIso(new Date(ts)));
+        }
+        return days;
+    }, [daily, learningDailyRaw]);
+
+    const dailyAligned = useMemo(() => {
+        if (chartDays.length === 0) return [];
+        const baseByType = Object.keys(TYPE_LABELS).reduce((acc, type) => {
+            acc[type] = 0;
+            return acc;
+        }, {});
+        const byDay = new Map(daily.map((day) => [day.day, day]));
+        return chartDays.map((day) => {
+            const entry = byDay.get(day);
+            if (entry) return entry;
+            return {
+                day,
+                active_seconds: 0,
+                duration_seconds: 0,
+                tests_total: 0,
+                by_type: { ...baseByType }
+            };
+        });
+    }, [chartDays, daily]);
+
+    const learningDaily = useMemo(() => {
+        if (learningDailyRaw.length === 0) return [];
+        if (chartDays.length === 0) return learningDailyRaw;
+        const byDay = new Map(learningDailyRaw.map((day) => [day.day, day]));
+        return chartDays.map((day) => byDay.get(day) || { day, by_level: {} });
+    }, [learningDailyRaw, chartDays]);
 
     const learningColumnWidth = useMemo(() => {
         if (learningDaily.length === 0) return 0;
@@ -101,14 +154,14 @@ const AnalyticsPage = ({
     }, [learningDaily]);
 
     const maxActive = useMemo(() => {
-        if (daily.length === 0) return 1;
-        return Math.max(1, ...daily.map((d) => d.active_seconds || 0));
-    }, [daily]);
+        if (dailyAligned.length === 0) return 1;
+        return Math.max(1, ...dailyAligned.map((d) => d.active_seconds || 0));
+    }, [dailyAligned]);
 
     const maxTests = useMemo(() => {
-        if (daily.length === 0) return 1;
-        return Math.max(1, ...daily.map((d) => d.tests_total || 0));
-    }, [daily]);
+        if (dailyAligned.length === 0) return 1;
+        return Math.max(1, ...dailyAligned.map((d) => d.tests_total || 0));
+    }, [dailyAligned]);
 
     const totalActiveMinutes = totals ? formatMinutes(totals.active_seconds) : 0;
     const avgActiveMinutes = totals ? formatMinutes((totals.active_seconds || 0) / 30) : 0;
@@ -188,7 +241,7 @@ const AnalyticsPage = ({
                                     {trendError}
                                 </div>
                             )}
-                            {!trendLoading && !trendError && learningDaily.length === 0 && (
+                            {!trendLoading && !trendError && learningDailyRaw.length === 0 && (
                                 <div className="text-center text-gray-400 text-sm font-semibold py-10">
                                     Sem dados suficientes.
                                 </div>
@@ -241,8 +294,15 @@ const AnalyticsPage = ({
                                         </div>
                                     </div>
                                     <div className="flex mt-2">
-                                        {learningDaily.map((day, idx) => <AxisLabel key={day.day} idx={idx} label={formatDayLabel(day.day)} center style={{ width: `${learningColumnWidth}%` }} />
-                                        )}
+                                        {learningDaily.map((day, idx) => (
+                                            <AxisLabel
+                                                key={day.day}
+                                                idx={idx}
+                                                label={formatDayLabel(day.day)}
+                                                center
+                                                className="flex-1"
+                                            />
+                                        ))}
                                     </div>
                                 </div>
                             )}
@@ -253,20 +313,20 @@ const AnalyticsPage = ({
                             subtitle="Minutos ativos"
                             rightContent={<div className="text-xs font-bold text-gray-400">Max: {formatMinutes(maxActive)} min</div>}
                         >
-                            <div className="flex items-end justify-end gap-2 min-w-[720px] h-44">
-                                {daily.map((day, idx) => {
+                            <div className="flex items-end h-44">
+                                {dailyAligned.map((day, idx) => {
                                     const barHeight = calcBarHeight(day.active_seconds, maxActive, CHART_HEIGHT_PX);
                                     const title = formatActiveTooltip(day);
                                     const enabled = (day.active_seconds || 0) > 0;
                                     return (
-                                        <div key={day.day} className="flex flex-col items-center gap-2">
+                                        <div key={day.day} className="flex-1 min-w-0 flex flex-col items-center gap-2 px-1">
                                             <TooltipTarget text={title} enabled={enabled}>
                                                 <div
                                                     className="w-3 bg-duo-blue rounded-t"
                                                     style={{ height: `${barHeight}px` }}
                                                 ></div>
                                             </TooltipTarget>
-                                            <AxisLabel idx={idx} label={formatDayLabel(day.day)} />
+                                            <AxisLabel idx={idx} label={formatDayLabel(day.day)} center className="w-full" />
                                         </div>
                                     );
                                 })}
@@ -278,13 +338,13 @@ const AnalyticsPage = ({
                             subtitle="Breakdown por nivel"
                             showLegend
                         >
-                            <div className="flex items-end justify-end gap-2 min-w-[720px] h-44">
-                                {daily.map((day, idx) => {
+                            <div className="flex items-end h-44">
+                                {dailyAligned.map((day, idx) => {
                                     const byType = day.by_type || {};
                                     const title = formatTestsTooltip(day, byType);
                                     const enabled = (day.tests_total || 0) > 0;
                                     return (
-                                        <div key={day.day} className="flex flex-col items-center gap-2">
+                                        <div key={day.day} className="flex-1 min-w-0 flex flex-col items-center gap-2 px-1">
                                             <TooltipTarget text={title} enabled={enabled}>
                                                 <div className="relative w-3" style={{ height: `${CHART_HEIGHT_PX}px` }}>
                                                     <div className="absolute inset-0 flex flex-col justify-end rounded-t overflow-hidden border border-transparent">
@@ -302,7 +362,7 @@ const AnalyticsPage = ({
                                                     </div>
                                                 </div>
                                             </TooltipTarget>
-                                            <AxisLabel idx={idx} label={formatDayLabel(day.day)} />
+                                            <AxisLabel idx={idx} label={formatDayLabel(day.day)} center className="w-full" />
                                         </div>
                                     );
                                 })}

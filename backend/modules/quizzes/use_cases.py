@@ -68,7 +68,7 @@ class GenerateQuizUseCase:
         material_topics_data = MaterialMapper.topics_map(material)
         allowed_concepts = ConceptWhitelistBuilder.build(material_topics_data, target_topics)
         allowed_concepts_set = set(allowed_concepts)
-        
+
         material_xp = material.total_xp
         try:
             strategy = self.strategy_factory.select_strategy(request.quiz_type, material_xp)
@@ -105,16 +105,23 @@ class GenerateQuizUseCase:
                 )
 
         material_concepts: list[str] = allowed_concepts
-        if is_multiple_choice:
-            material_concepts = self._build_concept_sequence(
-                self.analytics_service, user_id, material_id, allowed_concepts_set, allowed_concepts,
-                builder="build_mcq_quiz_concepts", total=10
-            )
-        elif is_short_answer:
-            material_concepts = self._build_concept_sequence(
-                self.analytics_service, user_id, material_id, allowed_concepts_set, allowed_concepts,
-                builder="build_short_quiz_concepts", total=8
-            )
+        if is_multiple_choice or is_short_answer:
+            # For fixed-sequence quizzes, only restrict concepts by the user's
+            # explicit topic selection — not by adaptive topic filtering.
+            # The concept builders already handle internal prioritisation.
+            quiz_concepts = ConceptWhitelistBuilder.build(material_topics_data, request.topics)
+            quiz_concepts_set = set(quiz_concepts)
+
+            if is_multiple_choice:
+                material_concepts = self._build_concept_sequence(
+                    self.analytics_service, user_id, material_id, quiz_concepts_set, quiz_concepts,
+                    builder="build_mcq_quiz_concepts", total=10
+                )
+            else:
+                material_concepts = self._build_concept_sequence(
+                    self.analytics_service, user_id, material_id, quiz_concepts_set, quiz_concepts,
+                    builder="build_short_quiz_concepts", total=8
+                )
         elif is_open_ended and self.analytics_service:
             concepts = self.analytics_service.build_open_quiz_concepts(
                 user_id, material_id, allowed_concepts_set, total_concepts=8
@@ -175,6 +182,8 @@ class SaveQuizResultUseCase:
             item.model_dump() if hasattr(item, "model_dump") else item.dict()
             for item in result.detailed_results
         ]
+        if not analytics_data:
+            raise QuizServiceError("Resultados detalhados em falta.", status_code=400)
         try:
             self.recorder.record(
                 user_id=user_id,
