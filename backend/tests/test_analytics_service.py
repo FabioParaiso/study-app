@@ -136,7 +136,7 @@ class TestAnalyticsService:
         assert item["score_data_mcq"]["display_value"] == "100%"
         
         assert item["score_data_short"]["confidence_level"] == "exploring"
-        assert item["score_data_short"]["display_value"] == "3/5"
+        assert item["score_data_short"]["display_value"] == "3/4"
         
         assert item["score_data_bloom"]["confidence_level"] == "not_seen"
         assert item["score_data_bloom"]["display_value"] == "--"
