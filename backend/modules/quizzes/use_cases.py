@@ -156,6 +156,8 @@ class SaveQuizResultUseCase:
             item.model_dump() if hasattr(item, "model_dump") else item.dict()
             for item in result.detailed_results
         ]
+        if not analytics_data:
+            raise QuizServiceError("Resultados detalhados em falta.", status_code=400)
         try:
             self.recorder.record(
                 user_id=user_id,
