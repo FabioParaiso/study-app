@@ -67,8 +67,7 @@ class GenerateQuizUseCase:
         target_topics, priority_topics = self.topic_selector.select(user_id, material_id, request.topics)
         material_topics_data = MaterialMapper.topics_map(material)
         allowed_concepts = ConceptWhitelistBuilder.build(material_topics_data, target_topics)
-        allowed_concepts_set = set(allowed_concepts)
-        
+
         material_xp = material.total_xp
         try:
             strategy = self.strategy_factory.select_strategy(request.quiz_type, material_xp)
@@ -92,16 +91,23 @@ class GenerateQuizUseCase:
                 )
 
         material_concepts: list[str] = allowed_concepts
-        if is_multiple_choice:
-            material_concepts = self._build_concept_sequence(
-                self.analytics_service, user_id, material_id, allowed_concepts_set, allowed_concepts,
-                builder="build_mcq_quiz_concepts", total=10
-            )
-        elif is_short_answer:
-            material_concepts = self._build_concept_sequence(
-                self.analytics_service, user_id, material_id, allowed_concepts_set, allowed_concepts,
-                builder="build_short_quiz_concepts", total=8
-            )
+        if is_multiple_choice or is_short_answer:
+            # For fixed-sequence quizzes, only restrict concepts by the user's
+            # explicit topic selection — not by adaptive topic filtering.
+            # The concept builders already handle internal prioritisation.
+            quiz_concepts = ConceptWhitelistBuilder.build(material_topics_data, request.topics)
+            quiz_concepts_set = set(quiz_concepts)
+
+            if is_multiple_choice:
+                material_concepts = self._build_concept_sequence(
+                    self.analytics_service, user_id, material_id, quiz_concepts_set, quiz_concepts,
+                    builder="build_mcq_quiz_concepts", total=10
+                )
+            else:
+                material_concepts = self._build_concept_sequence(
+                    self.analytics_service, user_id, material_id, quiz_concepts_set, quiz_concepts,
+                    builder="build_short_quiz_concepts", total=8
+                )
 
         questions = ai_service.generate_quiz(strategy, text, target_topics, priority_topics, material_concepts)
 
