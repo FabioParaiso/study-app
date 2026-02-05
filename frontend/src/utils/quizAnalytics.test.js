@@ -78,4 +78,26 @@ describe('buildDetailedResults', () => {
         expect(detailedResults).toEqual([]);
         expect(errors.map((err) => err.index)).toEqual([0, 1, 2]);
     });
+
+    it('includes question_topic to disambiguate duplicate concept names', () => {
+        const questions = [
+            { topic: 'Saúde da Pele', correctIndex: 0, concepts: ['Cuidados Específicos'] }
+        ];
+
+        const { detailedResults, errors } = buildDetailedResults({
+            questions,
+            userAnswers: { 0: 0 },
+            openEndedEvaluations: {},
+            quizType: 'multiple-choice'
+        });
+
+        expect(errors).toEqual([]);
+        expect(detailedResults).toEqual([
+            {
+                topic: 'Cuidados Específicos',
+                question_topic: 'Saúde da Pele',
+                is_correct: true
+            }
+        ]);
+    });
 });

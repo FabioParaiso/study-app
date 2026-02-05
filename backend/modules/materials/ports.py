@@ -23,6 +23,7 @@ class MaterialReaderRepositoryPort(Protocol):
 
 class MaterialConceptIdRepositoryPort(Protocol):
     def get_concept_id_map(self, material_id: int) -> Dict[str, int]: ...
+    def get_concept_pair_id_map(self, material_id: int) -> Dict[Tuple[str, str], int]: ...
 
 
 class MaterialConceptPairsRepositoryPort(Protocol):

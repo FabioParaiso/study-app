@@ -111,6 +111,30 @@ class MaterialConceptRepository(MaterialRepositoryBase):
             print(f"Error loading concept map: {e}")
             return {}
 
+    def get_concept_pair_id_map(self, material_id: int) -> dict[tuple[str, str], int]:
+        try:
+            from models import Concept, Topic
+
+            rows = (
+                self.db.query(Concept.id, Concept.name, Topic.name)
+                .join(Topic)
+                .filter(Topic.study_material_id == material_id)
+                .all()
+            )
+            concept_pair_map: dict[tuple[str, str], int] = {}
+            for concept_id, concept_name, topic_name in rows:
+                topic_key = (topic_name or "").strip().lower()
+                concept_key = (concept_name or "").strip().lower()
+                if not topic_key or not concept_key:
+                    continue
+                pair_key = (topic_key, concept_key)
+                if pair_key not in concept_pair_map:
+                    concept_pair_map[pair_key] = concept_id
+            return concept_pair_map
+        except Exception as e:
+            print(f"Error loading concept pair map: {e}")
+            return {}
+
     def get_concept_pairs(self, material_id: int) -> list[tuple[str, str]]:
         try:
             from models import Topic, Concept

@@ -99,7 +99,7 @@ EXEMPLOS DE PERGUNTAS (CALIBRAÇÃO):
 REGRAS DE SAÍDA (JSON) — OBRIGATÓRIO:
 - Devolve APENAS JSON válido (sem markdown, sem texto extra).
 - Mantém o schema EXACTO e não inventes chaves.
-- Se a LISTA DE CONCEITOS estiver vazia, devolve {{ "questions": [] }}.
+- Se a LISTA PRIORIZADA DE CONCEITOS estiver vazia, devolve {{ "questions": [] }}.
 
 VALIDAÇÕES OBRIGATÓRIAS:
 - "questions" tem exatamente 5 perguntas.
