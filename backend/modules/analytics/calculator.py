@@ -1,6 +1,6 @@
 from typing import Iterable
 from datetime import datetime
-from modules.analytics.constants import QUIZ_TYPES, CONFIDENCE_WINDOW, EXPLORING_THRESHOLD
+from modules.analytics.constants import QUIZ_TYPES, CONFIDENCE_WINDOW, EXPLORING_THRESHOLD_MCQ, EXPLORING_THRESHOLD_SHORT, EXPLORING_THRESHOLD_BLOOM
 
 
 def _get_building_status(mastery: float) -> tuple[str, str]:
@@ -41,7 +41,7 @@ def _calculate_mastery_simple(items: list[dict], window_size: int = 7) -> float:
 
 class AnalyticsCalculator:
     @staticmethod
-    def _calculate_score_data(items: list[dict]) -> dict:
+    def _calculate_score_data(items: list[dict], exploring_threshold: int = EXPLORING_THRESHOLD_MCQ) -> dict:
         """
         Calculates score data with gradual confidence levels.
         
@@ -62,23 +62,23 @@ class AnalyticsCalculator:
                 "score": None,
                 "confidence_level": "not_seen",
                 "attempts_count": 0,
-                "attempts_needed": EXPLORING_THRESHOLD,
+                "attempts_needed": exploring_threshold,
                 "display_value": "--",
                 "status_key": "not_seen",
                 "status_label": "Não Visto"
             }
-        
+
         window = items[:CONFIDENCE_WINDOW]
         actual_count = len(window)
-        
-        # State: Exploring (1-4 attempts)
-        if actual_count < EXPLORING_THRESHOLD:
+
+        # State: Exploring
+        if actual_count < exploring_threshold:
             return {
                 "score": None,
                 "confidence_level": "exploring",
                 "attempts_count": actual_count,
-                "attempts_needed": EXPLORING_THRESHOLD - actual_count,
-                "display_value": f"{actual_count}/{EXPLORING_THRESHOLD}",
+                "attempts_needed": exploring_threshold - actual_count,
+                "display_value": f"{actual_count}/{exploring_threshold}",
                 "status_key": "exploring",
                 "status_label": "Em Exploração"
             }
@@ -187,8 +187,8 @@ class AnalyticsCalculator:
 
             # Calculate score_data for each type
             score_data_mcq = AnalyticsCalculator._calculate_score_data(mcq_items)
-            score_data_short = AnalyticsCalculator._calculate_score_data(short_items)
-            score_data_bloom = AnalyticsCalculator._calculate_score_data(bloom_items)
+            score_data_short = AnalyticsCalculator._calculate_score_data(short_items, EXPLORING_THRESHOLD_SHORT)
+            score_data_bloom = AnalyticsCalculator._calculate_score_data(bloom_items, EXPLORING_THRESHOLD_BLOOM)
 
             results.append({
                 "topic": t_name,

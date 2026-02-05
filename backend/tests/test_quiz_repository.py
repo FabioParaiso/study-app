@@ -34,7 +34,13 @@ def test_record_quiz_result_counts_mcq_correct(db_session):
         score=3,
         total=5,
         quiz_type="multiple-choice",
-        analytics_data=[],
+        analytics_data=[
+            {"topic": "Concept1", "is_correct": True},
+            {"topic": "Concept1", "is_correct": True},
+            {"topic": "Concept2", "is_correct": False},
+            {"topic": "Concept2", "is_correct": True},
+            {"topic": "Concept3", "is_correct": False},
+        ],
         material_id=material.id,
         xp_earned=0,
         duration_seconds=120,
@@ -43,10 +49,11 @@ def test_record_quiz_result_counts_mcq_correct(db_session):
 
     assert success is True
     db_session.refresh(material)
+    assert material.total_questions_answered == 5
     assert material.correct_answers_count == 3
 
 
-def test_record_quiz_result_normalizes_open_ended_score(db_session):
+def test_record_quiz_result_counts_open_ended_correct(db_session):
     student = _create_student(db_session, "OpenUser")
     material = _create_material(db_session, student.id, "open.txt")
 
@@ -56,7 +63,12 @@ def test_record_quiz_result_normalizes_open_ended_score(db_session):
         score=70,
         total=4,
         quiz_type="open-ended",
-        analytics_data=[],
+        analytics_data=[
+            {"topic": "Biology", "is_correct": True},
+            {"topic": "Biology", "is_correct": False},
+            {"topic": "Biology", "is_correct": True},
+            {"topic": "Biology", "is_correct": False},
+        ],
         material_id=material.id,
         xp_earned=0,
         duration_seconds=200,
@@ -65,4 +77,5 @@ def test_record_quiz_result_normalizes_open_ended_score(db_session):
 
     assert success is True
     db_session.refresh(material)
-    assert material.correct_answers_count == 3
+    assert material.total_questions_answered == 4
+    assert material.correct_answers_count == 2

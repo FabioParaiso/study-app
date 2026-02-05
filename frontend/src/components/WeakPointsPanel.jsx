@@ -96,10 +96,15 @@ const WeakPointsPanel = ({ points = [], loading = false }) => {
 
     return (
         <div className="bg-white rounded-2xl border-2 border-gray-200 p-6">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6 flex items-center gap-2">
-                <TrendingUp size={16} />
-                O teu Domínio
-            </h3>
+            <div className="mb-6">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <TrendingUp size={16} />
+                    O teu Domínio
+                </h3>
+                <p className="text-xs text-gray-400 font-medium mt-1">
+                    Baseado nas últimas 7 respostas por conceito.
+                </p>
+            </div>
 
             <div className="space-y-4">
                 {Object.entries(groupedPoints).map(([topic, concepts]) => {
