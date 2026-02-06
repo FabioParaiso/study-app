@@ -31,6 +31,7 @@ yarn-error.log*
 
 # Testing & Coverage
 .coverage
+.coverage.*
 htmlcov/
 backend/.coverage
 backend/htmlcov/
@@ -54,3 +55,5 @@ Thumbs.db
 # Misc
 .agent/workflow_logs/
 .agent/
+.claude/settings.local.json
+test_output*.txt
