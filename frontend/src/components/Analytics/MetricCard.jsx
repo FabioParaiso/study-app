@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Reusable metric card component for the Analytics Dashboard.
  * Displays an icon, label, and value in a consistent card layout.

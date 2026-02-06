@@ -26,11 +26,17 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
 
       - name: Install backend deps
         working-directory: backend
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run backend lint
+        working-directory: backend
+        run: ruff check .
 
       - name: Run backend tests (full)
         working-directory: backend
@@ -52,6 +58,10 @@ jobs:
       - name: Install frontend deps
         working-directory: frontend
         run: npm ci
+
+      - name: Run frontend lint
+        working-directory: frontend
+        run: npm run lint
 
       - name: Run frontend tests (full)
         working-directory: frontend

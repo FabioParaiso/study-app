@@ -1,4 +1,3 @@
-import React from 'react';
 import { BookOpen, XCircle, Trophy, PenTool, Lock } from 'lucide-react';
 import WeakPointsPanel from '../WeakPointsPanel';
 import { useAnalytics } from '../../hooks/useAnalytics';

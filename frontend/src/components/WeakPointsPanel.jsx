@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { TrendingUp, ChevronDown, ChevronUp, BookOpen, Trophy, PenTool } from 'lucide-react';
 
 /**
@@ -74,7 +74,9 @@ const ScoreBadge = ({ scoreData, icon: Icon }) => {
 const WeakPointsPanel = ({ points = [], loading = false }) => {
     const [expandedTopics, setExpandedTopics] = useState({});
 
-    const safePoints = Array.isArray(points) ? points : [];
+    const safePoints = useMemo(() => {
+        return Array.isArray(points) ? points : [];
+    }, [points]);
 
     const toggleTopic = (topic) => {
         setExpandedTopics(prev => ({ ...prev, [topic]: !prev[topic] }));
