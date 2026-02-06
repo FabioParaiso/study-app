@@ -10,8 +10,7 @@ export function useQuiz(student, materialId) {
     const {
         questions, gameState, currentQuestionIndex, score, streak, userAnswers,
         openEndedEvaluations, missedIndices, showFeedback, isEvaluating,
-        setGameState, setIsEvaluating, initQuiz, recordAnswer, recordEvaluation, advanceQuestion,
-        setQuestions
+        setGameState, setIsEvaluating, initQuiz, recordAnswer, recordEvaluation, advanceQuestion
     } = useQuizEngine();
 
     const [loading, setLoading] = useState(false);

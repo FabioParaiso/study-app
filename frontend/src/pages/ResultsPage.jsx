@@ -1,5 +1,5 @@
-import React from 'react';
-import { Award, RefreshCw, RotateCcw, CheckCircle, Flame } from 'lucide-react';
+import { useEffect } from 'react';
+import { RefreshCw, RotateCcw, CheckCircle, Flame } from 'lucide-react';
 import Confetti from '../components/UI/Confetti';
 
 const ResultsScreen = ({
@@ -15,7 +15,7 @@ const ResultsScreen = ({
     else if (finalScore < 80) status = { color: 'text-duo-blue', border: 'border-duo-blue', bg: 'bg-blue-50', message: "Muito bom!" };
 
     // Stop any TTS
-    React.useEffect(() => {
+    useEffect(() => {
         window.speechSynthesis.cancel();
     }, []);
 

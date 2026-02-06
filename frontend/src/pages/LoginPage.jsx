@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, User, Lock, Sparkles, GraduationCap, ArrowRight, Rocket, Shield, Key } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff, User, Lock, ArrowRight, Shield, Key } from 'lucide-react';
 import { authService } from '../services/authService';
 import mascotImg from '../assets/mascot.png';
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Send, CheckCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Send } from 'lucide-react';
 import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, PARTIAL_SUCCESS_MESSAGES, getRandomMessage, FeedbackIcon } from './shared';
 
 const ShortAnswerCard = ({

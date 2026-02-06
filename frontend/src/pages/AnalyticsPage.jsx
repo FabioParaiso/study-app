@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { ArrowLeft, BarChart3, Clock, Layers } from 'lucide-react';
 import IntroHeader from '../components/Intro/IntroHeader';
 import MetricCard from '../components/Analytics/MetricCard';

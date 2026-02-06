@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { Rocket, Sparkles, Brain, Zap, ArrowRight, Star, ChevronDown, ChevronUp, CheckCircle, HelpCircle, Shield, Clock, GraduationCap, Users, FileText } from 'lucide-react';
+import { Rocket, Brain, Zap, ArrowRight, CheckCircle, Shield, FileText } from 'lucide-react';
 import mascotImg from '../assets/mascot.png';
 
 const LandingPage = ({ onStart }) => {
@@ -216,7 +215,7 @@ const LandingPage = ({ onStart }) => {
                                 Para os Pais
                             </div>
                             <h2 className="text-4xl font-black text-gray-900 leading-tight">
-                                Transforme o "Tempo de Ecrã" em <span className="text-blue-600">Tempo de Estudo</span>.
+                                Transforme o &quot;Tempo de Ecrã&quot; em <span className="text-blue-600">Tempo de Estudo</span>.
                             </h2>
                             <p className="text-gray-600 text-lg leading-relaxed">
                                 Sabemos que a batalha contra o telemóvel é difícil. O Super Study usa a mesma psicologia viciante dos videojogos para criar hábitos de estudo consistentes.

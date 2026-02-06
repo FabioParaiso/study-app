@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Barra de progresso reutilizável para Quiz.
  * @param {number} current - Índice atual (0-based)

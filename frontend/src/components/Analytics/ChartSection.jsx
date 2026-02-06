@@ -1,5 +1,3 @@
-import React from 'react';
-
 const TYPE_LABELS = {
     'multiple-choice': 'Iniciante',
     'short_answer': 'Intermedio',

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Upload, RefreshCw } from 'lucide-react';
 import LoadingTips from '../UI/LoadingTips';
 

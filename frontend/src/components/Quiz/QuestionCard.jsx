@@ -1,8 +1,7 @@
-import React from 'react';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { ProgressBar, QuestionHeader, SUCCESS_MESSAGES, ERROR_MESSAGES, getRandomMessage, FeedbackIcon } from './shared';
 
-const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, handleSpeak, speakingPart, showFeedback }) => {
+const QuestionCard = ({ question, index, total, onAnswer, userAnswer, onNext, handleSpeak, speakingPart }) => {
     // Derived state
     const isAnswered = userAnswer !== null && userAnswer !== undefined;
     const isCorrect = isAnswered && userAnswer === question.correctIndex;
