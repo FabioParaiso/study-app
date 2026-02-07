@@ -86,6 +86,8 @@ def test_upload_and_generate_quiz_flow(client):
     assert quiz_response.status_code == 200
     quiz_data = quiz_response.json()
     assert "questions" in quiz_data
+    assert "quiz_session_token" in quiz_data
+    assert isinstance(quiz_data["quiz_session_token"], str)
     assert len(quiz_data["questions"]) == 1
     assert quiz_data["questions"][0]["topic"] == "Photosynthesis"
 

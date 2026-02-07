@@ -28,9 +28,9 @@ class QuizResultRecorder:
         xp_earned: int,
         duration_seconds: int,
         active_seconds: int
-    ) -> None:
+    ) -> int:
         analytics_data = self.resolver.apply(material_id, analytics_data)
-        success = self.quiz_repo.record_quiz_result(
+        quiz_result_id = self.quiz_repo.record_quiz_result(
             student_id=user_id,
             score=score,
             total=total_questions,
@@ -41,5 +41,6 @@ class QuizResultRecorder:
             duration_seconds=duration_seconds,
             active_seconds=active_seconds
         )
-        if not success:
+        if not quiz_result_id:
             raise QuizRecordError("Failed to save results", status_code=500)
+        return int(quiz_result_id)

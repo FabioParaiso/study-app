@@ -6,7 +6,8 @@ from rate_limiter import limiter
 from modules.auth.service import AuthService, AuthServiceError
 from modules.auth.ports import AuthServicePort, StudentAuthRepositoryPort
 from modules.common.ports import TokenServicePort
-from dependencies import get_student_auth_repo, get_token_service
+from dependencies import get_current_user, get_student_auth_repo, get_token_service
+from modules.auth.models import Student
 
 router = APIRouter()
 
@@ -19,6 +20,7 @@ def _student_to_response(student) -> dict:
         "id": student.id, 
         "name": student.name,
         "total_xp": student.total_xp,
+        "challenge_xp": student.challenge_xp,
         "current_avatar": student.current_avatar,
         "high_score": student.high_score
     }
@@ -71,3 +73,8 @@ def login_student(
         "token_type": "bearer",
         "user": _student_to_response(student)
     }
+
+
+@router.get("/me")
+def get_me(current_user: Student = Depends(get_current_user)):
+    return _student_to_response(current_user)

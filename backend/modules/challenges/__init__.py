@@ -6,6 +6,7 @@ from .calendar import (
     is_training_week,
     validate_tz_offset,
 )
+from .service import ChallengeService
 
 __all__ = [
     "get_challenge_launch_date",
@@ -14,4 +15,5 @@ __all__ = [
     "get_week_id",
     "is_training_week",
     "validate_tz_offset",
+    "ChallengeService",
 ]

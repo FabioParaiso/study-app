@@ -1,4 +1,5 @@
 import random
+import feature_flags
 from modules.analytics.ports import AnalyticsServicePort
 from modules.quizzes.registry import QuizTypeRegistry
 
@@ -16,7 +17,7 @@ class QuizUnlockPolicy:
 
     def select_strategy(self, quiz_type: str):
         config = self.registry.get_for_generation(quiz_type)
-        if self.material_xp < config.min_xp:
+        if not feature_flags.is_coop_challenge_enabled() and self.material_xp < config.min_xp:
             raise QuizPolicyError(
                 f"Level Locked. Requires {config.min_xp} XP.",
                 status_code=403

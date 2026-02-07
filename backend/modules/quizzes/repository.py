@@ -19,7 +19,7 @@ class QuizResultPersistenceRepository(QuizRepositoryBase):
         xp_earned: int,
         duration_seconds: int,
         active_seconds: int
-    ) -> bool:
+    ) -> int:
         try:
             analytics_data = analytics_data or []
             effective_total = len(analytics_data)
@@ -58,8 +58,8 @@ class QuizResultPersistenceRepository(QuizRepositoryBase):
                     material.high_score = max(material.high_score, score)
 
             self.db.commit()
-            return True
+            return int(result.id)
         except Exception as e:
             print(f"Error saving quiz result: {e}")
             self.db.rollback()
-            return False
+            return 0

@@ -21,6 +21,8 @@ from modules.quizzes.use_cases import (
 from modules.quizzes.registry import build_default_quiz_registry
 from modules.quizzes.ports import QuizResultPersistencePort
 from services.llm_provider import build_openai_caller
+from dependencies import get_challenge_service
+from modules.challenges.ports import ChallengeServicePort
 
 
 def get_material_read_repo(db: Session = Depends(get_db)):
@@ -66,7 +68,8 @@ def get_save_quiz_result_use_case(
     material_repo: MaterialReadRepository = Depends(get_material_read_repo),
     concept_repo: MaterialConceptRepository = Depends(get_material_concept_repo),
     quiz_repo: QuizResultPersistencePort = Depends(get_quiz_repo),
+    challenge_service: ChallengeServicePort = Depends(get_challenge_service),
 ):
     resolver = ConceptIdResolver(concept_repo)
     recorder = QuizResultRecorder(quiz_repo, resolver)
-    return SaveQuizResultUseCase(material_repo, recorder)
+    return SaveQuizResultUseCase(material_repo, recorder, challenge_service=challenge_service)
