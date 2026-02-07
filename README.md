@@ -174,6 +174,9 @@ Aplicacao disponivel em `http://localhost:5173`.
 | `DATABASE_URL` | Nao | `sqlite:///./study_app.db` | Ligacao DB |
 | `APP_ENV` | Nao | `staging` | Selecao de modelos LLM |
 | `TEST_MODE` | Nao | `false` | Desativa certos controlos em teste |
+| `COOP_CHALLENGE_ENABLED` | Nao | `false` | Flag global do modo desafio cooperativo |
+| `COOP_PAUSE_MODE_ENABLED` | Nao | `false` | Flag do modo pausa cooperativo |
+| `CHALLENGE_LAUNCH_DATE` | Nao | vazio | Data de lancamento do desafio (`YYYY-MM-DD`) |
 
 ### Frontend
 
@@ -182,6 +185,24 @@ Aplicacao disponivel em `http://localhost:5173`.
 | `VITE_API_URL` | Nao | `http://localhost:8000` | URL base da API |
 | `VITE_BASE_PATH` | Nao | `/` | Base path de deploy (GitHub Pages) |
 | `VITE_REGISTER_ENABLED` | Nao | `true` | Mostra/esconde registo na UI |
+
+## Scripts Operacionais (Sprint 0)
+
+Backfill de `challenge_xp` em modo seguro (default `dry-run`):
+
+```bash
+cd backend
+python -m scripts.backfill_challenge_xp --student-name "Nome Aluna"
+```
+
+Emparelhamento inicial em modo seguro (`--dry-run`):
+
+```bash
+cd backend
+python -m scripts.pair_students --a-id 1 --b-name "Maria" --dry-run
+```
+
+Nota: as opcoes `--apply` dos dois scripts dependem das colunas de Sprint 1A (`students.challenge_xp` e `students.partner_id`).
 
 ## Testes e Qualidade
 
