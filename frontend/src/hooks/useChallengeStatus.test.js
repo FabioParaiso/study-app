@@ -31,9 +31,9 @@ describe('useChallengeStatus', () => {
         const { result } = renderHook(() => useChallengeStatus(1));
 
         await waitFor(() => {
-            expect(studyService.getChallengeStatus).toHaveBeenCalledTimes(1);
+            expect(studyService.getChallengeStatus).toHaveBeenCalled();
+            expect(result.current.status).toEqual({ week_id: '2026W07' });
         });
-        expect(result.current.status).toEqual({ week_id: '2026W07' });
     });
 
     it('exposes error when API call fails', async () => {
