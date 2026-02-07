@@ -3,7 +3,7 @@ import { Eye, EyeOff, User, Lock, ArrowRight, Shield, Key } from 'lucide-react';
 import { authService } from '../services/authService';
 import mascotImg from '../assets/mascot.png';
 
-const LoginPage = ({ onLogin, onBack }) => {
+const LoginPage = ({ onLogin }) => {
     const [isRegistering, setIsRegistering] = useState(false);
     const [name, setName] = useState("");
     const [password, setPassword] = useState("");
@@ -106,17 +106,6 @@ const LoginPage = ({ onLogin, onBack }) => {
                 <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px]"></div>
                 <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px]"></div>
             </div>
-
-            {/* Back to Home Button */}
-            {onBack && (
-                <button
-                    onClick={onBack}
-                    className="absolute top-6 left-6 z-20 text-gray-400 hover:text-white transition-colors flex items-center gap-2 font-bold uppercase tracking-widest text-xs group"
-                >
-                    <ArrowRight className="rotate-180 group-hover:-translate-x-1 transition-transform" size={16} />
-                    Abortar Missão
-                </button>
-            )}
 
             <div className="max-w-md w-full animate-scale-in relative z-10">
 
