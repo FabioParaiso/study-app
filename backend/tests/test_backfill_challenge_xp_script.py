@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-import pytest
 from sqlalchemy import text
 
 from scripts.backfill_challenge_xp import run_backfill
@@ -138,8 +137,8 @@ def test_backfill_ignores_invalid_sessions(db_session):
     assert item["computed_challenge_xp"] == 0
 
 
-def test_backfill_apply_fails_without_challenge_xp_column(db_session):
-    student = _create_student(db_session, "NoChallengeColumn")
+def test_backfill_apply_updates_challenge_xp(db_session):
+    student = _create_student(db_session, "ApplyChallengeXP")
     _add_quiz_result(
         db_session,
         student.id,
@@ -150,8 +149,11 @@ def test_backfill_apply_fails_without_challenge_xp_column(db_session):
         created_at=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc),
     )
 
-    with pytest.raises(RuntimeError):
-        run_backfill(db=db_session, student_ids=[student.id], student_names=[], apply=True)
+    result = run_backfill(db=db_session, student_ids=[student.id], student_names=[], apply=True)
+    assert result["dry_run"] is False
+    refreshed = db_session.query(Student).filter(Student.id == student.id).first()
+    assert refreshed is not None
+    assert refreshed.challenge_xp == 25
 
 
 def test_backfill_dry_run_does_not_mutate_existing_columns(db_session):

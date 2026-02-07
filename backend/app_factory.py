@@ -49,11 +49,13 @@ def register_routes(app: FastAPI) -> None:
     from modules.materials import router as materials_router
     from modules.quizzes import router as quizzes_router
     from modules.analytics import router as analytics_router
+    from modules.challenges import router as challenges_router
 
     app.include_router(auth_router.router)
     app.include_router(materials_router.router)
     app.include_router(quizzes_router.router)
     app.include_router(analytics_router.router)
+    app.include_router(challenges_router.router)
     app.include_router(gamification_router.router)
 
     @app.get("/health")

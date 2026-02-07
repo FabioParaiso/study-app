@@ -4,12 +4,15 @@ from modules.quizzes.deps import (
     get_ai_service,
     get_generate_quiz_use_case,
     get_evaluate_answer_use_case,
+    get_material_read_repo,
     get_save_quiz_result_use_case,
 )
 from modules.quizzes.errors import QuizServiceError
 from schemas.study import QuizRequest, EvaluationRequest, QuizResultCreate
 from dependencies import get_current_user, enforce_ai_quota
 from models import Student
+from modules.materials.repository import MaterialReadRepository
+from modules.challenges.tokens import create_quiz_session_token
 from modules.quizzes.ports import (
     QuizAIServicePort,
     GenerateQuizUseCasePort,
@@ -39,13 +42,21 @@ def generate_quiz_endpoint(
     current_user: Student = Depends(get_current_user),
     _quota: None = Depends(enforce_ai_quota),
     use_case: GenerateQuizUseCasePort = Depends(get_generate_quiz_use_case),
+    material_repo: MaterialReadRepository = Depends(get_material_read_repo),
     ai_service: QuizAIServicePort = Depends(get_quiz_ai_service)
 ):
     try:
         questions = use_case.execute(current_user.id, payload, ai_service)
     except QuizServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
-    return {"questions": questions}
+
+    material = material_repo.load(current_user.id)
+    token = create_quiz_session_token(
+        student_id=current_user.id,
+        material_id=material.id if material else None,
+        quiz_type=payload.quiz_type,
+    )
+    return {"questions": questions, "quiz_session_token": token}
 
 @router.post("/evaluate-answer")
 @limiter.limit(AI_RATE_LIMIT)

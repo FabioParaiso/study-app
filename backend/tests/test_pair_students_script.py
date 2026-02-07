@@ -14,11 +14,6 @@ def _create_student(db_session, name: str) -> Student:
     return student
 
 
-def _add_partner_column(db_session):
-    db_session.execute(text("ALTER TABLE students ADD COLUMN partner_id INTEGER"))
-    db_session.commit()
-
-
 def _partner_of(db_session, student_id: int):
     return db_session.execute(
         text("SELECT partner_id FROM students WHERE id = :id"),
@@ -26,22 +21,7 @@ def _partner_of(db_session, student_id: int):
     ).scalar_one()
 
 
-def test_pairing_fails_without_partner_column(db_session):
-    a = _create_student(db_session, "A_NoCol")
-    b = _create_student(db_session, "B_NoCol")
-
-    with pytest.raises(RuntimeError):
-        run_pairing(
-            db=db_session,
-            a_selector=StudentSelector(student_id=a.id),
-            b_selector=StudentSelector(student_id=b.id),
-            apply=False,
-        )
-
-
 def test_pairing_by_id_and_name_with_cleanup_and_symmetry(db_session):
-    _add_partner_column(db_session)
-
     a = _create_student(db_session, "Alice")
     b = _create_student(db_session, "Bianca")
     c = _create_student(db_session, "Carla")
@@ -50,7 +30,12 @@ def test_pairing_by_id_and_name_with_cleanup_and_symmetry(db_session):
     # Existing pairs: A<->C and B<->D
     db_session.execute(
         text("UPDATE students SET partner_id = :partner WHERE id = :id"),
-        [{"id": a.id, "partner": c.id}, {"id": c.id, "partner": a.id}, {"id": b.id, "partner": d.id}, {"id": d.id, "partner": b.id}],
+        [
+            {"id": a.id, "partner": c.id},
+            {"id": c.id, "partner": a.id},
+            {"id": b.id, "partner": d.id},
+            {"id": d.id, "partner": b.id},
+        ],
     )
     db_session.commit()
 
@@ -70,8 +55,6 @@ def test_pairing_by_id_and_name_with_cleanup_and_symmetry(db_session):
 
 
 def test_pairing_dry_run_does_not_change_data(db_session):
-    _add_partner_column(db_session)
-
     a = _create_student(db_session, "DryA")
     b = _create_student(db_session, "DryB")
 
@@ -88,7 +71,6 @@ def test_pairing_dry_run_does_not_change_data(db_session):
 
 
 def test_pairing_rejects_same_student(db_session):
-    _add_partner_column(db_session)
     a = _create_student(db_session, "SelfPair")
 
     with pytest.raises(ValueError):
@@ -96,5 +78,17 @@ def test_pairing_rejects_same_student(db_session):
             db=db_session,
             a_selector=StudentSelector(student_id=a.id),
             b_selector=StudentSelector(student_name="SelfPair"),
+            apply=True,
+        )
+
+
+def test_pairing_fails_when_student_not_found(db_session):
+    _create_student(db_session, "OnlyOne")
+
+    with pytest.raises(ValueError):
+        run_pairing(
+            db=db_session,
+            a_selector=StudentSelector(student_name="OnlyOne"),
+            b_selector=StudentSelector(student_name="Missing"),
             apply=True,
         )

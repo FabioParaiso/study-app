@@ -41,6 +41,7 @@ class QuizResultCreate(BaseModel):
     xp_earned: int = 0
     duration_seconds: int = 0
     active_seconds: int = 0
+    quiz_session_token: Optional[str] = None
 
 class AnalyzeRequest(BaseModel):
     pass # No fields left if we remove student_id, but wait, usually AnalyzeRequest needs something?

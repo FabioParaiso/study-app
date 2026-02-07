@@ -16,7 +16,7 @@ class QuizResultRecorderPort(Protocol):
         xp_earned: int,
         duration_seconds: int,
         active_seconds: int
-    ) -> None: ...
+    ) -> int: ...
 
 
 class QuizStrategyFactoryPort(Protocol):
@@ -38,7 +38,7 @@ class QuizResultPersistencePort(Protocol):
         xp_earned: int,
         duration_seconds: int,
         active_seconds: int
-    ) -> bool: ...
+    ) -> int: ...
 
 
 class LLMServicePort(Protocol):

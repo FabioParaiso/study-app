@@ -1,5 +1,6 @@
 from schemas.study import QuizRequest, EvaluationRequest, QuizResultCreate
 from typing import Any
+import logging
 from modules.materials.mapper import MaterialMapper
 from modules.quizzes.recorder import QuizRecordError
 from modules.quizzes.policies import (
@@ -15,6 +16,10 @@ from modules.quizzes.ports import (
     QuizStrategyFactoryPort,
 )
 from modules.quizzes.errors import QuizServiceError
+from modules.challenges.ports import ChallengeServicePort
+
+
+logger = logging.getLogger(__name__)
 
 
 class GenerateQuizUseCase:
@@ -167,10 +172,12 @@ class SaveQuizResultUseCase:
     def __init__(
         self,
         material_repo: MaterialLoaderPort,
-        recorder: QuizResultRecorderPort
+        recorder: QuizResultRecorderPort,
+        challenge_service: ChallengeServicePort | None = None,
     ):
         self.material_repo = material_repo
         self.recorder = recorder
+        self.challenge_service = challenge_service
 
     def execute(self, user_id: int, result: QuizResultCreate) -> None:
         material_id = result.study_material_id
@@ -185,7 +192,7 @@ class SaveQuizResultUseCase:
         if not analytics_data:
             raise QuizServiceError("Resultados detalhados em falta.", status_code=400)
         try:
-            self.recorder.record(
+            quiz_result_id = self.recorder.record(
                 user_id=user_id,
                 score=result.score,
                 total_questions=result.total_questions,
@@ -196,5 +203,18 @@ class SaveQuizResultUseCase:
                 duration_seconds=result.duration_seconds,
                 active_seconds=result.active_seconds
             )
+            if self.challenge_service:
+                try:
+                    self.challenge_service.process_session(
+                        quiz_result_id=quiz_result_id,
+                        student_id=user_id,
+                        quiz_type=result.quiz_type,
+                        score=result.score,
+                        total_questions=result.total_questions,
+                        active_seconds=result.active_seconds,
+                        quiz_session_token=result.quiz_session_token,
+                    )
+                except Exception:
+                    logger.exception("Challenge hook error for quiz_result_id=%s", quiz_result_id)
         except QuizRecordError as e:
             raise QuizServiceError(str(e), status_code=e.status_code)

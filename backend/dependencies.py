@@ -7,8 +7,11 @@ from repositories.student_repository import (
     StudentLookupRepository,
 )
 from repositories.usage_repository import DailyUsageRepository
+from modules.challenges.repository import ChallengeRepository
+from modules.challenges.service import ChallengeService
 from modules.auth.ports import StudentLookupRepositoryPort
 from modules.common.ports import TokenServicePort
+from modules.challenges.ports import ChallengeServicePort
 from services.token_service import TokenService
 from services.usage_service import UsageService, UsageLimitReached
 
@@ -37,6 +40,14 @@ def get_usage_repo(db=Depends(get_db)):
 
 def get_usage_service(repo=Depends(get_usage_repo)):
     return UsageService(repo)
+
+
+def get_challenge_repo(db=Depends(get_db)):
+    return ChallengeRepository(db)
+
+
+def get_challenge_service(repo=Depends(get_challenge_repo)) -> ChallengeServicePort:
+    return ChallengeService(repo)
 
 
 def get_current_user(

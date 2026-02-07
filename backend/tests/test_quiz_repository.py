@@ -29,7 +29,7 @@ def test_record_quiz_result_counts_mcq_correct(db_session):
     material = _create_material(db_session, student.id, "mcq.txt")
 
     repo = QuizResultPersistenceRepository(db_session)
-    success = repo.record_quiz_result(
+    quiz_result_id = repo.record_quiz_result(
         student_id=student.id,
         score=3,
         total=5,
@@ -47,7 +47,8 @@ def test_record_quiz_result_counts_mcq_correct(db_session):
         active_seconds=110
     )
 
-    assert success is True
+    assert isinstance(quiz_result_id, int)
+    assert quiz_result_id > 0
     db_session.refresh(material)
     assert material.total_questions_answered == 5
     assert material.correct_answers_count == 3
@@ -58,7 +59,7 @@ def test_record_quiz_result_counts_open_ended_correct(db_session):
     material = _create_material(db_session, student.id, "open.txt")
 
     repo = QuizResultPersistenceRepository(db_session)
-    success = repo.record_quiz_result(
+    quiz_result_id = repo.record_quiz_result(
         student_id=student.id,
         score=70,
         total=4,
@@ -75,7 +76,8 @@ def test_record_quiz_result_counts_open_ended_correct(db_session):
         active_seconds=180
     )
 
-    assert success is True
+    assert isinstance(quiz_result_id, int)
+    assert quiz_result_id > 0
     db_session.refresh(material)
     assert material.total_questions_answered == 4
     assert material.correct_answers_count == 2

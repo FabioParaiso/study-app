@@ -202,7 +202,7 @@ cd backend
 python -m scripts.pair_students --a-id 1 --b-name "Maria" --dry-run
 ```
 
-Nota: as opcoes `--apply` dos dois scripts dependem das colunas de Sprint 1A (`students.challenge_xp` e `students.partner_id`).
+Nota: as opcoes `--apply` dos dois scripts exigem backend atualizado com Sprint 1A (startup cria/ajusta colunas automaticamente).
 
 ## Testes e Qualidade
 
@@ -231,9 +231,10 @@ Nota: para correcoes automaticas de lint no frontend, usa `npm run lint:fix`.
 | Area | Endpoint |
 | --- | --- |
 | Health | `GET /health` |
-| Auth | `POST /register`, `POST /login` |
+| Auth | `POST /register`, `POST /login`, `GET /me` |
 | Materiais | `GET /current-material`, `POST /upload`, `POST /analyze-topics`, `GET /materials`, `POST /materials/{id}/activate`, `DELETE /delete-material/{id}`, `POST /clear-material` |
-| Quizzes | `POST /generate-quiz`, `POST /evaluate-answer`, `POST /quiz/result` |
+| Quizzes | `POST /generate-quiz` (inclui `quiz_session_token`), `POST /evaluate-answer`, `POST /quiz/result` |
+| Challenge | `GET /challenge/weekly-status` |
 | Analitica | `GET /analytics/weak-points`, `GET /analytics/metrics`, `GET /analytics/learning-trend` |
 | Gamificacao | `POST /gamification/xp`, `POST /gamification/avatar`, `POST /gamification/highscore` |
 
