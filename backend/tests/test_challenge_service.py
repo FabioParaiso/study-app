@@ -48,6 +48,7 @@ def test_process_session_feature_flag_off_skips(monkeypatch, db_session):
         quiz_type="multiple-choice",
         score=7,
         total_questions=10,
+        detailed_results_count=10,
         active_seconds=220,
         quiz_session_token=None,
     )
@@ -75,6 +76,7 @@ def test_process_session_awards_once_and_is_idempotent(monkeypatch, db_session):
         quiz_type="multiple-choice",
         score=8,
         total_questions=10,
+        detailed_results_count=10,
         active_seconds=240,
         quiz_session_token=token,
     )
@@ -84,6 +86,7 @@ def test_process_session_awards_once_and_is_idempotent(monkeypatch, db_session):
         quiz_type="multiple-choice",
         score=8,
         total_questions=10,
+        detailed_results_count=10,
         active_seconds=240,
         quiz_session_token=token,
     )
@@ -119,8 +122,99 @@ def test_process_session_handles_repository_error(monkeypatch):
         quiz_type="multiple-choice",
         score=8,
         total_questions=10,
+        detailed_results_count=10,
         active_seconds=240,
         quiz_session_token=token,
     )
 
     assert result["reason"] == "hook_error"
+
+
+def test_process_session_fast_but_valid_shape_still_awards(monkeypatch, db_session):
+    monkeypatch.setenv("COOP_CHALLENGE_ENABLED", "true")
+
+    student = _create_student(db_session, "ChallengeSvcFast")
+    quiz_result = _create_quiz_result(db_session, student.id)
+    token = create_quiz_session_token(
+        student_id=student.id,
+        material_id=None,
+        quiz_type="multiple-choice",
+        now_utc=datetime.now(timezone.utc) - timedelta(minutes=10),
+    )
+
+    service = ChallengeService(ChallengeRepository(db_session))
+    result = service.process_session(
+        quiz_result_id=quiz_result.id,
+        student_id=student.id,
+        quiz_type="multiple-choice",
+        score=8,
+        total_questions=10,
+        detailed_results_count=10,
+        active_seconds=10,
+        quiz_session_token=token,
+    )
+
+    db_session.refresh(student)
+    assert result["applied"] is True
+    assert result["xp_awarded"] == 20
+    assert student.challenge_xp == 20
+
+
+def test_process_session_invalid_question_count_does_not_award(monkeypatch, db_session):
+    monkeypatch.setenv("COOP_CHALLENGE_ENABLED", "true")
+
+    student = _create_student(db_session, "ChallengeSvcInvalidCount")
+    quiz_result = _create_quiz_result(db_session, student.id)
+    token = create_quiz_session_token(
+        student_id=student.id,
+        material_id=None,
+        quiz_type="multiple-choice",
+        now_utc=datetime.now(timezone.utc) - timedelta(minutes=10),
+    )
+
+    service = ChallengeService(ChallengeRepository(db_session))
+    result = service.process_session(
+        quiz_result_id=quiz_result.id,
+        student_id=student.id,
+        quiz_type="multiple-choice",
+        score=8,
+        total_questions=9,
+        detailed_results_count=9,
+        active_seconds=240,
+        quiz_session_token=token,
+    )
+
+    db_session.refresh(student)
+    assert result["applied"] is False
+    assert result["reason"] == "invalid_question_count"
+    assert student.challenge_xp == 0
+
+
+def test_process_session_incomplete_submission_does_not_award(monkeypatch, db_session):
+    monkeypatch.setenv("COOP_CHALLENGE_ENABLED", "true")
+
+    student = _create_student(db_session, "ChallengeSvcIncomplete")
+    quiz_result = _create_quiz_result(db_session, student.id)
+    token = create_quiz_session_token(
+        student_id=student.id,
+        material_id=None,
+        quiz_type="multiple-choice",
+        now_utc=datetime.now(timezone.utc) - timedelta(minutes=10),
+    )
+
+    service = ChallengeService(ChallengeRepository(db_session))
+    result = service.process_session(
+        quiz_result_id=quiz_result.id,
+        student_id=student.id,
+        quiz_type="multiple-choice",
+        score=8,
+        total_questions=10,
+        detailed_results_count=9,
+        active_seconds=240,
+        quiz_session_token=token,
+    )
+
+    db_session.refresh(student)
+    assert result["applied"] is False
+    assert result["reason"] == "incomplete_submission"
+    assert student.challenge_xp == 0

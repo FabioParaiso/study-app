@@ -13,9 +13,9 @@ from sqlalchemy.orm import Session
 
 from database import SessionLocal, engine
 from modules.challenges.calendar import get_local_date, validate_tz_offset
+from modules.challenges.constants import EXPECTED_QUESTIONS_BY_TYPE
 
 
-MIN_ACTIVE_SECONDS = 180
 MIN_TOTAL_QUESTIONS = 5
 XP_BASE_VALID_DAY = 20
 XP_QUALITY_BONUS = 5
@@ -64,9 +64,14 @@ def _score_pct(row: dict[str, Any]) -> float:
 
 
 def _is_valid_session(row: dict[str, Any]) -> bool:
-    active_seconds = int(row.get("active_seconds") or 0)
+    quiz_type = str(row.get("quiz_type") or "").strip()
     total_questions = int(row.get("total_questions") or 0)
-    return active_seconds >= MIN_ACTIVE_SECONDS and total_questions >= MIN_TOTAL_QUESTIONS
+    expected_questions = EXPECTED_QUESTIONS_BY_TYPE.get(quiz_type)
+    if expected_questions is None:
+        return False
+    if total_questions < MIN_TOTAL_QUESTIONS:
+        return False
+    return total_questions == int(expected_questions)
 
 
 def _load_students(

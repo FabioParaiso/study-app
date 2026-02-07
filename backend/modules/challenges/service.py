@@ -7,12 +7,17 @@ import feature_flags
 from modules.challenges.calendar import get_local_date, get_week_id, is_training_week, validate_tz_offset
 from modules.challenges.calculator import (
     cap_active_seconds,
-    is_valid_session,
+    is_valid_session_shape,
     min_plausible_active_seconds,
     normalize_score_pct,
     xp_for_first_valid_session,
 )
-from modules.challenges.constants import CONTINUITY_TARGET_DAYS, CONTINUITY_TARGET_XP, MISSION_BASE_TARGET_DAYS
+from modules.challenges.constants import (
+    CONTINUITY_TARGET_DAYS,
+    CONTINUITY_TARGET_XP,
+    MIN_QUESTIONS,
+    MISSION_BASE_TARGET_DAYS,
+)
 from modules.challenges.repository import ChallengeRepository
 from modules.challenges.tokens import decode_quiz_session_token, parse_issued_at
 
@@ -31,6 +36,7 @@ class ChallengeService:
         quiz_type: str,
         score: int,
         total_questions: int,
+        detailed_results_count: int,
         active_seconds: int,
         quiz_session_token: str | None,
     ) -> dict:
@@ -69,7 +75,7 @@ class ChallengeService:
         server_estimated_seconds = int(max(0.0, (now_utc - issued_at).total_seconds()))
         safe_active_seconds = cap_active_seconds(active_seconds, server_estimated_seconds)
 
-        if safe_active_seconds >= 180 and safe_active_seconds < min_plausible_active_seconds(total_questions):
+        if int(total_questions or 0) >= MIN_QUESTIONS and 0 < safe_active_seconds < min_plausible_active_seconds(total_questions):
             logger.warning(
                 "Suspiciously fast session for student=%s quiz_result=%s active=%ss questions=%s",
                 student_id,
@@ -85,47 +91,53 @@ class ChallengeService:
                     result = {"applied": False, "reason": "duplicate_quiz_result"}
                 elif not self.repo.consume_quiz_session_jti(jti.strip(), student_id):
                     result = {"applied": False, "reason": "token_reused"}
-                elif not is_valid_session(safe_active_seconds, total_questions):
-                    result = {"applied": False, "reason": "session_invalid"}
                 else:
-                    student = self.repo.get_student(student_id)
-                    if student is None:
-                        result = {"applied": False, "reason": "student_not_found"}
+                    is_valid_shape, shape_reason = is_valid_session_shape(
+                        quiz_type=quiz_type,
+                        total_questions=total_questions,
+                        detailed_results_count=detailed_results_count,
+                    )
+                    if not is_valid_shape:
+                        result = {"applied": False, "reason": shape_reason}
                     else:
-                        quiz_result = self.repo.get_quiz_result(quiz_result_id)
-                        if quiz_result is None:
-                            result = {"applied": False, "reason": "quiz_result_not_found"}
+                        student = self.repo.get_student(student_id)
+                        if student is None:
+                            result = {"applied": False, "reason": "student_not_found"}
                         else:
-                            tz_offset = validate_tz_offset(student.expected_tz_offset, fallback=0)
-                            local_date = get_local_date(quiz_result.created_at, tz_offset)
-                            week_id = get_week_id(quiz_result.created_at, tz_offset)
-                            training_week = is_training_week(local_date)
+                            quiz_result = self.repo.get_quiz_result(quiz_result_id)
+                            if quiz_result is None:
+                                result = {"applied": False, "reason": "quiz_result_not_found"}
+                            else:
+                                tz_offset = validate_tz_offset(student.expected_tz_offset, fallback=0)
+                                local_date = get_local_date(quiz_result.created_at, tz_offset)
+                                week_id = get_week_id(quiz_result.created_at, tz_offset)
+                                training_week = is_training_week(local_date)
 
-                            week, _created_week = self.repo.get_or_create_week(
-                                student_id=student.id,
-                                week_id=week_id,
-                                is_training_week=training_week,
-                            )
+                                week, _created_week = self.repo.get_or_create_week(
+                                    student_id=student.id,
+                                    week_id=week_id,
+                                    is_training_week=training_week,
+                                )
 
-                            best_score_pct = normalize_score_pct(score, total_questions, quiz_type)
-                            day, is_first_valid_session = self.repo.get_or_create_day_activity(
-                                challenge_week_id=week.id,
-                                local_date=local_date,
-                                best_score_pct=best_score_pct,
-                                quiz_result_id=quiz_result_id,
-                            )
+                                best_score_pct = normalize_score_pct(score, total_questions, quiz_type)
+                                day, is_first_valid_session = self.repo.get_or_create_day_activity(
+                                    challenge_week_id=week.id,
+                                    local_date=local_date,
+                                    best_score_pct=best_score_pct,
+                                    quiz_result_id=quiz_result_id,
+                                )
 
-                            xp_awarded = xp_for_first_valid_session(is_first_valid_session)
-                            if xp_awarded > 0:
-                                self.repo.award_daily_base_xp(student=student, week=week, day=day, xp=xp_awarded)
+                                xp_awarded = xp_for_first_valid_session(is_first_valid_session)
+                                if xp_awarded > 0:
+                                    self.repo.award_daily_base_xp(student=student, week=week, day=day, xp=xp_awarded)
 
-                            result = {
-                                "applied": xp_awarded > 0,
-                                "reason": "applied" if xp_awarded > 0 else "already_awarded_today",
-                                "xp_awarded": xp_awarded,
-                                "week_id": week_id,
-                                "local_date": local_date.isoformat(),
-                            }
+                                result = {
+                                    "applied": xp_awarded > 0,
+                                    "reason": "applied" if xp_awarded > 0 else "already_awarded_today",
+                                    "xp_awarded": xp_awarded,
+                                    "week_id": week_id,
+                                    "local_date": local_date.isoformat(),
+                                }
 
             self.repo.commit()
             return result

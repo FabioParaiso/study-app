@@ -23,6 +23,7 @@ const getLevelInfo = (xp) => {
 };
 
 export function useGamification(student, stats) {
+    const isCoopChallengeEnabled = String(import.meta.env.VITE_COOP_CHALLENGE_ENABLED || 'false').toLowerCase() === 'true';
     const [highScore, setHighScore] = useState(0);
     const [totalXP, setTotalXP] = useState(0);
     const [selectedAvatar, setSelectedAvatar] = useState('mascot');
@@ -32,14 +33,17 @@ export function useGamification(student, stats) {
         if (student) {
             setSelectedAvatar(student.current_avatar || 'mascot');
         }
-        if (stats) {
+        if (isCoopChallengeEnabled) {
+            setHighScore(stats?.high_score || 0);
+            setTotalXP(student?.challenge_xp || 0);
+        } else if (stats) {
             setHighScore(stats.high_score || 0);
             setTotalXP(stats.total_xp || 0);
         } else {
             setHighScore(0);
             setTotalXP(0);
         }
-    }, [student, stats]);
+    }, [student, stats, isCoopChallengeEnabled]);
 
 
 

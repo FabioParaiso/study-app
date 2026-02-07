@@ -2,9 +2,16 @@ import { useEffect } from 'react';
 import { RefreshCw, RotateCcw, CheckCircle, Flame } from 'lucide-react';
 import Confetti from '../components/UI/Confetti';
 
+const reasonLabel = {
+    invalid_question_count: 'número de perguntas inválido para este tipo de teste',
+    incomplete_submission: 'o teste não ficou completo',
+    unknown_quiz_type: 'tipo de teste não suportado para o desafio'
+};
+
 const ResultsScreen = ({
     score, totalQuestions, xpEarned, streak, quizType,
-    getOpenEndedAverage, exitQuiz, numMissed, onReview, onRestart
+    getOpenEndedAverage, exitQuiz, numMissed, onReview, onRestart,
+    challengeSessionFeedback
 }) => {
     const isMultiple = quizType === 'multiple-choice';
     const finalScore = isMultiple ? Math.round((score / totalQuestions) * 100) : getOpenEndedAverage();
@@ -61,6 +68,24 @@ const ResultsScreen = ({
                         </div>
                     </div>
                 </div>
+
+                {/* Challenge Session Feedback */}
+                {challengeSessionFeedback && (
+                    <div className={`rounded-2xl border-2 p-4 ${challengeSessionFeedback.eligible ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                        <p className={`text-sm font-black uppercase tracking-wide ${challengeSessionFeedback.eligible ? 'text-green-700' : 'text-amber-700'}`}>
+                            Desafio das Cientistas
+                        </p>
+                        {challengeSessionFeedback.eligible ? (
+                            <p className="text-sm text-green-700 font-bold mt-1">
+                                Sessão válida para XP do Desafio: teste completo com a contagem esperada por tipo. Potencial da sessão: +{challengeSessionFeedback.estimatedXp} XP.
+                            </p>
+                        ) : (
+                            <p className="text-sm text-amber-700 font-bold mt-1">
+                                Sessão não elegível para XP do Desafio ({reasonLabel[challengeSessionFeedback.reason] || 'regra de elegibilidade não cumprida'}). Só a 1ª sessão válida do dia conta para +20 XP.
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 {/* Actions */}
                 <div className="space-y-3">

@@ -3,6 +3,7 @@ import { useQuiz } from './hooks/useQuiz';
 import { useStudent } from './hooks/useStudent';
 import { useMaterial } from './hooks/useMaterial';
 import { useTTS } from './hooks/useTTS';
+import { useChallengeStatus } from './hooks/useChallengeStatus';
 
 import IntroPage from './pages/IntroPage';
 import ResultsPage from './pages/ResultsPage';
@@ -12,6 +13,10 @@ import QuizPage from './pages/QuizPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 
 export default function App() {
+    const isCoopChallengeEnabled = ['1', 'true', 'yes', 'on'].includes(
+        String(import.meta.env.VITE_COOP_CHALLENGE_ENABLED || 'false').toLowerCase()
+    );
+
     // --- Custom Hooks (SRP) ---
     const { student, setStudent, logout } = useStudent();
 
@@ -26,11 +31,18 @@ export default function App() {
     } = useGamification(student, savedMaterial);
 
     const {
+        status: challengeStatus,
+        loading: challengeLoading,
+        error: challengeError,
+        refresh: refreshChallengeStatus
+    } = useChallengeStatus(student?.id, { enabled: isCoopChallengeEnabled });
+
+    const {
         questions, loading, errorMsg: quizError, quizType, gameState, setGameState,
         currentQuestionIndex, score, streak, userAnswers, openEndedEvaluations, isEvaluating,
         startQuiz, handleAnswer, handleEvaluation, handleShortAnswer, nextQuestion, exitQuiz, getOpenEndedAverage,
-        showFeedback, missedIndices, startReviewMode, sessionXP
-    } = useQuiz(student, savedMaterial?.id);
+        showFeedback, missedIndices, startReviewMode, sessionXP, challengeSessionFeedback
+    } = useQuiz(student, savedMaterial?.id, { refreshChallengeStatus });
 
     const { speakingPart, handleSpeak } = useTTS();
 
@@ -41,6 +53,16 @@ export default function App() {
 
     const handleStart = (type) => startQuiz(type, selectedTopic);
     const handleOpenAnalytics = () => setGameState('analytics');
+    const challengeXpDisplay = (() => {
+        if (!isCoopChallengeEnabled) return totalXP;
+        if (challengeStatus?.mode === 'coop') {
+            return Number(challengeStatus?.team?.team_xp || totalXP);
+        }
+        if (challengeStatus?.mode === 'solo_continuity') {
+            return Number(challengeStatus?.individual?.xp || totalXP);
+        }
+        return totalXP;
+    })();
 
     // --- Render ---
 
@@ -72,6 +94,8 @@ export default function App() {
                 selectedAvatar={selectedAvatar}
                 level={level}
                 totalXP={totalXP}
+                xpLabel={isCoopChallengeEnabled ? 'XP do Desafio' : 'XP'}
+                xpValue={challengeXpDisplay}
                 highScore={highScore}
                 nextLevel={nextLevel}
                 LEVELS={LEVELS}
@@ -79,6 +103,10 @@ export default function App() {
                 activateMaterial={activateMaterial}
                 onDeleteMaterial={deleteMaterial}
                 onOpenAnalytics={handleOpenAnalytics}
+                isChallengeEnabled={isCoopChallengeEnabled}
+                challengeStatus={challengeStatus}
+                challengeLoading={challengeLoading}
+                challengeError={challengeError}
             />
         );
     }
@@ -92,6 +120,8 @@ export default function App() {
                 totalXP={totalXP}
                 onLogout={handleLogout}
                 level={level}
+                xpLabel={isCoopChallengeEnabled ? 'XP do Desafio' : 'XP'}
+                xpValue={challengeXpDisplay}
                 onBack={() => setGameState('intro')}
             />
         );
@@ -133,6 +163,7 @@ export default function App() {
                 onRestart={() => startQuiz(quizType, selectedTopic)}
                 numMissed={missedIndices ? missedIndices.length : 0}
                 onReview={startReviewMode}
+                challengeSessionFeedback={challengeSessionFeedback}
             />
         );
     }
