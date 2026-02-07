@@ -5,8 +5,49 @@ import { calculateXPFromScore } from '../utils/xpCalculator';
 import { buildDetailedResults } from '../utils/quizAnalytics';
 
 const IDLE_THRESHOLD_MS = 60 * 1000;
+const EXPECTED_QUESTIONS_BY_TYPE = {
+    'multiple-choice': 10,
+    short_answer: 8,
+    'open-ended': 5
+};
 
-export function useQuiz(student, materialId) {
+function getChallengeSessionFeedback(quizType, questionsCount, detailedResultsCount, activeSeconds) {
+    const expectedCount = EXPECTED_QUESTIONS_BY_TYPE[quizType];
+    const baseFeedback = {
+        eligible: false,
+        estimatedXp: 0,
+        reason: 'unknown_quiz_type',
+        activeSeconds,
+        totalQuestions: questionsCount
+    };
+
+    if (!expectedCount) {
+        return baseFeedback;
+    }
+
+    if (questionsCount !== expectedCount) {
+        return {
+            ...baseFeedback,
+            reason: 'invalid_question_count'
+        };
+    }
+
+    if (detailedResultsCount !== questionsCount) {
+        return {
+            ...baseFeedback,
+            reason: 'incomplete_submission'
+        };
+    }
+
+    return {
+        ...baseFeedback,
+        eligible: true,
+        estimatedXp: 20,
+        reason: 'valid_session'
+    };
+}
+
+export function useQuiz(student, materialId, options = {}) {
     const {
         questions, gameState, currentQuestionIndex, score, streak, userAnswers,
         openEndedEvaluations, missedIndices, showFeedback, isEvaluating,
@@ -16,6 +57,14 @@ export function useQuiz(student, materialId) {
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [quizType, setQuizType] = useState(null);
+    const [quizSessionToken, setQuizSessionToken] = useState(null);
+    const [challengeSessionFeedback, setChallengeSessionFeedback] = useState({
+        eligible: false,
+        estimatedXp: 0,
+        reason: null,
+        activeSeconds: 0,
+        totalQuestions: 0
+    });
 
     const [sessionXP, setSessionXP] = useState(0);
     const timingRef = useRef({
@@ -25,7 +74,9 @@ export function useQuiz(student, materialId) {
         lastTickAt: 0,
         intervalId: null
     });
+    const refreshRetryTimerRef = useRef(null);
     const isEvaluatingRef = useRef(false);
+    const { refreshChallengeStatus } = options;
 
     const markActivity = useCallback(() => {
         timingRef.current.lastInputAt = Date.now();
@@ -106,17 +157,55 @@ export function useQuiz(student, materialId) {
         return () => stopTiming();
     }, [gameState, startTiming, stopTiming]);
 
+    useEffect(() => () => {
+        if (refreshRetryTimerRef.current) {
+            clearTimeout(refreshRetryTimerRef.current);
+            refreshRetryTimerRef.current = null;
+        }
+    }, []);
+
+    const triggerChallengeRefresh = useCallback(async () => {
+        if (typeof refreshChallengeStatus !== 'function') return;
+        try {
+            await refreshChallengeStatus();
+        } catch (err) {
+            console.error('Failed to refresh challenge status', err);
+        }
+    }, [refreshChallengeStatus]);
+
+    const scheduleChallengeRefreshRetry = useCallback(() => {
+        if (typeof refreshChallengeStatus !== 'function') return;
+        if (refreshRetryTimerRef.current) {
+            clearTimeout(refreshRetryTimerRef.current);
+        }
+        refreshRetryTimerRef.current = setTimeout(() => {
+            triggerChallengeRefresh();
+            refreshRetryTimerRef.current = null;
+        }, 600);
+    }, [refreshChallengeStatus, triggerChallengeRefresh]);
+
     const startQuiz = async (type, topic) => {
         setLoading(true);
         setErrorMsg("");
         setQuizType(type);
+        setQuizSessionToken(null);
         setSessionXP(0); // Reset session XP
+        setChallengeSessionFeedback({
+            eligible: false,
+            estimatedXp: 0,
+            reason: null,
+            activeSeconds: 0,
+            totalQuestions: 0
+        });
 
         try {
-            const qs = await studyService.generateQuiz(topic, type);
+            const payload = await studyService.generateQuiz(topic, type);
+            const qs = Array.isArray(payload) ? payload : payload?.questions;
+            const token = Array.isArray(payload) ? null : (payload?.quiz_session_token || null);
             if (!Array.isArray(qs) || qs.length === 0) {
                 throw new Error("Não foi possível gerar perguntas para este tópico. Tenta 'Todos' ou outro tópico.");
             }
+            setQuizSessionToken(token);
             initQuiz(qs);
         } catch (err) {
             console.error(err);
@@ -205,6 +294,13 @@ export function useQuiz(student, materialId) {
             // Submit Analytics in background
             if (student?.id) {
                 const { durationSeconds, activeSeconds } = getTimingSnapshot();
+                const sessionFeedback = getChallengeSessionFeedback(
+                    quizType,
+                    questions.length,
+                    detailedResults.length,
+                    activeSeconds
+                );
+                setChallengeSessionFeedback(sessionFeedback);
                 studyService.submitQuizResult(
                     submissionScore,
                     questions.length,
@@ -213,8 +309,16 @@ export function useQuiz(student, materialId) {
                     sessionXP,
                     materialId,
                     durationSeconds,
-                    activeSeconds
-                ).catch(err => console.error("Failed to submit analytics", err));
+                    activeSeconds,
+                    quizSessionToken
+                )
+                    .then(() => {
+                        if (sessionFeedback.reason === 'valid_session') {
+                            triggerChallengeRefresh();
+                            scheduleChallengeRefreshRetry();
+                        }
+                    })
+                    .catch(err => console.error("Failed to submit analytics", err));
             }
         }
     };
@@ -239,7 +343,7 @@ export function useQuiz(student, materialId) {
     return {
         questions, loading, errorMsg, setErrorMsg, quizType, gameState, setGameState,
         currentQuestionIndex, score, streak, userAnswers, openEndedEvaluations, isEvaluating, showFeedback,
-        missedIndices, sessionXP,
+        missedIndices, sessionXP, challengeSessionFeedback,
         startQuiz, handleAnswer, handleEvaluation, handleShortAnswer, nextQuestion, exitQuiz, getOpenEndedAverage, startReviewMode
     };
 }

@@ -211,6 +211,7 @@ class SaveQuizResultUseCase:
                         quiz_type=result.quiz_type,
                         score=result.score,
                         total_questions=result.total_questions,
+                        detailed_results_count=len(analytics_data),
                         active_seconds=result.active_seconds,
                         quiz_session_token=result.quiz_session_token,
                     )

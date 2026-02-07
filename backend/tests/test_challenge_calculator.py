@@ -1,15 +1,37 @@
 from modules.challenges.calculator import (
     cap_active_seconds,
-    is_valid_session,
+    expected_questions_for_type,
+    is_valid_session_shape,
     normalize_score_pct,
     xp_for_first_valid_session,
 )
 
 
-def test_is_valid_session_thresholds():
-    assert is_valid_session(180, 5) is True
-    assert is_valid_session(179, 5) is False
-    assert is_valid_session(180, 4) is False
+def test_expected_questions_for_type():
+    assert expected_questions_for_type("multiple-choice") == 10
+    assert expected_questions_for_type("short_answer") == 8
+    assert expected_questions_for_type("open-ended") == 5
+    assert expected_questions_for_type("unknown") is None
+
+
+def test_is_valid_session_shape_by_quiz_type():
+    assert is_valid_session_shape("multiple-choice", 10, 10) == (True, "valid")
+    assert is_valid_session_shape("short_answer", 8, 8) == (True, "valid")
+    assert is_valid_session_shape("open-ended", 5, 5) == (True, "valid")
+
+
+def test_is_valid_session_shape_invalid_question_count():
+    assert is_valid_session_shape("open-ended", 8, 8) == (False, "invalid_question_count")
+    assert is_valid_session_shape("multiple-choice", 9, 9) == (False, "invalid_question_count")
+
+
+def test_is_valid_session_shape_incomplete_submission():
+    assert is_valid_session_shape("short_answer", 8, 7) == (False, "incomplete_submission")
+
+
+def test_is_valid_session_shape_below_min_questions_and_unknown():
+    assert is_valid_session_shape("multiple-choice", 4, 4) == (False, "below_min_questions")
+    assert is_valid_session_shape("essay", 10, 10) == (False, "unknown_quiz_type")
 
 
 def test_xp_for_first_valid_session():

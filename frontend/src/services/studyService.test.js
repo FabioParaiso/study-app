@@ -16,14 +16,15 @@ describe('studyService', () => {
     });
 
     it('generateQuiz sends empty topics when "all"', async () => {
-        api.post.mockResolvedValue({ data: { questions: [] } });
+        api.post.mockResolvedValue({ data: { questions: [], quiz_session_token: 'tok' } });
 
-        await studyService.generateQuiz('all', 'multiple-choice');
+        const payload = await studyService.generateQuiz('all', 'multiple-choice');
 
         expect(api.post).toHaveBeenCalledWith('/generate-quiz', {
             topics: [],
             quiz_type: 'multiple-choice'
         });
+        expect(payload).toEqual({ questions: [], quiz_session_token: 'tok' });
     });
 
     it('generateQuiz wraps single topic string', async () => {
@@ -51,7 +52,7 @@ describe('studyService', () => {
     it('submitQuizResult sends timing data', async () => {
         api.post.mockResolvedValue({ data: {} });
 
-        await studyService.submitQuizResult(5, 10, 'multiple-choice', [], 20, 3, 12.7, 9.2);
+        await studyService.submitQuizResult(5, 10, 'multiple-choice', [], 20, 3, 12.7, 9.2, 'quiz-token');
 
         expect(api.post).toHaveBeenCalledWith('/quiz/result', {
             score: 5,
@@ -61,8 +62,18 @@ describe('studyService', () => {
             study_material_id: 3,
             xp_earned: 20,
             duration_seconds: 13,
-            active_seconds: 9
+            active_seconds: 9,
+            quiz_session_token: 'quiz-token'
         });
+    });
+
+    it('getChallengeStatus calls weekly-status endpoint', async () => {
+        api.get.mockResolvedValue({ data: { week_id: '2026W07' } });
+
+        const response = await studyService.getChallengeStatus();
+
+        expect(api.get).toHaveBeenCalledWith('/challenge/weekly-status');
+        expect(response).toEqual({ week_id: '2026W07' });
     });
 
     it('getMetrics builds query string with days and offset', async () => {

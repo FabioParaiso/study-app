@@ -52,9 +52,16 @@ As métricas de aprendizagem detalhadas ficam numa área secundária (pais/admin
 
 Uma sessão conta para XP se:
 
-- `active_seconds >= 180`
+- o `quiz_type` é suportado (`multiple-choice`, `short_answer`, `open-ended`)
+- o `total_questions` corresponde ao esperado por tipo:
+  - `multiple-choice = 10`
+  - `short_answer = 8`
+  - `open-ended = 5` (com pool de até 8 conceitos priorizados)
+- `detailed_results_count == total_questions` (submissão completa)
 - `total_questions >= 5`
 - sessão concluída e persistida
+
+`active_seconds` continua a ser recolhido para observabilidade/anti-cheat, mas não bloqueia XP por si só.
 
 ### 4.2 Geração de XP do Desafio
 
@@ -353,7 +360,7 @@ Para cada aluna:
   tz_offset = student.expected_tz_offset (definido no seed, ex.: 0 para Portugal WET)
   Converter cada quiz_result.created_at (UTC) para local_date usando tz_offset
   Agrupar quiz_results por local_date
-  Para cada dia com sessão válida (active_seconds >= 180 AND total_questions >= 5):
+  Para cada dia com sessão válida (quiz_type suportado + total_questions esperado por tipo + total_questions >= 5):
     challenge_xp += 20
     Se max(score_percentage) do dia >= 80:
       challenge_xp += 5
@@ -544,7 +551,7 @@ Não guardar timezone dinâmico no `Student` — apenas o `expected_tz_offset` c
 
 ### 9.7 Validação Server-Side de `active_seconds`
 
-**Problema:** `active_seconds` e `duration_seconds` são ambos calculados no frontend. Com XP dependente de sessão válida, há incentivo a manipular ambos.
+**Problema:** `active_seconds` e `duration_seconds` são ambos calculados no frontend. Mesmo sem hard gate temporal para XP, estes campos podem ser manipulados e degradar métricas/observabilidade.
 
 **Decisão:** Validação em 3 camadas:
 
@@ -586,7 +593,7 @@ O cliente pode transportar o token, mas não consegue forjar o conteúdo sem que
 
 **Compatibilidade com retries legítimos:** Reutilização maliciosa do mesmo token é bloqueada por `jti` já consumido. Já retries por falha técnica durante o processamento não perdem XP, porque o consumo de `jti` e o `mark_processed` só persistem se a transação completar.
 
-**Implementação:** Camadas 1+2 são obrigatórias no **Sprint 1A** (não adiadas para Estabilidade), porque impactam diretamente a integridade do XP.
+**Implementação:** Camadas 1+2 são obrigatórias no **Sprint 1A** (não adiadas para Estabilidade), porque impactam diretamente integridade e observabilidade do sistema.
 
 **Camada 2 — Sanity check de `active_seconds` contra estimativa server-side:**
 
@@ -602,12 +609,13 @@ active_seconds = max(active_seconds, 0)
 ```python
 # Um quiz de 10 questões com <60s de active_time é suspeito
 min_plausible = total_questions * 6  # ~6s mínimo por questão
-if active_seconds < min_plausible and active_seconds >= 180:
+if 0 < active_seconds < min_plausible:
     log.warning(f"Suspiciously fast session: {active_seconds}s for {total_questions}q")
     # Não bloquear, apenas logar — pode ser aluna rápida
 ```
 
-No Go-Live, as 3 camadas devem estar ativas: Camadas 1+2 como validação forte, Camada 3 como guardrail adicional de anomalias.
+No Go-Live, as 3 camadas devem estar ativas: Camadas 1+2 como validação forte, Camada 3 como guardrail adicional de anomalias.  
+A elegibilidade de XP é decidida por estrutura válida da sessão (tipo + contagem esperada + submissão completa), não por limiar fixo de tempo.
 
 ### 9.8 Week Rollover e Concorrência
 
@@ -791,7 +799,7 @@ backend/modules/challenges/
 ├── ports.py               # ChallengeServicePort, ChallengeRepositoryPort
 ├── calculator.py          # Sessão válida, XP diário, normalização de score
 ├── calendar.py            # week_id, local_day, training week
-└── constants.py           # MIN_ACTIVE_SECONDS=180, MIN_QUESTIONS=5, XP_BASE=20, etc.
+└── constants.py           # EXPECTED_QUESTIONS_BY_TYPE (10/8/5), MIN_QUESTIONS=5, XP_BASE=20, etc.
 ```
 
 Ficheiros existentes a modificar:
@@ -825,7 +833,8 @@ Ficheiros existentes a modificar:
 - `services/studyService.js` — adicionar `getChallengeStatus()`
 - `services/studyService.js` — enviar `quiz_session_token` em `submitQuizResult()`
 - `hooks/useGamification.js` — source de XP condicional (challenge_xp vs stats.total_xp)
-- `hooks/useQuiz.js` — guardar `quiz_session_token` vindo de `generateQuiz()` e reenviar no `submitQuizResult()`
+- `hooks/useQuiz.js` — guardar `quiz_session_token` vindo de `generateQuiz()`, reenviar no `submitQuizResult()` e disparar refresh imediato do challenge status após submissão válida (com retry curto)
+- `App.jsx` — passar `refresh` do `useChallengeStatus` para o `useQuiz` (integração do refresh pós-submit)
 - `components/Intro/IntroHeader.jsx` — integrar challenge card ou XP do desafio
 - `pages/ResultsPage.jsx` — mostrar contribuição da sessão para a missão
 
@@ -969,14 +978,14 @@ Escopo funcional:
 
 - modelos: `ChallengeWeek`, `ChallengeDayActivity`
 - repositório e serviço com ports
-- `calculator.py`: sessão válida, XP diário (+20 base, sem bónus de qualidade)
+- `calculator.py`: sessão válida por tipo/contagem (`multiple-choice=10`, `short_answer=8`, `open-ended=5`), XP diário (+20 base, sem bónus de qualidade)
 - hook em `SaveQuizResultUseCase` → `challenge_service.process_session()`
 - `GET /challenge/weekly-status` (versão base, só Missão Base)
 - migração: adicionar `challenge_xp`, `partner_id` e `expected_tz_offset` a `students` — usar padrão existente de `main.py` com `inspect()` + `ALTER TABLE` condicional (mesma abordagem de `ensure_quiz_result_time_columns`)
 - seed: definir `expected_tz_offset` para as 2 alunas (ex.: 0 para WET Portugal)
 - executar script de backfill de `challenge_xp` contra dados de produção (secção 9.2)
 - desligar dependência de XP legacy no unlock (`QuizUnlockPolicy`) quando `COOP_CHALLENGE_ENABLED=true`
-- anti-cheat obrigatório neste sprint: Camadas 1+2+3 de validação de `active_seconds`, com `quiz_session_token` assinado emitido em `/generate-quiz` e validado em `/quiz/result`
+- anti-cheat obrigatório neste sprint: Camadas 1+2+3 de validação de `active_seconds` (observabilidade), com `quiz_session_token` assinado emitido em `/generate-quiz` e validado em `/quiz/result`
 - rollout seguro: manter `COOP_CHALLENGE_ENABLED=false` durante toda a Sprint 1A
 - compatibilidade obrigatória: backend aceita `quiz_session_token` ausente em 1A sem erro HTTP (graceful degradation para não quebrar frontend pré-1B)
 - testes: unitários para calculator, integração para endpoint
@@ -985,7 +994,7 @@ Checkpoint:
 
 - todos os testes passam
 - endpoint retorna dados corretos para sessão simulada manualmente
-- XP não é atribuído quando `active_seconds < 180` ou `total_questions < 5`
+- XP não é atribuído quando a sessão não cumpre estrutura válida (`quiz_type` suportado, contagem esperada por tipo, submissão completa e `total_questions >= 5`)
 - segunda sessão no mesmo dia não gera XP
 - sessão com token inválido/expirado não gera XP do desafio
 - sessão sem token não gera erro HTTP em 1A (com flag off) e não gera XP do desafio
@@ -1007,6 +1016,8 @@ Escopo funcional:
 - `useGamification.js` — condicionar source de XP (challenge_xp quando flag ativa)
 - `IntroHeader.jsx` — mostrar XP do desafio em vez de XP material
 - `ResultsPage.jsx` — mostrar "+20 XP do Desafio" após sessão válida
+- após `submitQuizResult` de sessão válida, fazer refresh imediato do `weekly-status` + retry curto (~600ms) para mitigar race de commit
+- manter polling de 30s como fallback de consistência
 - guard com `VITE_COOP_CHALLENGE_ENABLED`
 - após deploy e smoke test E2E, ativar `COOP_CHALLENGE_ENABLED` no início de semana (segunda 00:00 local)
 - após ativação da flag, validar smoke test com token obrigatório para elegibilidade de Challenge XP
@@ -1024,6 +1035,7 @@ Checkpoint para avançar (adaptado para N=1 dupla — rolling window de 3 semana
 - nenhuma aluna abandona (0 semanas com 0 sessões), excluindo semanas `all_paused` do denominador
 - sem erros críticos de cálculo de XP/semana
 - criança consegue perceber o estado da missão sem ajuda (validação qualitativa)
+- atualização do card de desafio ocorre quase imediatamente após fim de sessão válida (sem depender apenas do polling de 30s)
 
 Nota: com 1 dupla, métricas de taxa (%) são ruído — usar contagens absolutas em janelas de 3+ semanas. Converter para taxas quando N >= 5 duplas.
 
@@ -1177,13 +1189,14 @@ Escopo:
 8. `partner_id IS NULL` entra automaticamente em `Missão de Continuidade` (sem recompensa cooperativa).
 9. Recompensas de fallback (`Continuidade` e `Contribuição`) implementadas e instrumentadas.
 10. Script de backfill executado — títulos existentes preservados.
-11. Validação server-side de `active_seconds` ativa no Go-Live com as 3 camadas (token assinado + sanity check + heurística).
-12. Com `COOP_CHALLENGE_ENABLED=true`, UX e desbloqueios não dependem de XP legacy.
-13. `Modo Pausa` com duração limitada e cooldown ativo (sem possibilidade de solo permanente por omissão).
-14. Anti-replay ativo: `quiz_session_token.jti` de uso único (reutilização não gera XP do desafio).
-15. `all_paused` tratado como semana neutra para missão/métricas cooperativas, sem bloquear XP individual e títulos.
-16. Rollout de flags executado em 3 passos: 1A backend com flag off, 1B frontend completo, ativação só após smoke test E2E.
-17. Em Sprint 1A, `quiz_session_token` é backward-compatible (ausência não quebra `POST /quiz/result`); após ativação da flag, token válido é obrigatório para Challenge XP.
+11. Elegibilidade de XP validada por estrutura de sessão (`multiple-choice=10`, `short_answer=8`, `open-ended=5`, submissão completa e `total_questions >= 5`).
+12. Validação server-side de `active_seconds` ativa no Go-Live com as 3 camadas (token assinado + sanity check + heurística), sem hard gate temporal de XP.
+13. Com `COOP_CHALLENGE_ENABLED=true`, UX e desbloqueios não dependem de XP legacy.
+14. `Modo Pausa` com duração limitada e cooldown ativo (sem possibilidade de solo permanente por omissão).
+15. Anti-replay ativo: `quiz_session_token.jti` de uso único (reutilização não gera XP do desafio).
+16. `all_paused` tratado como semana neutra para missão/métricas cooperativas, sem bloquear XP individual e títulos.
+17. Rollout de flags executado em 3 passos: 1A backend com flag off, 1B frontend completo, ativação só após smoke test E2E.
+18. Em Sprint 1A, `quiz_session_token` é backward-compatible (ausência não quebra `POST /quiz/result`); após ativação da flag, token válido é obrigatório para Challenge XP.
 
 Itens V1.1 (não bloqueiam Go-Live inicial):
 

@@ -3,13 +3,16 @@ import IntroHeader from '../components/Intro/IntroHeader';
 import UploadSection from '../components/Intro/UploadSection';
 import MaterialDashboard from '../components/Intro/MaterialDashboard';
 import MaterialLibrary from '../components/MaterialLibrary';
+import WeeklyChallengeCard from '../components/Challenge/WeeklyChallengeCard';
 
 const IntroScreen = ({
     student, onLogout,
     file, handleFileChange, analyzeFile, isAnalyzing, savedMaterial, clearMaterial,
     availableTopics, selectedTopic, setSelectedTopic, loading, startQuiz,
     changeAvatar, selectedAvatar, level, totalXP, nextLevel, LEVELS,
-    materialsList, activateMaterial, onDeleteMaterial, onOpenAnalytics
+    materialsList, activateMaterial, onDeleteMaterial, onOpenAnalytics,
+    xpLabel, xpValue,
+    isChallengeEnabled, challengeStatus, challengeLoading, challengeError
 }) => {
 
     // Duolingo-style Button Component
@@ -43,6 +46,8 @@ const IntroScreen = ({
                 selectedAvatar={selectedAvatar}
                 changeAvatar={changeAvatar}
                 totalXP={totalXP}
+                xpLabel={xpLabel}
+                xpValue={xpValue}
                 onLogout={onLogout}
                 level={level}
             />
@@ -74,6 +79,14 @@ const IntroScreen = ({
 
                 {/* Sidebar (Right) */}
                 <div className="space-y-6">
+                    {isChallengeEnabled && (
+                        <WeeklyChallengeCard
+                            status={challengeStatus}
+                            loading={challengeLoading}
+                            error={challengeError}
+                        />
+                    )}
+
                     {/* Analytics */}
                     <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 flex flex-col gap-4">
                         <div className="flex items-center gap-3">

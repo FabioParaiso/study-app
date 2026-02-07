@@ -1,6 +1,6 @@
 from modules.challenges.constants import (
+    EXPECTED_QUESTIONS_BY_TYPE,
     MAX_ACTIVE_SECONDS_MULTIPLIER,
-    MIN_ACTIVE_SECONDS,
     MIN_QUESTIONS,
     MIN_SECONDS_PER_QUESTION_HEURISTIC,
     XP_BASE_DAILY,
@@ -29,8 +29,25 @@ def min_plausible_active_seconds(total_questions: int) -> int:
     return questions * MIN_SECONDS_PER_QUESTION_HEURISTIC
 
 
-def is_valid_session(active_seconds: int, total_questions: int) -> bool:
-    return int(active_seconds or 0) >= MIN_ACTIVE_SECONDS and int(total_questions or 0) >= MIN_QUESTIONS
+def expected_questions_for_type(quiz_type: str) -> int | None:
+    return EXPECTED_QUESTIONS_BY_TYPE.get(str(quiz_type or "").strip())
+
+
+def is_valid_session_shape(quiz_type: str, total_questions: int, detailed_results_count: int) -> tuple[bool, str]:
+    expected_questions = expected_questions_for_type(quiz_type)
+    if expected_questions is None:
+        return False, "unknown_quiz_type"
+
+    if int(total_questions or 0) < MIN_QUESTIONS:
+        return False, "below_min_questions"
+
+    if int(total_questions or 0) != int(expected_questions):
+        return False, "invalid_question_count"
+
+    if int(detailed_results_count or 0) != int(total_questions or 0):
+        return False, "incomplete_submission"
+
+    return True, "valid"
 
 
 def xp_for_first_valid_session(is_first_valid_session_of_day: bool) -> int:

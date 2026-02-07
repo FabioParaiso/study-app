@@ -18,6 +18,7 @@ class ChallengeServicePort(Protocol):
         quiz_type: str,
         score: int,
         total_questions: int,
+        detailed_results_count: int,
         active_seconds: int,
         quiz_session_token: str | None,
     ) -> dict: ...

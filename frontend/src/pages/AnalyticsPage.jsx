@@ -42,6 +42,8 @@ const AnalyticsPage = ({
     selectedAvatar,
     changeAvatar,
     totalXP,
+    xpLabel,
+    xpValue,
     onLogout,
     level,
     onBack
@@ -172,6 +174,8 @@ const AnalyticsPage = ({
                 selectedAvatar={selectedAvatar}
                 changeAvatar={changeAvatar}
                 totalXP={totalXP}
+                xpLabel={xpLabel}
+                xpValue={xpValue}
                 onLogout={onLogout}
                 level={level}
             />

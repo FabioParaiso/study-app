@@ -27,7 +27,7 @@ export const studyService = {
             quiz_type: type // Pass the type directly (multiple-choice, short_answer, open-ended)
         };
         const res = await api.post('/generate-quiz', payload);
-        return res.data.questions;
+        return res.data;
     },
     evaluateAnswer: async (question, userAnswer, type = 'open-ended') => {
         const res = await api.post('/evaluate-answer', {
@@ -37,7 +37,17 @@ export const studyService = {
         });
         return res.data;
     },
-    submitQuizResult: async (score, total, type, detailedResults, xpEarned, materialId, durationSeconds = 0, activeSeconds = 0) => {
+    submitQuizResult: async (
+        score,
+        total,
+        type,
+        detailedResults,
+        xpEarned,
+        materialId,
+        durationSeconds = 0,
+        activeSeconds = 0,
+        quizSessionToken = null
+    ) => {
         await api.post('/quiz/result', {
             score,
             total_questions: total,
@@ -46,8 +56,13 @@ export const studyService = {
             study_material_id: materialId,
             xp_earned: xpEarned,
             duration_seconds: Math.round(durationSeconds),
-            active_seconds: Math.round(activeSeconds)
+            active_seconds: Math.round(activeSeconds),
+            quiz_session_token: quizSessionToken
         });
+    },
+    getChallengeStatus: async () => {
+        const res = await api.get('/challenge/weekly-status');
+        return res.data;
     },
     getWeakPoints: async (materialId) => {
         let url = `/analytics/weak-points?t=${Date.now()}`;

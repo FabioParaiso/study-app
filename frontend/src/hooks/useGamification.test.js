@@ -16,6 +16,7 @@ describe('useGamification Hook', () => {
     let consoleError;
 
     beforeEach(() => {
+        vi.unstubAllEnvs();
         consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     });
 
@@ -58,6 +59,7 @@ describe('useGamification Hook', () => {
     });
 
     it('syncs stats from props', () => {
+        vi.stubEnv('VITE_COOP_CHALLENGE_ENABLED', 'false');
         const student = { id: 1, current_avatar: 'rocket' };
         const stats = { total_xp: 300, high_score: 42 };
         const { result } = renderHook(() => useGamification(student, stats));
@@ -65,6 +67,16 @@ describe('useGamification Hook', () => {
         expect(result.current.totalXP).toBe(300);
         expect(result.current.highScore).toBe(42);
         expect(result.current.selectedAvatar).toBe('rocket');
+    });
+
+    it('uses challenge_xp when coop challenge flag is enabled', () => {
+        vi.stubEnv('VITE_COOP_CHALLENGE_ENABLED', 'true');
+        const student = { id: 1, challenge_xp: 555, current_avatar: 'mascot' };
+        const stats = { total_xp: 999, high_score: 42 };
+
+        const { result } = renderHook(() => useGamification(student, stats));
+
+        expect(result.current.totalXP).toBe(555);
     });
 
     it('reverts avatar when update fails', async () => {

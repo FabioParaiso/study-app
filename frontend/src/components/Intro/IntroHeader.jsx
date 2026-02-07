@@ -9,7 +9,8 @@ const LevelIcon = ({ iconName, className }) => {
     return <Icon className={className} />;
 };
 
-const IntroHeader = ({ student, selectedAvatar, changeAvatar, totalXP, onLogout, level }) => {
+const IntroHeader = ({ student, selectedAvatar, changeAvatar, totalXP, xpLabel = 'XP', xpValue = null, onLogout, level }) => {
+    const displayXP = xpValue === null || xpValue === undefined ? totalXP : xpValue;
     return (
         <header className="bg-white border-b-2 border-gray-200 sticky top-0 z-10">
             <div className="max-w-5xl mx-auto px-4 h-16 flex justify-between items-center">
@@ -39,7 +40,7 @@ const IntroHeader = ({ student, selectedAvatar, changeAvatar, totalXP, onLogout,
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                         <img src="https://d35aaqx5ub95lt.cloudfront.net/images/icons/398e4298a3b39ce566050e5c041949ef.svg" className="w-6 h-6" alt="gem" />
-                        <span className="font-bold text-duo-red text-lg">{totalXP} XP</span>
+                        <span className="font-bold text-duo-red text-lg">{displayXP} {xpLabel}</span>
                     </div>
                     <button
                         onClick={onLogout}

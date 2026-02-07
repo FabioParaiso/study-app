@@ -146,6 +146,7 @@ Criar `frontend/.env` (ou ajustar conforme ambiente):
 VITE_API_URL=http://localhost:8000
 VITE_BASE_PATH=/
 VITE_REGISTER_ENABLED=true
+VITE_COOP_CHALLENGE_ENABLED=false
 ```
 
 Iniciar frontend:
@@ -185,6 +186,7 @@ Aplicacao disponivel em `http://localhost:5173`.
 | `VITE_API_URL` | Nao | `http://localhost:8000` | URL base da API |
 | `VITE_BASE_PATH` | Nao | `/` | Base path de deploy (GitHub Pages) |
 | `VITE_REGISTER_ENABLED` | Nao | `true` | Mostra/esconde registo na UI |
+| `VITE_COOP_CHALLENGE_ENABLED` | Nao | `false` | Liga UI do desafio semanal no frontend |
 
 ## Scripts Operacionais (Sprint 0)
 

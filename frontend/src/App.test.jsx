@@ -84,6 +84,15 @@ vi.mock('./hooks/useQuiz', () => ({
         missedIndices: [],
         startReviewMode: vi.fn(),
         sessionXP: 0,
+        challengeSessionFeedback: { eligible: false, estimatedXp: 0, reason: null },
+    }),
+}));
+
+vi.mock('./hooks/useChallengeStatus', () => ({
+    useChallengeStatus: () => ({
+        status: null,
+        loading: false,
+        error: '',
     }),
 }));
 
