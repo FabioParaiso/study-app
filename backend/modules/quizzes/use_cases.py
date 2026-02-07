@@ -68,7 +68,7 @@ class GenerateQuizUseCase:
         material_topics_data = MaterialMapper.topics_map(material)
         allowed_concepts = ConceptWhitelistBuilder.build(material_topics_data, target_topics)
         allowed_concepts_set = set(allowed_concepts)
-        
+
         material_xp = material.total_xp
         try:
             strategy = self.strategy_factory.select_strategy(request.quiz_type, material_xp)
@@ -78,6 +78,7 @@ class GenerateQuizUseCase:
         quiz_type = request.quiz_type or "multiple-choice"
         is_multiple_choice = quiz_type == "multiple-choice"
         is_short_answer = quiz_type == "short_answer"
+        is_open_ended = quiz_type == "open-ended"
 
         # Gate: short answer requires all concepts to have confident MCQ data
         if is_short_answer and self.analytics_service:
@@ -91,17 +92,42 @@ class GenerateQuizUseCase:
                     status_code=403
                 )
 
+        # Gate: open-ended requires all concepts to have confident Short data
+        if is_open_ended and self.analytics_service:
+            readiness = self.analytics_service.check_open_ended_readiness(user_id, material_id)
+            if not readiness["is_ready"]:
+                ready = readiness["ready_concepts"]
+                total = readiness["total_concepts"]
+                raise QuizServiceError(
+                    f"Ainda não estás pronto para o Avançado. "
+                    f"Pratica mais no Intermédio ({ready}/{total} conceitos prontos).",
+                    status_code=403
+                )
+
         material_concepts: list[str] = allowed_concepts
-        if is_multiple_choice:
-            material_concepts = self._build_concept_sequence(
-                self.analytics_service, user_id, material_id, allowed_concepts_set, allowed_concepts,
-                builder="build_mcq_quiz_concepts", total=10
+        if is_multiple_choice or is_short_answer:
+            # For fixed-sequence quizzes, only restrict concepts by the user's
+            # explicit topic selection — not by adaptive topic filtering.
+            # The concept builders already handle internal prioritisation.
+            quiz_concepts = ConceptWhitelistBuilder.build(material_topics_data, request.topics)
+            quiz_concepts_set = set(quiz_concepts)
+
+            if is_multiple_choice:
+                material_concepts = self._build_concept_sequence(
+                    self.analytics_service, user_id, material_id, quiz_concepts_set, quiz_concepts,
+                    builder="build_mcq_quiz_concepts", total=10
+                )
+            else:
+                material_concepts = self._build_concept_sequence(
+                    self.analytics_service, user_id, material_id, quiz_concepts_set, quiz_concepts,
+                    builder="build_short_quiz_concepts", total=8
+                )
+        elif is_open_ended and self.analytics_service:
+            concepts = self.analytics_service.build_open_quiz_concepts(
+                user_id, material_id, allowed_concepts_set, total_concepts=8
             )
-        elif is_short_answer:
-            material_concepts = self._build_concept_sequence(
-                self.analytics_service, user_id, material_id, allowed_concepts_set, allowed_concepts,
-                builder="build_short_quiz_concepts", total=8
-            )
+            if concepts:
+                material_concepts = concepts
 
         questions = ai_service.generate_quiz(strategy, text, target_topics, priority_topics, material_concepts)
 
@@ -156,6 +182,8 @@ class SaveQuizResultUseCase:
             item.model_dump() if hasattr(item, "model_dump") else item.dict()
             for item in result.detailed_results
         ]
+        if not analytics_data:
+            raise QuizServiceError("Resultados detalhados em falta.", status_code=400)
         try:
             self.recorder.record(
                 user_id=user_id,

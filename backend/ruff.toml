@@ -1,0 +1,7 @@
+target-version = "py311"
+line-length = 120
+
+[lint]
+# Baseline strictness: fail on syntax/name-resolution level issues.
+# We can progressively expand this set as the codebase is cleaned.
+select = ["E9", "F63", "F7", "F82"]

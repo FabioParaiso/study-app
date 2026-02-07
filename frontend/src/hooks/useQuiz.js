@@ -10,8 +10,7 @@ export function useQuiz(student, materialId) {
     const {
         questions, gameState, currentQuestionIndex, score, streak, userAnswers,
         openEndedEvaluations, missedIndices, showFeedback, isEvaluating,
-        setGameState, setIsEvaluating, initQuiz, recordAnswer, recordEvaluation, advanceQuestion,
-        setQuestions
+        setGameState, setIsEvaluating, initQuiz, recordAnswer, recordEvaluation, advanceQuestion
     } = useQuizEngine();
 
     const [loading, setLoading] = useState(false);
@@ -115,10 +114,13 @@ export function useQuiz(student, materialId) {
 
         try {
             const qs = await studyService.generateQuiz(topic, type);
+            if (!Array.isArray(qs) || qs.length === 0) {
+                throw new Error("Não foi possível gerar perguntas para este tópico. Tenta 'Todos' ou outro tópico.");
+            }
             initQuiz(qs);
         } catch (err) {
             console.error(err);
-            const msg = err.response?.data?.detail || "Erro ao gerar o teste.";
+            const msg = err.response?.data?.detail || err.message || "Erro ao gerar o teste.";
             setErrorMsg(msg);
             setQuizType(null);
         } finally {
@@ -143,20 +145,22 @@ export function useQuiz(student, materialId) {
         addXPCallback(xp);
     };
 
-    const handleEvaluation = async (userText, addXPCallback) => {
+    const submitEvaluatedAnswer = async (userText, addXPCallback, evaluationType = 'open-ended') => {
         if (!userText.trim()) return;
         setIsEvaluating(true);
         const currentQ = questions[currentQuestionIndex];
 
         try {
-            const evalData = await studyService.evaluateAnswer(currentQ.question, userText);
+            const rawEval = await studyService.evaluateAnswer(currentQ.question, userText, evaluationType);
+            const evalData = {
+                ...rawEval,
+                is_correct: rawEval.score >= 50
+            };
             recordEvaluation(currentQuestionIndex, evalData, userText);
 
-            // XP Logic (centralized in utils/xpCalculator.js)
             const xpEarned = calculateXPFromScore(evalData.score);
             setSessionXP(prev => prev + xpEarned);
             addXPCallback(xpEarned);
-
         } catch (err) {
             console.error(err);
             alert("Erro ao avaliar. Tenta novamente.");
@@ -165,36 +169,12 @@ export function useQuiz(student, materialId) {
         }
     };
 
-    /**
-     * Handler for Short Answer mode - uses AI evaluation for simple sentences.
-     */
+    const handleEvaluation = async (userText, addXPCallback) => {
+        await submitEvaluatedAnswer(userText, addXPCallback, 'open-ended');
+    };
+
     const handleShortAnswer = async (userText, addXPCallback) => {
-        if (!userText.trim()) return;
-        setIsEvaluating(true);
-        const currentQ = questions[currentQuestionIndex];
-
-        try {
-            // Pass 'short_answer' as type to trigger the simple sentence prompt on backend
-            const rawEval = await studyService.evaluateAnswer(currentQ.question, userText, 'short_answer');
-
-            const evalData = {
-                ...rawEval,
-                is_correct: rawEval.score >= 50
-            };
-
-            recordEvaluation(currentQuestionIndex, evalData, userText);
-
-            // XP Logic (centralized in utils/xpCalculator.js)
-            const xpEarned = calculateXPFromScore(evalData.score);
-            setSessionXP(prev => prev + xpEarned);
-            addXPCallback(xpEarned);
-
-        } catch (err) {
-            console.error(err);
-            alert("Erro ao avaliar. Tenta novamente.");
-        } finally {
-            setIsEvaluating(false);
-        }
+        await submitEvaluatedAnswer(userText, addXPCallback, 'short_answer');
     };
 
     const nextQuestion = async (updateHighScoreCallback) => {

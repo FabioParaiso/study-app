@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useState } from 'react';
+import { useRef, useLayoutEffect, useState } from 'react';
 
 const TOOLTIP_OFFSET_PX = 8;
 const TOOLTIP_EDGE_PADDING = 8;

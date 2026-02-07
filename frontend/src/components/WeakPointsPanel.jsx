@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { TrendingUp, ChevronDown, ChevronUp, BookOpen, Trophy, PenTool } from 'lucide-react';
 
 /**
@@ -74,7 +74,9 @@ const ScoreBadge = ({ scoreData, icon: Icon }) => {
 const WeakPointsPanel = ({ points = [], loading = false }) => {
     const [expandedTopics, setExpandedTopics] = useState({});
 
-    const safePoints = Array.isArray(points) ? points : [];
+    const safePoints = useMemo(() => {
+        return Array.isArray(points) ? points : [];
+    }, [points]);
 
     const toggleTopic = (topic) => {
         setExpandedTopics(prev => ({ ...prev, [topic]: !prev[topic] }));
@@ -96,10 +98,15 @@ const WeakPointsPanel = ({ points = [], loading = false }) => {
 
     return (
         <div className="bg-white rounded-2xl border-2 border-gray-200 p-6">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6 flex items-center gap-2">
-                <TrendingUp size={16} />
-                O teu Domínio
-            </h3>
+            <div className="mb-6">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <TrendingUp size={16} />
+                    O teu Domínio
+                </h3>
+                <p className="text-xs text-gray-400 font-medium mt-1">
+                    Baseado nas últimas 7 respostas por conceito.
+                </p>
+            </div>
 
             <div className="space-y-4">
                 {Object.entries(groupedPoints).map(([topic, concepts]) => {

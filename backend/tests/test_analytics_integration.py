@@ -191,7 +191,7 @@ def test_quiz_result_without_material_id_uses_active(client):
 
 
 def test_open_ended_score_average_updates_counts(client, db_session):
-    """Integration test: open-ended score (average) updates correct_answers_count via normalization."""
+    """Integration test: open-ended correct_answers_count uses per-concept correctness."""
 
     import time
     name = f"OpenScoreUser{int(time.time()*1000)}"
@@ -233,8 +233,8 @@ def test_open_ended_score_average_updates_counts(client, db_session):
     from models import StudyMaterial
     material = db_session.query(StudyMaterial).filter(StudyMaterial.id == material_id).first()
     assert material is not None
-    # 70% of 4 -> round(2.8) = 3
-    assert material.correct_answers_count == 3
+    # 2 correct out of 4 concepts
+    assert material.correct_answers_count == 2
 
 
 def test_get_metrics_endpoint_returns_daily_counts(client, db_session):

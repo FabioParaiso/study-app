@@ -27,6 +27,7 @@ class QuizRequest(BaseModel):
 
 class AnalyticsItem(BaseModel):
     topic: str # Keeping 'topic' name for frontend compatibility, but this will now hold Concept Name
+    question_topic: Optional[str] = None # Topic name from generated question for concept disambiguation
     concept_id: Optional[int] = None # Link to the specific concept
     is_correct: bool
 

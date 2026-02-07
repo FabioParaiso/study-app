@@ -1,8 +1,7 @@
-import pytest
 from unittest.mock import patch
-from modules.quizzes.policies import QuestionPostProcessor, QuizStrategyFactory, QuizPolicyError
+from modules.quizzes.policies import QuestionPostProcessor, QuizStrategyFactory
 from modules.quizzes.registry import build_default_quiz_registry
-from modules.quizzes.engine import MultipleChoiceStrategy
+from modules.quizzes.engine import MultipleChoiceStrategy, OpenEndedStrategy
 
 
 def test_question_post_processor_updates_correct_index():
@@ -20,13 +19,12 @@ def test_question_post_processor_updates_correct_index():
     assert processed[0]["correctIndex"] == 2
 
 
-def test_quiz_strategy_factory_blocks_locked_levels():
+def test_quiz_strategy_factory_open_ended_not_blocked_by_xp():
     factory = QuizStrategyFactory(build_default_quiz_registry())
 
-    with pytest.raises(QuizPolicyError) as exc:
-        factory.select_strategy("open-ended", material_xp=0)
+    strategy = factory.select_strategy("open-ended", material_xp=0)
 
-    assert exc.value.status_code == 403
+    assert isinstance(strategy, OpenEndedStrategy)
 
 
 def test_quiz_strategy_factory_defaults_to_multiple_choice():

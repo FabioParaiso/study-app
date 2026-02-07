@@ -28,30 +28,41 @@ export const useQuizEngine = (initialQuestions = []) => {
         setGameState('playing');
     }, [resetGame]);
 
+    const applyAnswerOutcome = useCallback((qIndex, isCorrect) => {
+        if (isCorrect) {
+            setStreak(prev => prev + 1);
+            return 'correct';
+        }
+
+        setStreak(0);
+        setMissedIndices(prev => {
+            if (!prev.includes(qIndex)) return [...prev, qIndex];
+            return prev;
+        });
+        return 'incorrect';
+    }, []);
+
     const recordAnswer = useCallback((qIndex, oIndex, isCorrect) => {
         setUserAnswers(prev => ({ ...prev, [qIndex]: oIndex }));
         setShowFeedback(true);
 
         if (isCorrect) {
             setScore(prev => prev + 1);
-            setStreak(prev => prev + 1);
-            return 'correct';
-        } else {
-            setStreak(0);
-            setMissedIndices(prev => {
-                if (!prev.includes(qIndex)) return [...prev, qIndex];
-                return prev;
-            });
-            return 'incorrect';
         }
-    }, []);
+
+        return applyAnswerOutcome(qIndex, isCorrect);
+    }, [applyAnswerOutcome]);
 
     const recordEvaluation = useCallback((qIndex, evalData, userText) => {
         setOpenEndedEvaluations(prev => ({
             ...prev,
             [qIndex]: { ...evalData, userText }
         }));
-    }, []);
+
+        if (typeof evalData?.is_correct === 'boolean') {
+            applyAnswerOutcome(qIndex, evalData.is_correct);
+        }
+    }, [applyAnswerOutcome]);
 
     const advanceQuestion = useCallback(() => {
         setShowFeedback(false);

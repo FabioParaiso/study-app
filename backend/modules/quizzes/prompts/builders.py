@@ -9,7 +9,7 @@ from modules.quizzes.prompts.templates import (
 
 
 class PromptBuilder:
-    """Constrói prompts de geração de quizzes (MCQ usa lista fixa; outros usam whitelist)."""
+    """Constrói prompts de geração de quizzes (MCQ/short usam ordem fixa; open-ended usa lista priorizada)."""
 
     @staticmethod
     def _build_topic_instruction(topics: list[str], material_concepts: list[str]) -> str:
@@ -79,16 +79,33 @@ class PromptBuilder:
         Se um conceito aparecer mais do que uma vez, cria perguntas DIFERENTES em cada ocorrência.
         {lines}"""
 
+    @staticmethod
+    def _build_prioritized_list_instruction(concepts: list[str]) -> str:
+        """Lista priorizada para open-ended: conceitos no topo têm maior prioridade."""
+        if not concepts:
+            return ""
+        lines = "\n".join(f"{idx}. {concept}" for idx, concept in enumerate(concepts, start=1))
+        return f"""LISTA PRIORIZADA DE CONCEITOS:
+        Usa os conceitos do topo da lista preferencialmente. Cada pergunta pode cobrir 1-2 conceitos.
+        {lines}"""
+
     @classmethod
     def build_quiz_prompt(cls, quiz_type: str, text: str, topics: list[str], priority_topics: list[str] | None, material_concepts: list[str] | None) -> str:
-        """Constrói o prompt final; MCQ e short_answer usam sequência fixa, open-ended usa whitelist."""
+        """Constrói o prompt final; MCQ e short_answer usam sequência fixa, open-ended usa lista priorizada."""
         material_concepts = material_concepts or []
         topic_concepts = cls._dedupe_list(material_concepts)
         uses_fixed_sequence = quiz_type in ("multiple-choice", "short_answer")
+        uses_prioritized_list = quiz_type == "open-ended"
 
         topic_instr = cls._build_topic_instruction(topics, topic_concepts)
-        priority_instr = "" if uses_fixed_sequence else cls._build_priority_instruction(priority_topics or [], min_questions=2)
-        vocab_instr = cls._build_fixed_sequence_instruction(material_concepts) if uses_fixed_sequence else cls._build_vocab_instruction(material_concepts)
+        priority_instr = "" if (uses_fixed_sequence or uses_prioritized_list) else cls._build_priority_instruction(priority_topics or [], min_questions=2)
+
+        if uses_fixed_sequence:
+            vocab_instr = cls._build_fixed_sequence_instruction(material_concepts)
+        elif uses_prioritized_list:
+            vocab_instr = cls._build_prioritized_list_instruction(material_concepts)
+        else:
+            vocab_instr = cls._build_vocab_instruction(material_concepts)
 
         template = {
             "multiple-choice": MULTIPLE_CHOICE_TEMPLATE,

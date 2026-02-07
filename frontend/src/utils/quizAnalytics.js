@@ -52,10 +52,17 @@ export const buildDetailedResults = ({
         }
 
         concepts.forEach((conceptName) => {
-            detailedResults.push({
+            const resultItem = {
                 topic: conceptName,
                 is_correct: correct
-            });
+            };
+
+            const questionTopic = typeof q?.topic === 'string' ? q.topic.trim() : '';
+            if (questionTopic) {
+                resultItem.question_topic = questionTopic;
+            }
+
+            detailedResults.push(resultItem);
         });
     });
 

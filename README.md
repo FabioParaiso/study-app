@@ -1,129 +1,231 @@
-# 🦉 Super Study! - Aprender é uma Aventura
+# Super Study
 
-Bem-vindo ao **Super Study**, a plataforma de estudo inteligente que transforma apontamentos escolares numa aventura gamificada! 🚀
+Plataforma de estudo adaptativo para alunos do 2.o ciclo, com quizzes gerados por IA, progressao por niveis e analitica de desempenho por conceito.
 
-Este projeto foi desenhado especificamente para alunos do **6º ano (10-12 anos)**, combinando Inteligência Artificial com metodologias pedagógicas comprovadas (Taxonomia de Bloom + Repetição Espaçada) para tornar o estudo viciante e eficaz.
+## Visao Geral
 
----
+- Frontend em React 19 + Vite 6 + Tailwind.
+- Backend em FastAPI + SQLAlchemy (SQLite por defeito, PostgreSQL via `DATABASE_URL`).
+- Fluxo principal: upload de material -> extracao de topicos/conceitos -> geracao de quiz -> avaliacao -> registo analitico.
+- Modulos de dominio no backend: `auth`, `materials`, `quizzes`, `analytics`, `gamification`, `usage`.
 
-## ✨ Funcionalidades Mágicas
+## Estado Tecnico (snapshot local)
 
-### 🧠 Estudo Inteligente & Adaptativo
-A nossa IA não cria apenas perguntas aleatórias. Ela analisa os teus apontamentos (PDF/Texto) e cria um plano de estudo personalizado:
-*   **Deteção de Tópicos:** A IA organiza a matéria em tópicos claros (ex: "Fotossíntese", "Revolução Liberal").
-*   **Analítica de Pontos Fracos:** O sistema sabe onde erras! Se falhares perguntas sobre "Ruminantes", o próximo quiz terá mais perguntas sobre isso.
-*   **Estudo Focado:** Podes escolher estudar "Tudo" ou apenas um tópico específico para o teste de amanhã.
+Validado localmente em `2026-02-06`:
 
-### 🎮 Gamificação (Aprender a Brincar)
-Estudar não tem de ser chato. No Super Study, cada resposta certa conta!
-*   **XP (Pontos de Experiência):** Ganha XP por cada resposta certa. Acumula pontos para subir de nível!
-*   **Títulos Evolutivos:** Começas como "Estudante Curiosa" 🌱 e evoluis até "Cientista Lendária" 🚀 à medida que ganhas XP.
-*   **Mascote:** O nosso **Super Mocho** acompanha-te em toda a jornada!
+- Backend: `141/141` testes a passar (`backend/.venv/bin/pytest`).
+- Frontend: `84/84` testes a passar (`npm run test -- --run`).
+- Build frontend: `npm run build` com sucesso.
+- Lint frontend configurado com flat config (`frontend/eslint.config.js`) e a executar sem erros/avisos.
 
-### 📈 Sistema de Progressão (Níveis de Dificuldade)
-Para garantir uma aprendizagem sólida, o acesso aos modos de quiz é desbloqueado progressivamente, baseando-se na **Taxonomia de Bloom**:
+## Funcionalidades Principais
 
-| Nível | Modo de Quiz | Foco Pedagógico | Requisito |
-| :--- | :--- | :--- | :--- |
-| **Iniciante** 🟢 | Escolha Múltipla | **Compreensão & Conhecimento.** Aprender os conceitos básicos sem pressão. Erros comuns explicados. | Desbloqueado |
-| **Intermédio** 🟡 | Resposta Curta | **Aplicação & Construção de Frase.** O aluno tem de escrever uma frase simples (Sujeito + Verbo) factual. | 300 XP |
-| **Avançado** 🟣 | Resposta Aberta | **Análise & Avaliação.** Perguntas profundas ("Porquê?", "Explica...", "Na tua opinião..."). | 900 XP |
+- Quizzes por tipo: `multiple-choice`, `short_answer`, `open-ended`.
+- Selecao adaptativa de topicos/conceitos com base em historico (pontos fracos e dominio).
+- Biblioteca de materiais por aluno com ativacao e remocao.
+- Registo de metricas por sessao: score, tempo total, tempo ativo, distribuicao por tipo.
+- Dashboard de analitica:
+  - pontos fracos por conceito
+  - tempo ativo por dia
+  - evolucao de aprendizagem por nivel
+- Gamificacao: XP, avatar atual, high score.
+- Autenticacao por JWT.
 
----
+## Arquitetura
 
-## 🛠️ Arquitetura Técnica
+### Backend (`backend/`)
 
-O projeto segue uma arquitetura moderna e separada (Frontend + Backend), comunicando via REST API.
+- `main.py`: bootstrap da app, `load_dotenv`, criacao de tabelas, pequenos ajustes de schema.
+- `app_factory.py`: middlewares, CORS, rate limiting e registo de rotas.
+- `dependencies.py`: injeccao de dependencias (`Depends`) e autenticacao de utilizador atual.
+- `database.py`: engine/session SQLAlchemy e normalizacao de `DATABASE_URL`.
+- `security.py`: hash de password com `bcrypt`, JWT e validacao de `SECRET_KEY`.
+- `modules/*`: organizacao por dominio com `router`, `service`, `repository`, `use_cases`, `ports`, `models`.
 
-### 🎨 Frontend (`/frontend`)
-*   **Framework:** React (Vite)
-*   **Estilo:** Tailwind CSS (Design System personalizado "Duolingo-style": vibrante, arredondado, animado).
-*   **UX:** Feedback em tempo real, validações visuais, animações `framer-motion` suave.
+Padroes relevantes:
 
-### 🧠 Backend (`/backend`)
-*   **API:** FastAPI (Python).
-*   **Database:** SQLite (SQLAlchemy) para gestão de alunos, progresso e analítica.
-*   **AI Engine:** OpenAI GPT-4o-mini (Optimizado com estratégias de prompt engineering complexas).
-*   **Segurança:** Autenticação com Hashing de Passwords (`bcrypt`) e Rate Limiting (`slowapi`) para proteção contra brute-force.
+- Arquitetura modular com ports/protocols.
+- Estrategias de quiz via registry/factory (`modules/quizzes/registry.py`).
+- Politicas de selecao adaptativa de conceitos (`modules/quizzes/policies.py`).
 
----
+### Frontend (`frontend/`)
 
-## 🚀 Como Começar (Instalação)
+- SPA em React com estado encapsulado em custom hooks.
+- Hooks principais:
+  - `useMaterial`: upload/ativacao/gestao de materiais.
+  - `useQuiz` + `useQuizEngine`: ciclo de quiz, pontuacao, submissao de resultados.
+  - `useAnalytics`: consumo de metricas.
+  - `useGamification`: XP, niveis e avatar.
+  - `useStudent`: sessao autenticada (token em `localStorage`).
+- Cliente API centralizado em `src/services/api.js` (Axios + bearer token interceptor).
 
-### Pré-requisitos
-*   **Node.js** (v16+)
-*   **Python** (v3.9+)
-*   **OpenAI API Key**
+## Estrutura do Repositorio
 
-### 1. Configurar o Backend
-```bash
-cd backend
-
-# Criar ambiente virtual
-python -m venv venv
-source venv/bin/activate  # Mac/Linux
-# .\venv\Scripts\activate  # Windows
-
-# Instalar dependências
-pip install -r requirements.txt
-
-# Configurar Variáveis de Ambiente
-# Cria um ficheiro .env na pasta backend/ com:
-# OPENAI_API_KEY=sk-....
-# SECRET_KEY=uma-chave-forte
-# INVITE_CODE=um-codigo-secreto
-# REGISTER_ENABLED=true
-# DAILY_AI_CALL_LIMIT=50
-# AI_RATE_LIMIT=20/minute
-# ALLOWED_ORIGINS=http://localhost:5173
-# CORS_ALLOW_CREDENTIALS=false
+```text
+.
+├── backend/
+│   ├── app_factory.py
+│   ├── main.py
+│   ├── database.py
+│   ├── dependencies.py
+│   ├── security.py
+│   ├── modules/
+│   │   ├── auth/
+│   │   ├── materials/
+│   │   ├── quizzes/
+│   │   ├── analytics/
+│   │   ├── gamification/
+│   │   └── usage/
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── utils/
+│   └── public/
+└── .github/workflows/
 ```
 
-Para iniciar o servidor:
+## Requisitos
+
+- Node.js 20+ (recomendado).
+- Python 3.11+ (o projeto tem sido executado com 3.14 localmente).
+- Chave OpenAI (`OPENAI_API_KEY`) para funcionalidades de IA.
+
+## Setup Local
+
+### 1) Backend
+
 ```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+```
+
+Criar `backend/.env`:
+
+```env
+# Obrigatorias para runtime normal
+SECRET_KEY=troca_esta_chave_por_uma_forte
+OPENAI_API_KEY=sk-...
+
+# Comportamento da app
+REGISTER_ENABLED=true
+INVITE_CODE=opcional
+DAILY_AI_CALL_LIMIT=50
+AI_RATE_LIMIT=20/minute
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+CORS_ALLOW_CREDENTIALS=false
+
+# DB e ambiente
+DATABASE_URL=sqlite:///./study_app.db
+APP_ENV=staging
+```
+
+Iniciar API:
+
+```bash
+cd backend
+source .venv/bin/activate
 python -m uvicorn main:app --reload --port 8000
 ```
 
-### 2. Configurar o Frontend
-Num novo terminal:
+### 2) Frontend
+
 ```bash
 cd frontend
-
-# Instalar pacotes
 npm install
+```
 
-# (Opcional) Configurar variaveis do frontend (frontend/.env):
-# VITE_API_URL=http://localhost:8000
-# VITE_REGISTER_ENABLED=false
+Criar `frontend/.env` (ou ajustar conforme ambiente):
 
+```env
+VITE_API_URL=http://localhost:8000
+VITE_BASE_PATH=/
+VITE_REGISTER_ENABLED=true
+```
 
-# Iniciar aplicação
+Iniciar frontend:
+
+```bash
+cd frontend
 npm run dev
 ```
 
-Acede a `http://localhost:5173` e começa a estudar!
+Aplicacao disponivel em `http://localhost:5173`.
 
----
+## Variaveis de Ambiente
 
-## 📚 Estrutura do Projeto
+### Backend
 
+| Variavel | Obrigatoria | Default | Uso |
+| --- | --- | --- | --- |
+| `SECRET_KEY` | Sim (exceto `TEST_MODE=true`) | `super_secret_key_change_me` | Assinatura JWT |
+| `OPENAI_API_KEY` | Sim para IA | vazio | Geracao/avaliacao via OpenAI |
+| `REGISTER_ENABLED` | Nao | `true` | Liga/desliga registo |
+| `INVITE_CODE` | Nao | vazio | Se definido, registo exige codigo |
+| `DAILY_AI_CALL_LIMIT` | Nao | `50` | Limite diario por aluno |
+| `AI_RATE_LIMIT` | Nao | `20/minute` | Rate limit por IP em endpoints IA |
+| `ALLOWED_ORIGINS` | Nao | localhost:5173 | CORS allow origins |
+| `CORS_ALLOW_CREDENTIALS` | Nao | `false` | CORS credentials |
+| `DATABASE_URL` | Nao | `sqlite:///./study_app.db` | Ligacao DB |
+| `APP_ENV` | Nao | `staging` | Selecao de modelos LLM |
+| `TEST_MODE` | Nao | `false` | Desativa certos controlos em teste |
+
+### Frontend
+
+| Variavel | Obrigatoria | Default | Uso |
+| --- | --- | --- | --- |
+| `VITE_API_URL` | Nao | `http://localhost:8000` | URL base da API |
+| `VITE_BASE_PATH` | Nao | `/` | Base path de deploy (GitHub Pages) |
+| `VITE_REGISTER_ENABLED` | Nao | `true` | Mostra/esconde registo na UI |
+
+## Testes e Qualidade
+
+### Backend
+
+```bash
+cd backend
+source .venv/bin/activate
+ruff check .
+pytest
 ```
-/
-├── backend/
-│   ├── routers/         # Endpoints da API (Auth, Study, Gamification)
-│   ├── services/        # Lógica de Negócio (AI, Analytics, Quiz Strategies)
-│   ├── models.py        # Modelos de Base de Dados (SQLAlchemy)
-│   └── main.py          # Entry point
-│
-└── frontend/
-    ├── src/
-    │   ├── components/  # Componentes UI Reutilizáveis
-    │   ├── pages/       # Páginas Principais (Login, Intro, Quiz)
-    │   ├── services/    # Comunicação com API (Axios)
-    │   ├── hooks/       # Lógica de Estado (Custom Hooks)
-    │   └── assets/      # Imagens e Sons
-    └── public/          # Assets estáticos
+
+### Frontend
+
+```bash
+cd frontend
+npm run lint
+npm run test -- --run
+npm run build
 ```
 
----
-Desenvolvido por **Fábio Oliveira** & **Google DeepMind Antigravity** 🤖✨
+Nota: para correcoes automaticas de lint no frontend, usa `npm run lint:fix`.
+
+## Endpoints Principais
+
+| Area | Endpoint |
+| --- | --- |
+| Health | `GET /health` |
+| Auth | `POST /register`, `POST /login` |
+| Materiais | `GET /current-material`, `POST /upload`, `POST /analyze-topics`, `GET /materials`, `POST /materials/{id}/activate`, `DELETE /delete-material/{id}`, `POST /clear-material` |
+| Quizzes | `POST /generate-quiz`, `POST /evaluate-answer`, `POST /quiz/result` |
+| Analitica | `GET /analytics/weak-points`, `GET /analytics/metrics`, `GET /analytics/learning-trend` |
+| Gamificacao | `POST /gamification/xp`, `POST /gamification/avatar`, `POST /gamification/highscore` |
+
+Documentacao interativa FastAPI em `/docs`.
+
+## CI/CD (GitHub Actions)
+
+- `main-tests.yml`: lint + testes de backend e frontend em `main` (push + PR).
+- `staging-tests.yml`: lint + testes de staging em `staging` (backend sem integracao + frontend).
+- `deploy-pages.yml`: build/deploy do frontend para GitHub Pages em `main/master`.
+
+## Notas de Desenvolvimento
+
+- Strings de produto e UX estao maioritariamente em portugues.
+- O backend usa dependencia por ports para facilitar mocking em testes.
+- O token JWT e armazenado no `localStorage` com chave `study_token`.

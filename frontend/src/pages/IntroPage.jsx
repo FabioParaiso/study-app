@@ -1,4 +1,3 @@
-import React from 'react';
 import { Trophy, BarChart3 } from 'lucide-react';
 import IntroHeader from '../components/Intro/IntroHeader';
 import UploadSection from '../components/Intro/UploadSection';
@@ -8,8 +7,8 @@ import MaterialLibrary from '../components/MaterialLibrary';
 const IntroScreen = ({
     student, onLogout,
     file, handleFileChange, analyzeFile, isAnalyzing, savedMaterial, clearMaterial,
-    availableTopics, selectedTopic, setSelectedTopic, detectTopics, errorMsg, loading, startQuiz,
-    changeAvatar, selectedAvatar, level, totalXP, highScore, nextLevel, LEVELS,
+    availableTopics, selectedTopic, setSelectedTopic, loading, startQuiz,
+    changeAvatar, selectedAvatar, level, totalXP, nextLevel, LEVELS,
     materialsList, activateMaterial, onDeleteMaterial, onOpenAnalytics
 }) => {
 

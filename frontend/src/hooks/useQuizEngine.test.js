@@ -163,6 +163,29 @@ describe('useQuizEngine', () => {
         });
     });
 
+    it('recordEvaluation updates streak and missed indices when is_correct is present', () => {
+        const { result } = renderHook(() => useQuizEngine());
+
+        act(() => {
+            result.current.initQuiz(sampleQuestions);
+        });
+
+        act(() => {
+            result.current.recordEvaluation(0, { score: 80, is_correct: true }, "A1");
+            result.current.recordEvaluation(1, { score: 70, is_correct: true }, "A2");
+        });
+
+        expect(result.current.streak).toBe(2);
+        expect(result.current.missedIndices).toEqual([]);
+
+        act(() => {
+            result.current.recordEvaluation(2, { score: 40, is_correct: false }, "A3");
+        });
+
+        expect(result.current.streak).toBe(0);
+        expect(result.current.missedIndices).toContain(2);
+    });
+
     it('maintains streak across multiple correct answers', () => {
         const { result } = renderHook(() => useQuizEngine());
 

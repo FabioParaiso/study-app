@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 const TIPS = [
     "A IA está a ler e a aprender o teu documento...",

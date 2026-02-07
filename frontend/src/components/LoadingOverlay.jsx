@@ -1,5 +1,3 @@
-import React from 'react';
-
 const LoadingOverlay = () => (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-fade-in">
         <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center max-w-sm mx-4">

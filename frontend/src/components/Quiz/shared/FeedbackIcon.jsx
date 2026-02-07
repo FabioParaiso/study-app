@@ -1,4 +1,3 @@
-import React from 'react';
 import { PartyPopper, Star, CheckCircle, Trophy, Flame, Brain, Search, Lightbulb, Eye, BicepsFlexed } from 'lucide-react';
 
 const icons = {

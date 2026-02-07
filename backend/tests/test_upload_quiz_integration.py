@@ -1,8 +1,8 @@
-import pytest
 from unittest.mock import Mock
 from io import BytesIO
 import time
 from models import StudyMaterial
+from modules.analytics.service import AnalyticsService
 from modules.materials.deps import get_ai_service as materials_get_ai_service
 from modules.quizzes.router import get_quiz_ai_service, get_eval_ai_service
 
@@ -90,8 +90,8 @@ def test_upload_and_generate_quiz_flow(client):
     assert quiz_data["questions"][0]["topic"] == "Photosynthesis"
 
 
-def test_generate_open_ended_quiz(client, db_session):
-    """Integration test: Generate Open Ended quiz (verifying strategies)."""
+def test_generate_open_ended_quiz_requires_readiness(client, db_session):
+    """Integration test: open-ended quiz stays locked until readiness criteria is met."""
     
     # Register & Login
     unique_name = f"OpenEnded{int(time.time()*100)}"
@@ -121,6 +121,58 @@ def test_generate_open_ended_quiz(client, db_session):
     db_session.commit()
 
     # Generate Quiz (mock AI quiz generation)
+    _override_quiz_ai_service(client.app, [
+        {"question": "Explain the causes of WWII.", "topic": "History", "concepts": ["History"]}
+    ])
+    try:
+        quiz_request = {
+            "topics": [],
+            "quiz_type": "open-ended",
+            "api_key": "sk-test"
+        }
+        quiz_response = client.post("/generate-quiz", json=quiz_request, headers=headers)
+    finally:
+        client.app.dependency_overrides.pop(get_quiz_ai_service, None)
+        client.app.dependency_overrides.pop(get_eval_ai_service, None)
+
+    assert quiz_response.status_code == 403
+    detail = quiz_response.json()["detail"]
+    assert "Ainda não estás pronto para o Avançado" in detail
+
+
+def test_generate_open_ended_quiz_when_ready(client, monkeypatch):
+    """Integration test: open-ended quiz succeeds when readiness gate is satisfied."""
+
+    unique_name = f"OpenEndedReady{int(time.time()*100)}"
+    register_response = client.post("/register", json={"name": unique_name, "password": "StrongPass1!"})
+    assert register_response.status_code == 200
+    token = register_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    files = {"file": ("test.txt", BytesIO(b"Data about History."), "text/plain")}
+    _override_material_ai_service(client.app, {
+        "History": ["History"]
+    })
+    try:
+        client.post("/upload", files=files, headers=headers)
+    finally:
+        client.app.dependency_overrides.pop(materials_get_ai_service, None)
+
+    monkeypatch.setattr(
+        AnalyticsService,
+        "check_open_ended_readiness",
+        lambda self, student_id, material_id=None: {
+            "is_ready": True,
+            "total_concepts": 1,
+            "ready_concepts": 1
+        }
+    )
+    monkeypatch.setattr(
+        AnalyticsService,
+        "build_open_quiz_concepts",
+        lambda self, student_id, material_id=None, allowed_concepts=None, total_concepts=8: ["History"]
+    )
+
     _override_quiz_ai_service(client.app, [
         {"question": "Explain the causes of WWII.", "topic": "History", "concepts": ["History"]}
     ])

@@ -303,6 +303,20 @@ class AnalyticsService:
             "daily": daily
         }
 
+    @staticmethod
+    def _build_readiness_status(results: list[dict], score_data_key: str) -> dict:
+        concepts = [result for result in results if result.get("concept")]
+        ready = sum(
+            1 for result in concepts
+            if result.get(score_data_key, {}).get("confidence_level") in ("building", "established")
+        )
+        total = len(concepts)
+        return {
+            "is_ready": total > 0 and ready == total,
+            "total_concepts": total,
+            "ready_concepts": ready,
+        }
+
     def check_short_answer_readiness(
         self,
         student_id: int,
@@ -312,19 +326,110 @@ class AnalyticsService:
         Gate: ALL concepts must have confident MCQ data (building/established).
         """
         results = self.get_weak_points(student_id, material_id)
+        return self._build_readiness_status(results, "score_data_mcq")
 
-        concepts = [r for r in results if r.get("concept")]
-        ready = sum(
-            1 for r in concepts
-            if r.get("score_data_mcq", {}).get("confidence_level") in ("building", "established")
-        )
-        total = len(concepts)
+    def check_open_ended_readiness(
+        self,
+        student_id: int,
+        material_id: int | None = None
+    ) -> dict:
+        """
+        Gate: ALL concepts must have confident Short data (building/established).
+        """
+        results = self.get_weak_points(student_id, material_id)
+        return self._build_readiness_status(results, "score_data_short")
 
-        return {
-            "is_ready": total > 0 and ready == total,
-            "total_concepts": total,
-            "ready_concepts": ready,
-        }
+    def build_open_quiz_concepts(
+        self,
+        student_id: int,
+        material_id: int | None = None,
+        allowed_concepts: set[str] | None = None,
+        total_concepts: int = 8
+    ) -> list[str]:
+        """
+        Build prioritized concept list for open-ended quizzes using Bloom × Short cross-reference.
+
+        Buckets (priority order):
+          below_bloom: bloom not_seen/exploring
+          weak_bloom:  bloom building/established, score ≤ 75
+          strong_bloom: bloom building/established, score > 75
+
+        Returns ordered list (no shuffle) — order matters for LLM prompt.
+        No round-robin repetition — just returns all available.
+        Guarantees 1 weak + 1 strong reserved when below dominates.
+        """
+        results = self.get_weak_points(student_id, material_id)
+
+        items: list[dict] = []
+        for item in results:
+            concept = item.get("concept")
+            if not concept or (allowed_concepts and concept not in allowed_concepts):
+                continue
+
+            bloom_data = item.get("score_data_bloom", {})
+            short_data = item.get("score_data_short", {})
+
+            items.append({
+                "concept": concept,
+                "bloom_score": round((bloom_data.get("score") or 0) * 100),
+                "bloom_confidence": bloom_data.get("confidence_level", "not_seen"),
+                "bloom_attempts": bloom_data.get("attempts_count", 0),
+                "short_score": round((short_data.get("score") or 0) * 100),
+            })
+
+        if not items or total_concepts <= 0:
+            return []
+
+        below_bloom: list[dict] = []
+        weak_bloom: list[dict] = []
+        strong_bloom: list[dict] = []
+
+        for i in items:
+            bloom_confident = i["bloom_confidence"] in ("building", "established")
+            if not bloom_confident:
+                below_bloom.append(i)
+            elif i["bloom_score"] <= 75:
+                weak_bloom.append(i)
+            else:
+                strong_bloom.append(i)
+
+        # Sort within buckets
+        below_bloom.sort(key=lambda i: (i["bloom_attempts"], -i["short_score"], i["concept"].lower()))
+        weak_bloom.sort(key=lambda i: (i["bloom_score"], i["bloom_attempts"], -i["short_score"], i["concept"].lower()))
+        strong_bloom.sort(key=lambda i: (-i["bloom_score"], i["concept"].lower()))
+
+        total_unique = len(below_bloom) + len(weak_bloom) + len(strong_bloom)
+
+        if total_unique == 0:
+            return []
+
+        target = min(total_concepts, total_unique)
+
+        if total_unique >= total_concepts:
+            # Enough unique — priority selection with guarantees
+            guaranteed = []
+            remaining_strong = list(strong_bloom)
+            remaining_weak = list(weak_bloom)
+
+            # Guarantee 1 strong if below+weak would fill all slots
+            if strong_bloom and (len(below_bloom) + len(weak_bloom)) >= total_concepts:
+                guaranteed.append(strong_bloom[0]["concept"])
+                remaining_strong = strong_bloom[1:]
+
+            # Guarantee 1 weak if below would fill all remaining slots
+            if weak_bloom and len(below_bloom) >= (total_concepts - len(guaranteed)):
+                guaranteed.append(weak_bloom[0]["concept"])
+                remaining_weak = weak_bloom[1:]
+
+            remaining_slots = total_concepts - len(guaranteed)
+            pool = below_bloom + remaining_weak + remaining_strong
+            selected = [i["concept"] for i in pool[:remaining_slots]]
+            selected.extend(guaranteed)
+        else:
+            # Few concepts — just return all in priority order (no repetition)
+            selected = [i["concept"] for i in (below_bloom + weak_bloom + strong_bloom)]
+
+        return selected[:target]
 
     def build_short_quiz_concepts(
         self,
@@ -334,15 +439,21 @@ class AnalyticsService:
         total_questions: int = 8
     ) -> list[str]:
         """
-        Build concept sequence for short-answer quizzes using MCQ × Short cross-reference.
+        Build concept sequence for short-answer quizzes using short performance with MCQ tiebreakers.
 
         Buckets (priority order):
-          A (mcq_weak):    MCQ ≤ 75% — MCQ alone didn't teach it, change modality
-          B (to_practice): MCQ > 75% AND (short ≤ 75% or < 5 short attempts)
-          C (mastered):    MCQ > 75% AND short > 75% with 5+ short attempts
+          below_short: short not_seen/exploring
+          weak_short:  short building/established with score ≤ 75
+          strong_short: short building/established with score > 75
 
-        Quotas (target 6 unique): A=3, B=2, C=1
-        Expand to total_questions with repetitions from A, then B.
+        Ordering within buckets:
+          below_short: short_attempts asc, mcq_score desc
+          weak_short: short_score asc, short_attempts asc, mcq_score desc
+          strong_short: short_score desc
+
+        Selection:
+          - If enough unique concepts: fill in priority order (below → weak → strong).
+          - If few concepts: round-robin in the same priority order.
         """
         results = self.get_weak_points(student_id, material_id)
 
@@ -361,79 +472,61 @@ class AnalyticsService:
                 "mcq_confidence": mcq_data.get("confidence_level", "not_seen"),
                 "short_score": round((short_data.get("score") or 0) * 100),
                 "short_confidence": short_data.get("confidence_level", "not_seen"),
+                "short_attempts": short_data.get("attempts_count", 0),
             })
 
         if not items or total_questions <= 0:
             return []
 
-        MCQ_STRONG_THRESHOLD = 75
-        SHORT_STRONG_THRESHOLD = 75
-
-        mcq_weak: list[dict] = []     # A: MCQ ≤ 75%
-        to_practice: list[dict] = []   # B: MCQ > 75%, short not yet mastered
-        mastered: list[dict] = []      # C: MCQ > 75%, short > 75% with confident data
-
-        for i in items:
-            mcq_confident = i["mcq_confidence"] in ("building", "established")
-            mcq_strong = mcq_confident and i["mcq_score"] > MCQ_STRONG_THRESHOLD
-            short_confident = i["short_confidence"] in ("building", "established")
-            short_strong = short_confident and i["short_score"] > SHORT_STRONG_THRESHOLD
-
-            if not mcq_strong:
-                mcq_weak.append(i)
-            elif short_strong:
-                mastered.append(i)
-            else:
-                to_practice.append(i)
+        below_short = [i for i in items if i["short_confidence"] in ("not_seen", "exploring")]
+        weak_short = [
+            i for i in items
+            if i["short_confidence"] in ("building", "established") and i["short_score"] <= 75
+        ]
+        strong_short = [
+            i for i in items
+            if i["short_confidence"] in ("building", "established") and i["short_score"] > 75
+        ]
 
         # Sort within buckets
-        mcq_weak.sort(key=lambda i: (-i["mcq_score"], i["concept"].lower()))
-        to_practice.sort(key=lambda i: (i["short_score"], -i["mcq_score"], i["concept"].lower()))
-        mastered.sort(key=lambda i: (-(i["mcq_score"] + i["short_score"]), i["concept"].lower()))
+        below_short.sort(key=lambda i: (i["short_attempts"], -i["mcq_score"], i["concept"].lower()))
+        weak_short.sort(key=lambda i: (i["short_score"], i["short_attempts"], -i["mcq_score"], i["concept"].lower()))
+        strong_short.sort(key=lambda i: (-i["short_score"], i["concept"].lower()))
 
-        # Quotas for unique concepts (target 6, cascade A → B → C)
-        target_unique = min(6, len(items))
-        buckets = [(mcq_weak, 3), (to_practice, 2), (mastered, 1)]
-
-        selected: list[dict] = []
-        for bucket, quota in buckets:
-            selected.extend(bucket[:quota])
-
-        # Cascade: fill remaining slots from each bucket's unused items
-        remaining = target_unique - len(selected)
-        if remaining > 0:
-            already = set(id(i) for i in selected)
-            for bucket, _ in buckets:
-                for item in bucket:
-                    if remaining <= 0:
-                        break
-                    if id(item) not in already:
-                        selected.append(item)
-                        already.add(id(item))
-                        remaining -= 1
-
-        unique_concepts = [i["concept"] for i in selected]
-
-        if not unique_concepts:
+        total_unique = len(below_short) + len(weak_short) + len(strong_short)
+        if total_unique == 0:
             return []
 
-        # Expand to total_questions with repetitions
-        if len(unique_concepts) >= 6:
-            # Enough unique: extra slots repeat from mcq_weak (highest learning value)
-            mcq_weak_names = [i["concept"] for i in mcq_weak if i["concept"] in unique_concepts]
-            repeat_pool = mcq_weak_names or unique_concepts
+        if total_unique >= total_questions:
+            # ENOUGH UNIQUE CONCEPTS — max 1x each, priority selection
+            guaranteed = []
+            remaining_strong = list(strong_short)
+            remaining_weak = list(weak_short)
+
+            # Guarantee 1 strong if below+weak would fill all slots
+            if strong_short and (len(below_short) + len(weak_short)) >= total_questions:
+                guaranteed.append(strong_short[0]["concept"])
+                remaining_strong = strong_short[1:]
+
+            # Guarantee 1 weak if below would fill all remaining slots
+            if weak_short and len(below_short) >= (total_questions - len(guaranteed)):
+                guaranteed.append(weak_short[0]["concept"])
+                remaining_weak = weak_short[1:]
+
+            remaining_slots = total_questions - len(guaranteed)
+            pool = below_short + remaining_weak + remaining_strong
+            selected = [i["concept"] for i in pool[:remaining_slots]]
+            selected.extend(guaranteed)
         else:
-            # Few concepts: round-robin all in priority order
-            repeat_pool = unique_concepts
+            concepts_ordered = [i["concept"] for i in (below_short + weak_short + strong_short)]
+            selected = []
+            idx = 0
+            while len(selected) < total_questions:
+                selected.append(concepts_ordered[idx % len(concepts_ordered)])
+                idx += 1
 
-        result = list(unique_concepts)
-        idx = 0
-        while len(result) < total_questions:
-            result.append(repeat_pool[idx % len(repeat_pool)])
-            idx += 1
-
-        random.shuffle(result)
-        return result
+        random.shuffle(selected)
+        return selected
 
     def build_mcq_quiz_concepts(
         self,
